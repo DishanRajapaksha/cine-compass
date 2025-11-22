@@ -524,9 +524,9 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
                   highlighted && 'border-emerald-300 bg-emerald-50 shadow'
                 )}
               >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-6">
                   <div
-                    className="flex cursor-pointer items-start gap-3"
+                    className="flex cursor-pointer items-center gap-3 sm:items-center"
                     onClick={() => onMovieClick(movie)}
                   >
                     <img
@@ -545,7 +545,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:justify-start">
                     <button
                       type="button"
                       onClick={() => handleShowtimeClick(movie, showtime.showtimeId)}
@@ -564,7 +564,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
                         <span className="text-[11px] font-medium text-white/80">ends {showtime.endTime}</span>
                       </div>
                     </button>
-                    <div className="text-xs font-semibold text-slate-600">{showtime.theaterName}</div>
+                    <div className="text-xs font-semibold text-slate-600 whitespace-nowrap">{showtime.theaterName}</div>
                   </div>
 
                   {onAddShowtime && (
