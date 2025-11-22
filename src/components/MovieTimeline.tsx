@@ -39,6 +39,17 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
   onAddShowtime,
   savedShowtimeIds = []
 }) => {
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window === 'undefined') return 'grid';
+    try {
+      const stored = localStorage.getItem(TIMELINE_PREFS_KEY);
+      if (!stored) return 'grid';
+      const parsed = JSON.parse(stored);
+      return parsed?.viewMode === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
   const [availabilityMode, setAvailabilityMode] = useState<'highlight' | 'hide'>(() => {
     if (typeof window === 'undefined') return 'highlight';
     try {
@@ -187,13 +198,14 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       availabilityMode,
       bufferMinutes,
       hideSameMovie,
+      viewMode,
       theaterOrder
     };
     localStorage.setItem(TIMELINE_PREFS_KEY, JSON.stringify(payload));
     if (theaterOrder.length > 0) {
       localStorage.setItem(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
     }
-  }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder]);
+  }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder, viewMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -202,13 +214,14 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       availabilityMode,
       bufferMinutes,
       hideSameMovie,
+      viewMode,
       theaterOrder
     };
     localStorage.setItem(TIMELINE_PREFS_KEY, JSON.stringify(payload));
     if (theaterOrder.length > 0) {
       localStorage.setItem(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
     }
-  }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder, theaters]);
+  }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder, theaters, viewMode]);
 
   useEffect(() => {
     if (theaters.length === 0) return;
@@ -267,6 +280,35 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
     setDraggingTheater(null);
   };
 
+  const getRowState = (movie: Movie, showtime: TimelineShowtime) => {
+    const isSelectedByModal = selectedMovie?.id === movie.id;
+    const isAnchorShowtime = selectedAnchor?.movieId === movie.id && selectedAnchor.showtimeId === showtime.showtimeId;
+    const isSaved = savedShowtimeSet.has(showtime.showtimeId);
+
+    let isAvailableAfterSelected = false;
+    let isBlockedBySelection = false;
+    if (selectedAnchorEnd) {
+      const currentShowtimeStart = new Date(
+        movie.showtimes.find(st => st.id === showtime.showtimeId)?.startDate || ''
+      ).getTime();
+
+      isAvailableAfterSelected = currentShowtimeStart >= (selectedAnchorEnd + bufferTimeMs);
+      isBlockedBySelection = !isAnchorShowtime && !isAvailableAfterSelected;
+    }
+
+    const hideSameMovieRow = hideSameMovie && selectedAnchor && movie.id === selectedAnchor.movieId && !isAnchorShowtime;
+    const shouldHideRow = Boolean((availabilityMode === 'hide' && selectedAnchorEnd !== null && isBlockedBySelection) || hideSameMovieRow);
+
+    return {
+      isSelectedByModal,
+      isAnchorShowtime,
+      isSaved,
+      isAvailableAfterSelected,
+      isBlockedBySelection,
+      shouldHideRow
+    };
+  };
+
   if (loading) {
     return (
       <div className="mt-0 rounded-xl border border-slate-200 bg-white/80 p-10 text-center shadow-sm backdrop-blur">
@@ -290,6 +332,24 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
     <div className="mt-0 rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
+          <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-md"
+            >
+              By theater
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-md"
+            >
+              By start time
+            </Button>
+          </div>
           <div className="flex overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-1">
             <Button
               variant={availabilityMode === 'highlight' ? 'default' : 'ghost'}
@@ -335,131 +395,196 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
 
       </div>
 
-      <div className="mt-2 overflow-x-auto">
-        <div
-          className="grid min-w-[900px] gap-px rounded-lg border border-slate-200 bg-slate-200"
-          style={{ gridTemplateColumns: `240px repeat(${orderedTheaters.length}, minmax(160px, 1fr))` }}
-        >
-          <div className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm">
-            Movie
-          </div>
-          {orderedTheaters.map(theater => (
-            <div
-              key={theater.id}
-              className="sticky top-0 z-20 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-900 shadow-sm"
-              draggable
-              onDragStart={() => handleTheaterDragStart(theater.id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleTheaterDrop(theater.id)}
-            >
-              {theater.name}
+      {viewMode === 'grid' ? (
+        <div className="mt-2 overflow-x-auto">
+          <div
+            className="grid min-w-[900px] gap-px rounded-lg border border-slate-200 bg-slate-200"
+            style={{ gridTemplateColumns: `240px repeat(${orderedTheaters.length}, minmax(160px, 1fr))` }}
+          >
+            <div className="sticky left-0 top-0 z-30 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 shadow-sm">
+              Movie
             </div>
-          ))}
+            {orderedTheaters.map(theater => (
+              <div
+                key={theater.id}
+                className="sticky top-0 z-20 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-900 shadow-sm"
+                draggable
+                onDragStart={() => handleTheaterDragStart(theater.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleTheaterDrop(theater.id)}
+              >
+                {theater.name}
+              </div>
+            ))}
 
+            {timelineData.map(({ movie, showtime }) => {
+              const { isSelectedByModal, isAnchorShowtime, isSaved, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
+
+              if (shouldHideRow) {
+                return null;
+              }
+
+              return (
+                <React.Fragment key={`${movie.id}-${showtime.showtimeId}`}>
+                  <div
+                    className="sticky left-0 z-10 flex cursor-pointer items-center gap-3 bg-white px-3 py-2 pr-3 shadow-[2px_0_6px_rgba(0,0,0,0.04)] transition hover:bg-slate-50"
+                    onClick={() => onMovieClick(movie)}
+                  >
+                    <img
+                      src={movie.poster_path}
+                      alt={movie.title}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = fallbackPoster;
+                      }}
+                      className="h-[75px] w-[50px] rounded-md object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-900" title={movie.title}>
+                        {movie.title}
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-slate-600">
+                        {movie.duration ? <span>{movie.duration} min</span> : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  {orderedTheaters.map(theater => {
+                    const hasShowtime = showtime.theaterId === theater.id;
+                    const highlighted = availabilityMode === 'highlight' && isAvailableAfterSelected && hasShowtime;
+
+                    return (
+                      <div
+                        key={`${movie.id}-${showtime.showtimeId}-${theater.id}`}
+                        className={cn(
+                          'flex min-h-[110px] flex-col items-center justify-center gap-2 bg-white px-3 py-3 transition duration-200',
+                          highlighted && 'border-2 border-emerald-300 bg-emerald-50 shadow-sm',
+                          hasShowtime && !highlighted && 'bg-indigo-50'
+                        )}
+                      >
+                        {hasShowtime ? (
+                          <div className="flex w-full max-w-[200px] flex-col items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleShowtimeClick(movie, showtime.showtimeId)}
+                              className={cn(
+                                'w-full rounded-full px-4 py-2 text-center text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
+                                isAnchorShowtime
+                                  ? 'bg-amber-500 shadow-amber-200 hover:bg-amber-600 focus:ring-amber-300'
+                                  : highlighted
+                                    ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700 focus:ring-emerald-300'
+                                    : 'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700 focus:ring-indigo-300',
+                                isSelectedByModal && 'ring-2 ring-amber-200 ring-offset-2 ring-offset-white'
+                              )}
+                            >
+                              <div className="flex flex-col leading-tight">
+                                <span className="text-sm font-bold">{showtime.startTime}</span>
+                                <span className="text-[11px] font-medium text-white/80">ends {showtime.endTime}</span>
+                              </div>
+                            </button>
+                            {onAddShowtime && (
+                              <Button
+                                type="button"
+                                variant={isSaved ? 'secondary' : 'outline'}
+                                size="sm"
+                                className="w-full text-xs font-semibold"
+                                disabled={isSaved}
+                                onClick={() => onAddShowtime(movie, showtime.showtimeId)}
+                              >
+                                {isSaved ? 'Added to list' : 'Add to list'}
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-300">—</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col gap-3">
           {timelineData.map(({ movie, showtime }) => {
-            const isSelectedByModal = selectedMovie?.id === movie.id;
-            const isAnchorShowtime = selectedAnchor?.movieId === movie.id && selectedAnchor.showtimeId === showtime.showtimeId;
-            const isSaved = savedShowtimeSet.has(showtime.showtimeId);
-
-            let isAvailableAfterSelected = false;
-            let isBlockedBySelection = false;
-            if (selectedAnchorEnd) {
-              const currentShowtimeStart = new Date(
-                movie.showtimes.find(st => st.id === showtime.showtimeId)?.startDate || ''
-              ).getTime();
-
-              isAvailableAfterSelected = currentShowtimeStart >= (selectedAnchorEnd + bufferTimeMs);
-              isBlockedBySelection = !isAnchorShowtime && !isAvailableAfterSelected;
-            }
-
-            const hideSameMovieRow = hideSameMovie && selectedAnchor && movie.id === selectedAnchor.movieId && !isAnchorShowtime;
-            const shouldHideRow = Boolean((availabilityMode === 'hide' && selectedAnchorEnd !== null && isBlockedBySelection) || hideSameMovieRow);
+            const { isSelectedByModal, isAnchorShowtime, isSaved, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
 
             if (shouldHideRow) {
               return null;
             }
 
+            const highlighted = availabilityMode === 'highlight' && isAvailableAfterSelected;
+
             return (
-              <React.Fragment key={`${movie.id}-${showtime.showtimeId}`}>
-                <div
-                  className="sticky left-0 z-10 flex cursor-pointer items-center gap-3 bg-white px-3 py-2 pr-3 shadow-[2px_0_6px_rgba(0,0,0,0.04)] transition hover:bg-slate-50"
-                  onClick={() => onMovieClick(movie)}
-                >
-                  <img
-                    src={movie.poster_path}
-                    alt={movie.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = fallbackPoster;
-                    }}
-                    className="h-[75px] w-[50px] rounded-md object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-slate-900" title={movie.title}>
-                      {movie.title}
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-slate-600">
-                      {movie.duration ? <span>{movie.duration} min</span> : null}
+              <div
+                key={`${movie.id}-${showtime.showtimeId}`}
+                className={cn(
+                  'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm',
+                  highlighted && 'border-emerald-300 bg-emerald-50 shadow'
+                )}
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+                  <div
+                    className="flex cursor-pointer items-start gap-3"
+                    onClick={() => onMovieClick(movie)}
+                  >
+                    <img
+                      src={movie.poster_path}
+                      alt={movie.title}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = fallbackPoster;
+                      }}
+                      className="h-[75px] w-[50px] rounded-md object-cover"
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-900" title={movie.title}>
+                        {movie.title}
+                      </div>
+                      {movie.duration ? <div className="mt-1 text-xs text-slate-600">{movie.duration} min</div> : null}
                     </div>
                   </div>
-                </div>
 
-                {orderedTheaters.map(theater => {
-                  const hasShowtime = showtime.theaterId === theater.id;
-                  const highlighted = availabilityMode === 'highlight' && isAvailableAfterSelected && hasShowtime;
-
-                  return (
-                    <div
-                      key={`${movie.id}-${showtime.showtimeId}-${theater.id}`}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleShowtimeClick(movie, showtime.showtimeId)}
                       className={cn(
-                        'flex min-h-[110px] flex-col items-center justify-center gap-2 bg-white px-3 py-3 transition duration-200',
-                        highlighted && 'border-2 border-emerald-300 bg-emerald-50 shadow-sm',
-                        hasShowtime && !highlighted && 'bg-indigo-50'
+                        'rounded-full px-4 py-2 text-center text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
+                        isAnchorShowtime
+                          ? 'bg-amber-500 shadow-amber-200 hover:bg-amber-600 focus:ring-amber-300'
+                          : highlighted
+                            ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700 focus:ring-emerald-300'
+                            : 'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700 focus:ring-indigo-300',
+                        isSelectedByModal && 'ring-2 ring-amber-200 ring-offset-2 ring-offset-white'
                       )}
                     >
-                      {hasShowtime ? (
-                        <div className="flex w-full max-w-[200px] flex-col items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleShowtimeClick(movie, showtime.showtimeId)}
-                            className={cn(
-                              'w-full rounded-full px-4 py-2 text-center text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
-                              isAnchorShowtime
-                                ? 'bg-amber-500 shadow-amber-200 hover:bg-amber-600 focus:ring-amber-300'
-                                : highlighted
-                                  ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700 focus:ring-emerald-300'
-                                  : 'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700 focus:ring-indigo-300',
-                              isSelectedByModal && 'ring-2 ring-amber-200 ring-offset-2 ring-offset-white'
-                            )}
-                          >
-                            <div className="flex flex-col leading-tight">
-                              <span className="text-sm font-bold">{showtime.startTime}</span>
-                              <span className="text-[11px] font-medium text-white/80">ends {showtime.endTime}</span>
-                            </div>
-                          </button>
-                          {onAddShowtime && (
-                            <Button
-                              type="button"
-                              variant={isSaved ? 'secondary' : 'outline'}
-                              size="sm"
-                              className="w-full text-xs font-semibold"
-                              disabled={isSaved}
-                              onClick={() => onAddShowtime(movie, showtime.showtimeId)}
-                            >
-                              {isSaved ? 'Added to list' : 'Add to list'}
-                            </Button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-slate-300">—</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
+                      <div className="flex items-center gap-2 leading-tight">
+                        <span className="text-sm font-bold">{showtime.startTime}</span>
+                        <span className="text-[11px] font-medium text-white/80">ends {showtime.endTime}</span>
+                      </div>
+                    </button>
+                    <div className="text-xs font-semibold text-slate-600">{showtime.theaterName}</div>
+                  </div>
+
+                  {onAddShowtime && (
+                    <Button
+                      type="button"
+                      variant={isSaved ? 'secondary' : 'outline'}
+                      size="sm"
+                      className="justify-self-start text-xs font-semibold sm:justify-self-end"
+                      disabled={isSaved}
+                      onClick={() => onAddShowtime(movie, showtime.showtimeId)}
+                    >
+                      {isSaved ? 'Added to list' : 'Add to list'}
+                    </Button>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
-      </div>
+      )}
     </div>
   );
 };
