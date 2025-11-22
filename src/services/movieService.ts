@@ -452,7 +452,7 @@ export const movieService = {
 
   getPopularMovies: async (filters?: MovieFilters): Promise<MovieResponse> => {
     try {
-      const { apiFilters, dateRange } = await buildApiFilters(filters, { includeSubtitleFilter: true });
+      const { apiFilters } = await buildApiFilters(filters, { includeSubtitleFilter: true });
 
       const response = await client.request<{ showtimes: CinevilleResponse['data']['showtimes'] }>(SHOWTIMES_QUERY, {
         collections: [],
