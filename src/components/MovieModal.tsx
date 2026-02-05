@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Movie } from '../types/Movie';
 import { Button } from './ui/button';
+import { cn, getPosterDominantColor, hasEnglishSubtitles, type RgbColor } from '../lib/utils';
 
 interface MovieModalProps {
   movie: Movie;
@@ -10,6 +11,8 @@ interface MovieModalProps {
 const fallbackImage = 'https://via.placeholder.com/300x450/333333/ffffff?text=No+Image';
 
 const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
+  const [accentColor, setAccentColor] = useState<RgbColor | null>(null);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -26,6 +29,34 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
     };
   }, [onClose]);
 
+  useEffect(() => {
+    let active = true;
+    getPosterDominantColor(movie.poster_path).then((color) => {
+      if (active) {
+        setAccentColor(color);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [movie.poster_path]);
+
+  const accentStyles = useMemo(() => {
+    if (!accentColor) return null;
+    const base = `rgb(${accentColor.r}, ${accentColor.g}, ${accentColor.b})`;
+    return {
+      row: {
+        borderColor: base,
+        backgroundColor: `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0.18)`,
+        boxShadow: `0 0 0 2px rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0.28)`
+      } as React.CSSProperties,
+      badge: {
+        backgroundColor: base
+      } as React.CSSProperties
+    };
+  }, [accentColor]);
+
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -38,18 +69,17 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
   };
 
   const spoken = movie.spokenLanguages || [];
-  const subtitles = movie.availableSubtitles || [];
   const versions = movie.availableLanguageVersions || [];
   const specials = movie.availableSpecials || [];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-8"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur">
+      <div className="relative my-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur">
         <Button
           variant="ghost"
           size="icon"
@@ -60,19 +90,20 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
           ✕
         </Button>
 
-        <div className="grid gap-6 p-6 md:grid-cols-[260px,1fr] md:items-stretch lg:grid-cols-[300px,1fr]">
-          <div className="flex items-stretch justify-center">
-            <img
-              src={movie.poster_path || fallbackImage}
-              alt={movie.title}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = fallbackImage;
-              }}
-              className="h-full w-full max-w-[360px] rounded-xl object-cover shadow-md"
-            />
-          </div>
+        <div className="max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="grid gap-6 p-6 md:grid-cols-[260px,1fr] md:items-start lg:grid-cols-[300px,1fr]">
+            <div className="flex items-start justify-center">
+              <img
+                src={movie.poster_path || fallbackImage}
+                alt={movie.title}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = fallbackImage;
+                }}
+                className="h-auto w-full max-w-[360px] rounded-xl object-cover shadow-md"
+              />
+            </div>
 
-          <div className="space-y-4">
+            <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">{movie.title}</h2>
               <p className="mt-1 text-slate-600">
@@ -102,13 +133,6 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
               <section>
                 <h3 className="text-lg font-semibold text-slate-800">Spoken Languages</h3>
                 <p className="mt-1 text-slate-700">{spoken.join(', ')}</p>
-              </section>
-            )}
-
-            {subtitles.length > 0 && (
-              <section>
-                <h3 className="text-lg font-semibold text-slate-800">Subtitle Languages</h3>
-                <p className="mt-1 text-slate-700">{subtitles.join(', ')}</p>
               </section>
             )}
 
@@ -142,19 +166,54 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
                       minute: '2-digit',
                       hour12: false
                     });
+                    const showtimeHasEnglishSubtitles = hasEnglishSubtitles(showtime.subtitles);
+                    const subtitleParts = (showtime.subtitles || '')
+                      .split(',')
+                      .map((part) => part.trim())
+                      .filter(Boolean);
+                    const subtitlePartsWithoutEnglish = showtimeHasEnglishSubtitles
+                      ? subtitleParts.filter((part) => !hasEnglishSubtitles(part))
+                      : subtitleParts;
+                    const subtitleText = subtitlePartsWithoutEnglish.length > 0
+                      ? `Subtitles: ${subtitlePartsWithoutEnglish.join(', ')}`
+                      : null;
+                    const metadataItems = [
+                      subtitleText,
+                      showtime.languageVersion ? `Version: ${showtime.languageVersion}` : null,
+                      showtime.specials ? `Special: ${showtime.specials}` : null
+                    ].filter(Boolean);
 
                     return (
                       <div
                         key={showtime.id}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3"
+                        className={cn(
+                          'flex items-center justify-between gap-3 rounded-lg border p-3',
+                          showtimeHasEnglishSubtitles
+                            ? 'border-indigo-400 bg-indigo-100 ring-2 ring-indigo-200'
+                            : 'border-slate-200 bg-slate-50'
+                        )}
+                        style={showtimeHasEnglishSubtitles && accentStyles ? accentStyles.row : undefined}
                       >
                         <div className="flex-1">
-                          <p className="font-semibold text-slate-900">
-                            {showtime.theaterName}
+                          <p className="flex items-center gap-2 font-semibold text-slate-900">
+                            <span>{showtime.theaterName}</span>
+                            {showtimeHasEnglishSubtitles && (
+                              <span
+                                className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                                style={accentStyles?.badge}
+                              >
+                                EN subtitles
+                              </span>
+                            )}
                           </p>
                           <p className="text-sm text-slate-600">
                             {showtime.theaterCity} • {formattedDate} at {formattedTime}
                           </p>
+                          {metadataItems.length > 0 && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {metadataItems.join(' • ')}
+                            </p>
+                          )}
                         </div>
                         {showtime.ticketingUrl && (
                           <Button
@@ -179,6 +238,7 @@ const MovieModal: React.FC<MovieModalProps> = ({ movie, onClose }) => {
                 {movie.overview || 'No overview available for this movie.'}
               </p>
             </section>
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { City, MovieFilters } from '../types/Movie';
+import { getCurrentDateInAmsterdam } from '../lib/utils';
 
 interface MovieFiltersProps {
   cities: City[];
@@ -235,18 +236,11 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
   const [selectedSpecials, setSelectedSpecials] = useState<string[]>(filters.selectedSpecials);
   const [startTime, setStartTime] = useState<string>(filters.startTime || '');
   const [endTime, setEndTime] = useState<string>(filters.endTime || '');
-  // Helper function to get default dates - current day for both start and end
-  const getDefaultDates = () => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-
-    return {
-      startDate: today,
-      endDate: today
-    };
+  const todayInAmsterdam = getCurrentDateInAmsterdam();
+  const defaultDates = {
+    startDate: todayInAmsterdam,
+    endDate: todayInAmsterdam
   };
-
-  const defaultDates = getDefaultDates();
   const [startDate, setStartDate] = useState<string>(filters.startDate || defaultDates.startDate);
   const [endDate, setEndDate] = useState<string>(filters.endDate || defaultDates.endDate);
   const [spokenLanguagesCollapsed, setSpokenLanguagesCollapsed] = useState<boolean>(false);
@@ -392,7 +386,6 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
       <FilterSection>
         <TheaterCheckbox
           checked={selectedSubtitleLanguages.includes('en')}
-          onClick={() => handleSubtitleLanguageChange('en', !selectedSubtitleLanguages.includes('en'))}
         >
           <CheckboxInput
             type="checkbox"

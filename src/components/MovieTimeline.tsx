@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Movie } from '../types/Movie';
-import { cn } from '../lib/utils';
+import { cn, hasEnglishSubtitles as hasEnglishSubtitleFlag } from '../lib/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
@@ -20,6 +20,7 @@ interface TimelineShowtime {
   theaterId: string;
   theaterName: string;
   showtimeId: string;
+  subtitles: string;
 }
 
 interface TimelineRow {
@@ -30,6 +31,21 @@ interface TimelineRow {
 const fallbackPoster = 'https://via.placeholder.com/50x75?text=No+Image';
 const TIMELINE_PREFS_KEY = 'cineville_timeline_prefs';
 const TIMELINE_THEATER_ORDER_KEY = 'cineville_timeline_theater_order';
+const AMSTERDAM_TIME_ZONE = 'Europe/Amsterdam';
+
+const formatAmsterdamTime = (value: string): string => {
+  const withoutZoneMatch = value.match(/T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+  if (withoutZoneMatch) {
+    return withoutZoneMatch[1];
+  }
+
+  return new Date(value).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: AMSTERDAM_TIME_ZONE
+  });
+};
 
 const MovieTimeline: React.FC<MovieTimelineProps> = ({
   movies,
@@ -106,18 +122,8 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
 
     movies.forEach(movie => {
       movie.showtimes.forEach(showtime => {
-        const startDate = new Date(showtime.startDate);
-        const endDate = new Date(showtime.endDate);
-
-        const startTime = startDate.toLocaleTimeString('en-GB', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-
-        const endTime = endDate.toLocaleTimeString('en-GB', {
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const startTime = formatAmsterdamTime(showtime.startDate);
+        const endTime = formatAmsterdamTime(showtime.endDate);
 
         rows.push({
           movie,
@@ -126,7 +132,8 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
             endTime,
             theaterId: showtime.theaterId,
             theaterName: showtime.theaterName,
-            showtimeId: showtime.id
+            showtimeId: showtime.id,
+            subtitles: showtime.subtitles || ''
           }
         });
       });
@@ -284,6 +291,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
     const isSelectedByModal = selectedMovie?.id === movie.id;
     const isAnchorShowtime = selectedAnchor?.movieId === movie.id && selectedAnchor.showtimeId === showtime.showtimeId;
     const isSaved = savedShowtimeSet.has(showtime.showtimeId);
+    const hasEnglishSubtitles = hasEnglishSubtitleFlag(showtime.subtitles);
 
     let isAvailableAfterSelected = false;
     let isBlockedBySelection = false;
@@ -303,6 +311,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       isSelectedByModal,
       isAnchorShowtime,
       isSaved,
+      hasEnglishSubtitles,
       isAvailableAfterSelected,
       isBlockedBySelection,
       shouldHideRow
@@ -418,7 +427,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
             ))}
 
             {timelineData.map(({ movie, showtime }) => {
-              const { isSelectedByModal, isAnchorShowtime, isSaved, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
+              const { isSelectedByModal, isAnchorShowtime, isSaved, hasEnglishSubtitles, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
 
               if (shouldHideRow) {
                 return null;
@@ -458,7 +467,8 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
                         className={cn(
                           'flex min-h-[110px] flex-col items-center justify-center gap-2 bg-white px-3 py-3 transition duration-200',
                           highlighted && 'border-2 border-emerald-300 bg-emerald-50 shadow-sm',
-                          hasShowtime && !highlighted && 'bg-indigo-50'
+                          hasShowtime && !highlighted && 'bg-indigo-50',
+                          hasShowtime && hasEnglishSubtitles && !highlighted && 'ring-1 ring-indigo-200 bg-indigo-100/70'
                         )}
                       >
                         {hasShowtime ? (
@@ -508,7 +518,7 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {timelineData.map(({ movie, showtime }) => {
-            const { isSelectedByModal, isAnchorShowtime, isSaved, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
+            const { isSelectedByModal, isAnchorShowtime, isSaved, hasEnglishSubtitles, isAvailableAfterSelected, shouldHideRow } = getRowState(movie, showtime);
 
             if (shouldHideRow) {
               return null;
@@ -521,7 +531,8 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
                 key={`${movie.id}-${showtime.showtimeId}`}
                 className={cn(
                   'flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm',
-                  highlighted && 'border-emerald-300 bg-emerald-50 shadow'
+                  highlighted && 'border-emerald-300 bg-emerald-50 shadow',
+                  hasEnglishSubtitles && !highlighted && 'border-indigo-200 bg-indigo-50/60'
                 )}
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-6">

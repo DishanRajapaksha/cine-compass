@@ -5,7 +5,8 @@ import MoviePoster from './MoviePoster';
 import MovieModal from './MovieModal';
 import MovieFiltersComponent from './MovieFilters';
 import MovieTimeline from './MovieTimeline';
-import { cn } from '../lib/utils';
+import MovieSearch from './MovieSearch';
+import { cn, getCurrentDateInAmsterdam } from '../lib/utils';
 import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 
@@ -24,6 +25,12 @@ const BackgroundLayer: React.FC<{ posterUrl?: string; isVisible: boolean }> = ({
 
 const fallbackPoster = 'https://via.placeholder.com/50x75?text=No+Image';
 const SAVED_SHOWTIMES_KEY = 'cineville_saved_showtimes';
+
+const normalizeStoredDate = (value: unknown, today: string): string => {
+  if (typeof value !== 'string') return today;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return today;
+  return value < today ? today : value;
+};
 
 const SavedShowtimesPopup: React.FC<{
   open: boolean;
@@ -150,7 +157,7 @@ const MovieGallery: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [hoveredMovie, setHoveredMovie] = useState<Movie | null>(null);
   const [previousMovie, setPreviousMovie] = useState<Movie | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('timeline');
+  const [viewMode, setViewMode] = useState<'grid' | 'timeline' | 'search'>('timeline');
   const [savedShowtimes, setSavedShowtimes] = useState<SavedShowtime[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -183,24 +190,19 @@ const MovieGallery: React.FC = () => {
     if (stored === null) return true;
     return stored === 'true';
   });
-  // Helper function to get default dates - current day for both start and end
-  const getDefaultDates = () => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-
-    return {
-      startDate: today,
-      endDate: today
-    };
+  const todayInAmsterdam = getCurrentDateInAmsterdam();
+  const defaultDates = {
+    startDate: todayInAmsterdam,
+    endDate: todayInAmsterdam
   };
-
-  const defaultDates = getDefaultDates();
   const loadStoredFilters = (): MovieFilters | null => {
     if (typeof window === 'undefined') return null;
     try {
       const stored = localStorage.getItem(FILTERS_STORAGE_KEY);
       if (!stored) return null;
       const parsed = JSON.parse(stored);
+      const normalizedStartDate = normalizeStoredDate(parsed.startDate, defaultDates.startDate);
+      const normalizedEndDate = normalizeStoredDate(parsed.endDate, defaultDates.endDate);
       return {
         selectedCity: parsed.selectedCity ?? 'Amsterdam',
         selectedTheaters: parsed.selectedTheaters ?? [],
@@ -209,8 +211,8 @@ const MovieGallery: React.FC = () => {
         selectedSpecials: parsed.selectedSpecials ?? [],
         startTime: parsed.startTime ?? null,
         endTime: parsed.endTime ?? null,
-        startDate: parsed.startDate ?? defaultDates.startDate,
-        endDate: parsed.endDate ?? defaultDates.endDate
+        startDate: normalizedStartDate,
+        endDate: normalizedEndDate
       };
     } catch (err) {
       console.warn('Failed to parse stored filters', err);
@@ -435,6 +437,13 @@ const MovieGallery: React.FC = () => {
     </div>
   );
 
+  const renderSearchContent = () => (
+    <MovieSearch
+      filters={filters}
+      onMovieHover={handleMovieHover}
+    />
+  );
+
   return (
     <>
       <div className="fixed inset-0 -z-10">
@@ -475,6 +484,17 @@ const MovieGallery: React.FC = () => {
             >
               <span role="img" aria-label="timeline">📅</span>
               Timeline View
+            </Button>
+            <Button
+              variant={viewMode === 'search' ? 'default' : 'outline'}
+              onClick={() => setViewMode('search')}
+              className={cn(
+                'rounded-full px-5 transition-all',
+                viewMode === 'search' ? 'shadow-md shadow-indigo-200' : ''
+              )}
+            >
+              <span role="img" aria-label="search">🔍</span>
+              Search
             </Button>
             <div className="lg:hidden">
               <Button
@@ -537,6 +557,14 @@ const MovieGallery: React.FC = () => {
               >
                 📅 Timeline
               </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'search' ? 'default' : 'outline'}
+                onClick={() => setViewMode('search')}
+                className="rounded-full px-4"
+              >
+                🔍 Search
+              </Button>
             </div>
             <MovieFiltersComponent
               cities={cities}
@@ -550,7 +578,11 @@ const MovieGallery: React.FC = () => {
           </aside>
 
           <section className="min-w-0 self-start">
-            {viewMode === 'timeline' ? renderTimelineContent() : renderGridContent()}
+            {viewMode === 'timeline'
+              ? renderTimelineContent()
+              : viewMode === 'search'
+                ? renderSearchContent()
+                : renderGridContent()}
           </section>
         </div>
 
