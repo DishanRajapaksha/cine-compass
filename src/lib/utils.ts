@@ -74,7 +74,10 @@ export async function getPosterDominantColor(imageUrl: string | null | undefined
 
         context.drawImage(image, 0, 0, size, size);
         const { data } = context.getImageData(0, 0, size, size);
-        const buckets = new Map<string, { count: number; r: number; g: number; b: number }>();
+        const buckets = new Map<string, { count: number; weight: number; r: number; g: number; b: number }>();
+        const center = (size - 1) / 2;
+        const maxDistance = Math.hypot(center, center);
+        let totalWeight = 0;
 
         for (let index = 0; index < data.length; index += 4) {
           const alpha = data[index + 3];
@@ -91,33 +94,70 @@ export async function getPosterDominantColor(imageUrl: string | null | undefined
           const keyG = Math.round(g / 24) * 24;
           const keyB = Math.round(b / 24) * 24;
           const key = `${keyR}-${keyG}-${keyB}`;
+          const pixelIndex = index / 4;
+          const x = pixelIndex % size;
+          const y = Math.floor(pixelIndex / size);
+          const distance = Math.hypot(x - center, y - center);
+          const spatialWeight = 1 - Math.min(1, distance / maxDistance) * 0.35;
+          const pixelWeight = Math.max(0.65, spatialWeight);
 
           const existing = buckets.get(key);
           if (existing) {
             existing.count += 1;
-            existing.r += r;
-            existing.g += g;
-            existing.b += b;
+            existing.weight += pixelWeight;
+            existing.r += r * pixelWeight;
+            existing.g += g * pixelWeight;
+            existing.b += b * pixelWeight;
           } else {
-            buckets.set(key, { count: 1, r, g, b });
+            buckets.set(key, {
+              count: 1,
+              weight: pixelWeight,
+              r: r * pixelWeight,
+              g: g * pixelWeight,
+              b: b * pixelWeight
+            });
           }
+          totalWeight += pixelWeight;
         }
 
-        if (buckets.size === 0) {
+        if (buckets.size === 0 || totalWeight <= 0) {
           resolve(null);
           return;
         }
 
         const bucketValues = Array.from(buckets.values());
         let bestBucket = bucketValues[0];
-        let bestScore = -1;
+        let bestScore = -Infinity;
 
         bucketValues.forEach((bucket) => {
-          const avgR = bucket.r / bucket.count;
-          const avgG = bucket.g / bucket.count;
-          const avgB = bucket.b / bucket.count;
-          const saturation = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
-          const score = bucket.count * (1 + saturation / 255);
+          const avgR = bucket.r / bucket.weight;
+          const avgG = bucket.g / bucket.weight;
+          const avgB = bucket.b / bucket.weight;
+          const maxChannel = Math.max(avgR, avgG, avgB);
+          const minChannel = Math.min(avgR, avgG, avgB);
+          const diff = maxChannel - minChannel;
+          const saturation = maxChannel === 0 ? 0 : diff / maxChannel;
+          const lightness = (maxChannel + minChannel) / (2 * 255);
+          const rg = avgR - avgG;
+          const yb = (avgR + avgG) / 2 - avgB;
+          const colorfulness = Math.min(1, Math.sqrt(rg * rg + yb * yb) / 180);
+          const balancedLightness = 1 - Math.min(1, Math.abs(lightness - 0.55) / 0.55);
+          const presence = bucket.weight / totalWeight;
+
+          // Prefer colors that are vivid and pleasant to highlight, but still visible in the poster.
+          let score =
+            saturation * 2.4 +
+            colorfulness * 1.6 +
+            balancedLightness * 0.9 +
+            Math.sqrt(presence) * 0.7;
+
+          if (saturation < 0.08 || diff < 14) {
+            score *= 0.3;
+          }
+          if (lightness < 0.12 || lightness > 0.9) {
+            score *= 0.5;
+          }
+
           if (score > bestScore) {
             bestScore = score;
             bestBucket = bucket;
@@ -125,9 +165,9 @@ export async function getPosterDominantColor(imageUrl: string | null | undefined
         });
 
         const normalized: RgbColor = {
-          r: Math.round(Math.min(220, Math.max(50, bestBucket.r / bestBucket.count))),
-          g: Math.round(Math.min(220, Math.max(50, bestBucket.g / bestBucket.count))),
-          b: Math.round(Math.min(220, Math.max(50, bestBucket.b / bestBucket.count)))
+          r: Math.round(Math.min(225, Math.max(40, bestBucket.r / bestBucket.weight))),
+          g: Math.round(Math.min(225, Math.max(40, bestBucket.g / bestBucket.weight))),
+          b: Math.round(Math.min(225, Math.max(40, bestBucket.b / bestBucket.weight)))
         };
 
         resolve(normalized);
