@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/cine-compass/static/css/main.bef08dc0.css",
+    "main.js": "/cine-compass/static/js/main.7c285cd9.js",
+    "static/js/453.8e596b45.chunk.js": "/cine-compass/static/js/453.8e596b45.chunk.js",
+    "index.html": "/cine-compass/index.html",
+    "main.bef08dc0.css.map": "/cine-compass/static/css/main.bef08dc0.css.map",
+    "main.7c285cd9.js.map": "/cine-compass/static/js/main.7c285cd9.js.map",
+    "453.8e596b45.chunk.js.map": "/cine-compass/static/js/453.8e596b45.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.bef08dc0.css",
+    "static/js/main.7c285cd9.js"
+  ]
+}
