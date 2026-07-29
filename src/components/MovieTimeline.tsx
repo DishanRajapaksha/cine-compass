@@ -33,18 +33,23 @@ const TIMELINE_PREFS_KEY = 'cineville_timeline_prefs';
 const TIMELINE_THEATER_ORDER_KEY = 'cineville_timeline_theater_order';
 const AMSTERDAM_TIME_ZONE = 'Europe/Amsterdam';
 
-const formatAmsterdamTime = (value: string): string => {
+const formatAmsterdamTime = (value: string | null | undefined): string => {
+  if (!value) return '--:--';
   const withoutZoneMatch = value.match(/T(\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/);
   if (withoutZoneMatch) {
     return withoutZoneMatch[1];
   }
 
-  return new Date(value).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: AMSTERDAM_TIME_ZONE
-  });
+  try {
+    return new Date(value).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: AMSTERDAM_TIME_ZONE
+    });
+  } catch {
+    return '--:--';
+  }
 };
 
 const MovieTimeline: React.FC<MovieTimelineProps> = ({
