@@ -1,328 +1,184 @@
-import { GraphQLClient, gql } from 'graphql-request';
 import {
-  Movie,
-  MovieResponse,
-  CinevilleResponse,
+  City,
   CinevilleFilm,
+  CinevilleResponse,
+  CinevilleShowtime,
   CinevilleTheater,
   CinevilleTheatersResponse,
-  Theater,
-  City,
-  MovieFilters
+  Movie,
+  MovieFilters,
+  MovieResponse,
+  Theater
 } from '../types/Movie';
+import { normalizeLanguageCode } from '../lib/utils';
 
-const CINEVILLE_API_URL = 'https://next.cineville.nl/api/graphql';
+const CINEVILLE_API_URL = 'https://api.cineville.nl';
+const EVENTS_SEARCH_URL = `${CINEVILLE_API_URL}/events/search`;
+const VENUES_URL = `${CINEVILLE_API_URL}/venues`;
+const API_LOCALE = '*';
+const PRIMARY_LOCALE = 'en-GB';
+const FALLBACK_LOCALE = 'nl-NL';
+const PAGE_LIMIT = 999;
 
-// Create a GraphQL client
-const client = new GraphQLClient(CINEVILLE_API_URL, {
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+type EventSearchBody = Record<string, unknown>;
 
-// GraphQL Queries using gql template tag
-const THEATERS_QUERY = gql`
-  query theaters($page: CursorPagination) {
-    theaters(page: $page) {
-      data {
-        id
-        name
-        slug
-        address {
-          city
-          country
-        }
-      }
-    }
-  }
-`;
-
-const FILMS_QUERY = gql`
-  query films(
-    $filters: FilmsFilters
-    $page: CursorPagination
-    $locale: String
-    $fallbackLocale: String
-  ) {
-    films(
-      filters: $filters
-      page: $page
-      locale: $locale
-      fallbackLocale: $fallbackLocale
-    ) {
-      data {
-        id
-        slug
-        title
-        cover {
-          url
-          mime
-          alternativeText
-        }
-        poster {
-          url
-          mime
-          alternativeText
-        }
-        trailer {
-          url
-          mime
-          alternativeText
-        }
-        cast
-        duration
-        directors
-        releaseYear
-        spokenLanguages
-        contentRatingMinimumAge
-        premiereDate
-        shortDescription
-        description
-        editorsNote
-      }
-      count
-      totalCount
-    }
-  }
-`;
-
-const SHOWTIMES_QUERY = gql`
-  query showtimes(
-    $filters: ShowtimesFilters
-    $collections: [CollectionFilter!]
-    $page: CursorPagination
-    $sort: ShowtimesSort
-    $locale: String
-    $fallbackLocale: String
-    $country: String
-  ) {
-    __typename
-    showtimes(
-      filters: $filters
-      collections: $collections
-      page: $page
-      sort: $sort
-      locale: $locale
-      fallbackLocale: $fallbackLocale
-      country: $country
-    ) {
-      __typename
-      count
-      totalCount
-      data {
-        __typename
-        ...showtime
-      }
-      ...pageInfo
-    }
-  }
-
-  fragment asset on Asset {
-    __typename
-    url
-    mime
-    alternativeText
-  }
-
-  fragment filmHighlight on FilmHighlight {
-    __typename
-    type
-    author
-    endDate
-    startDate
-    description
-    label
-    active
-  }
-
-  fragment film on Film {
-    __typename
-    id
-    slug
-    title
-    cover {
-      __typename
-      ...asset
-    }
-    poster {
-      __typename
-      ...asset
-    }
-    trailer {
-      __typename
-      ...asset
-    }
-    cast
-    duration
-    directors
-    releaseYear
-    spokenLanguages
-    contentRatingMinimumAge
-    premiereDate
-    highlights {
-      __typename
-      ...filmHighlight
-    }
-    defaultHighlight
-    shortDescription
-    description
-    editorsNote
-  }
-
-  fragment address on Address {
-    __typename
-    street
-    houseNumber
-    postalCode
-    city
-    country
-  }
-
-  fragment theater on Theater {
-    __typename
-    id
-    slug
-    name
-    address {
-      __typename
-      ...address
-    }
-    cover {
-      __typename
-      ...asset
-    }
-    website
-    shortDescription
-    intro
-    description
-    ticketInfo
-  }
-
-  fragment showtime on Showtime {
-    __typename
-    id
-    film {
-      __typename
-      ...film
-    }
-    theater {
-      __typename
-      ...theater
-    }
-    startDate
-    endDate
-    subtitles
-    subtitlesList
-    languageVersion
-    languageVersionAbbreviation
-    ticketingUrl
-    specials
-  }
-
-  fragment pageInfo on ListResponse {
-    __typename
-    count
-    totalCount
-    previous
-    next
-  }
-`;
-
-const normalizeShowtimeSubtitles = (showtime: any): string => {
-  const fromList = Array.isArray(showtime?.subtitlesList)
-    ? showtime.subtitlesList
-        .map((item: any) => {
-          if (typeof item === 'string') return item.trim();
-          if (item && typeof item === 'object') {
-            const value = item.label ?? item.name ?? item.value ?? item.language;
-            return typeof value === 'string' ? value.trim() : '';
-          }
-          return '';
-        })
-        .filter(Boolean)
-    : [];
-
-  if (fromList.length > 0) {
-    return Array.from(new Set(fromList)).join(', ');
-  }
-
-  if (typeof showtime?.subtitles === 'string') {
-    return showtime.subtitles.trim();
-  }
-
-  return '';
+type NormalizedFilm = {
+  id: string;
+  title: string;
+  posterUrl: string;
+  premiereDate: string | null;
+  shortDescription: string;
+  description: string;
+  duration: number;
+  directors: string[];
+  cast: string[];
+  releaseYear: number;
+  spokenLanguages: string[];
 };
 
-// Convert Cineville film data to our Movie interface
-const convertCinevilleFilmToMovie = (film: CinevilleFilm, showtimes: any[]): Movie => {
-  // No rating provided by the API yet
-  const rating = 0;
+type NormalizedShowtime = {
+  id: string;
+  startDate: string;
+  endDate: string;
+  theater: CinevilleTheater;
+  ticketingUrl: string | null;
+  specials: string;
+  subtitles: string;
+  languageVersion: string | null;
+};
 
-  // Extract unique subtitle and language version options from showtimes
+const isNonEmptyValue = (value: unknown): boolean => {
+  if (value === null || value === undefined || value === '') return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.values(value as object).some(isNonEmptyValue);
+  return true;
+};
+
+const getLocalizedValue = <T>(attributes: Record<string, unknown>, field: string): T | undefined => {
+  const candidates = [
+    attributes[field],
+    (attributes[PRIMARY_LOCALE] as Record<string, unknown> | undefined)?.[field],
+    (attributes[FALLBACK_LOCALE] as Record<string, unknown> | undefined)?.[field]
+  ];
+  return candidates.find(isNonEmptyValue) as T | undefined;
+};
+
+const stringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(Boolean);
+};
+
+const normalizeFilm = (film: CinevilleFilm): NormalizedFilm => {
+  const attributes = film.attributes;
+  const poster = film.assets.poster ?? film.assets.cover;
+  return {
+    id: film.id,
+    title: film.title,
+    posterUrl: poster?.url ?? '',
+    premiereDate: typeof attributes.premiereDate === 'string' ? attributes.premiereDate : null,
+    shortDescription: getLocalizedValue<string>(film.localizableAttributes, 'shortDescription') ?? '',
+    description: getLocalizedValue<string>(film.localizableAttributes, 'description') ?? '',
+    duration: typeof attributes.duration === 'number' ? attributes.duration : 0,
+    directors: stringArray(attributes.directors),
+    cast: stringArray(attributes.cast),
+    releaseYear: typeof attributes.releaseYear === 'number' ? attributes.releaseYear : 0,
+    spokenLanguages: stringArray(attributes.spokenLanguages)
+  };
+};
+
+const normalizeSubtitles = (event: CinevilleShowtime): string =>
+  stringArray(event.attributes.subtitles).join(', ');
+
+const normalizeSpecials = (event: CinevilleShowtime): string => {
+  const tags = stringArray(event.attributes.tags);
+  const customTags = stringArray(getLocalizedValue<unknown>(event.localizableAttributes, 'customTags'));
+  return Array.from(new Set([...tags, ...customTags])).join(', ');
+};
+
+const calculateEndDate = (startDate: string, duration: number): string => {
+  if (!duration) return startDate;
+  const end = new Date(startDate);
+  end.setMinutes(end.getMinutes() + duration + 15);
+  end.setMinutes(Math.floor(end.getMinutes() / 5) * 5, 0, 0);
+  return end.toISOString();
+};
+
+const normalizeEvent = (
+  event: CinevilleShowtime,
+  film: NormalizedFilm
+): NormalizedShowtime | null => {
+  const theater = event._embedded.venue;
+  if (!theater) return null;
+  return {
+    id: event.id,
+    startDate: event.startDate,
+    endDate: event.endDate ?? calculateEndDate(event.startDate, film.duration),
+    theater,
+    ticketingUrl: event.ticketingUrl,
+    specials: normalizeSpecials(event),
+    subtitles: normalizeSubtitles(event),
+    languageVersion:
+      typeof event.attributes.languageVersion === 'string'
+        ? event.attributes.languageVersion
+        : null
+  };
+};
+
+const convertCinevilleFilmToMovie = (
+  film: NormalizedFilm,
+  showtimes: NormalizedShowtime[]
+): Movie => {
   const availableSubtitles = Array.from(new Set(
-    showtimes
-      .map(showtime => normalizeShowtimeSubtitles(showtime))
-      .filter(subtitle => subtitle.trim())
-      .map(subtitle => subtitle.trim())
+    showtimes.map(showtime => showtime.subtitles).filter(Boolean)
   ));
-
   const availableLanguageVersions = Array.from(new Set(
-    showtimes
-      .filter(showtime => showtime.languageVersion && showtime.languageVersion.trim())
-      .map(showtime => showtime.languageVersion.trim())
+    showtimes.map(showtime => showtime.languageVersion?.trim() ?? '').filter(Boolean)
   ));
-
   const availableSpecials = Array.from(new Set(
-    showtimes
-      .map(showtime => showtime.specials || '')
-      .filter(special => special.trim())
-      .map(special => special.trim())
+    showtimes.map(showtime => showtime.specials).filter(Boolean)
   ));
-
-  // Convert showtimes to our format
-  const movieShowtimes = showtimes.map(showtime => ({
-    id: showtime.id,
-    startDate: showtime.startDate,
-    endDate: showtime.endDate,
-    theaterId: showtime.theater.id,
-    theaterName: showtime.theater.name,
-    theaterCity: showtime.theater.address.city,
-    ticketingUrl: showtime.ticketingUrl,
-    specials: showtime.specials,
-    subtitles: normalizeShowtimeSubtitles(showtime),
-    languageVersion: showtime.languageVersion
-  }));
 
   return {
     id: film.id,
     title: film.title,
-    poster_path: film.poster?.url || film.cover?.url || '',
-    release_date: film.premiereDate || `${film.releaseYear}-01-01`,
+    poster_path: film.posterUrl,
+    release_date: film.premiereDate || (film.releaseYear ? `${film.releaseYear}-01-01` : ''),
     overview: film.shortDescription || film.description || 'No description available.',
-    vote_average: Math.round(rating * 10) / 10,
-    genre_ids: [], // Cineville doesn't provide genre IDs in this format
+    vote_average: 0,
+    genre_ids: [],
     duration: film.duration,
-    directors: film.directors || [],
-    cast: film.cast || [],
+    directors: film.directors,
+    cast: film.cast,
     releaseYear: film.releaseYear,
-    spokenLanguages: (film.spokenLanguages || []).filter(lang => lang !== null && lang.trim()),
+    spokenLanguages: film.spokenLanguages,
     availableSubtitles,
     availableLanguageVersions,
     availableSpecials,
-    showtimes: movieShowtimes
+    showtimes: showtimes.map(showtime => ({
+      id: showtime.id,
+      startDate: showtime.startDate,
+      endDate: showtime.endDate,
+      theaterId: showtime.theater.id,
+      theaterName: showtime.theater.name,
+      theaterCity: showtime.theater.address.city,
+      ticketingUrl: showtime.ticketingUrl,
+      specials: showtime.specials || null,
+      subtitles: showtime.subtitles,
+      languageVersion: showtime.languageVersion
+    }))
   };
 };
 
-// Get date range for API call based on filters or default
 const getDateRange = (filters?: MovieFilters) => {
   const now = new Date();
-
   let startDate: Date;
   let endDate: Date;
 
   if (filters?.startDate) {
     startDate = new Date(filters.startDate);
-    // Apply start time if provided
     if (filters.startTime) {
       const [hours, minutes] = filters.startTime.split(':').map(Number);
       startDate.setHours(hours, minutes, 0, 0);
@@ -330,13 +186,11 @@ const getDateRange = (filters?: MovieFilters) => {
       startDate.setHours(0, 0, 0, 0);
     }
   } else {
-    // Use current time as default start
     startDate = new Date(now);
   }
 
   if (filters?.endDate) {
     endDate = new Date(filters.endDate);
-    // Apply end time if provided
     if (filters.endTime) {
       const [hours, minutes] = filters.endTime.split(':').map(Number);
       endDate.setHours(hours, minutes, 59, 999);
@@ -344,388 +198,243 @@ const getDateRange = (filters?: MovieFilters) => {
       endDate.setHours(23, 59, 59, 999);
     }
   } else {
-    // Use end of current day as default
     endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
   }
 
-  return {
-    gte: startDate.toISOString(),
-    lt: endDate.toISOString()
-  };
+  return { gte: startDate.toISOString(), lt: endDate.toISOString() };
 };
 
-// Cache for all theater IDs to avoid repeated API calls
 let allTheaterIdsCache: string[] | null = null;
 let theatersCache: CinevilleTheater[] | null = null;
+let theatersPromise: Promise<CinevilleTheater[]> | null = null;
 const cityTheaterIdsCache = new Map<string, string[]>();
+const eventRequests = new Map<string, Promise<CinevilleResponse>>();
 
-// Load theaters once and reuse across helpers
+const fetchJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(url, init);
+  if (!response.ok) throw new Error(`Cineville API request failed with ${response.status}`);
+  return response.json() as Promise<T>;
+};
+
 const loadTheaters = async (): Promise<CinevilleTheater[]> => {
-  if (theatersCache) {
-    return theatersCache;
-  }
+  if (theatersCache) return theatersCache;
+  if (theatersPromise) return theatersPromise;
+
+  theatersPromise = (async () => {
+    const venues: CinevilleTheater[] = [];
+    let nextUrl: string | undefined = VENUES_URL;
+    while (nextUrl) {
+      const page: CinevilleTheatersResponse = await fetchJson<CinevilleTheatersResponse>(
+        nextUrl.startsWith('http') ? nextUrl : `${CINEVILLE_API_URL}${nextUrl}`
+      );
+      venues.push(...page._embedded.venues.filter(venue => !venue.isHidden));
+      nextUrl = page._links.next?.href;
+    }
+    theatersCache = venues;
+    return venues;
+  })();
 
   try {
-    const response = await client.request<{ theaters: CinevilleTheatersResponse['data']['theaters'] }>(THEATERS_QUERY, {
-      page: {
-        limit: 999
-      }
-    });
-
-    theatersCache = response.theaters.data;
-    return theatersCache;
-  } catch (error) {
-    console.error('Error fetching theaters:', error);
-    return [];
+    return await theatersPromise;
+  } finally {
+    theatersPromise = null;
   }
 };
 
-// Helper function to get all theater IDs
 const getAllTheaterIds = async (): Promise<string[]> => {
-  if (allTheaterIdsCache) {
-    return allTheaterIdsCache;
-  }
-
-  const theaters = await loadTheaters();
-  allTheaterIdsCache = theaters.map(theater => theater.id);
+  if (allTheaterIdsCache) return allTheaterIdsCache;
+  allTheaterIdsCache = (await loadTheaters()).map(theater => theater.id);
   return allTheaterIdsCache;
 };
 
-// Helper function to get theater IDs by city
 const getTheaterIdsByCity = async (cityName: string): Promise<string[]> => {
-  if (cityTheaterIdsCache.has(cityName)) {
-    return cityTheaterIdsCache.get(cityName)!;
-  }
-
-  const theaters = await loadTheaters();
-  const theaterIds = theaters
+  const cached = cityTheaterIdsCache.get(cityName);
+  if (cached) return cached;
+  const ids = (await loadTheaters())
     .filter(theater => theater.address.city === cityName)
     .map(theater => theater.id);
-
-  cityTheaterIdsCache.set(cityName, theaterIds);
-  return theaterIds;
+  cityTheaterIdsCache.set(cityName, ids);
+  return ids;
 };
 
 const resolveVenueIds = async (filters?: MovieFilters): Promise<string[]> => {
-  if (filters?.selectedTheaters?.length) {
-    return filters.selectedTheaters;
-  }
-
-  if (filters?.selectedCity) {
-    return getTheaterIdsByCity(filters.selectedCity);
-  }
-
+  if (filters?.selectedTheaters?.length) return filters.selectedTheaters;
+  if (filters?.selectedCity) return getTheaterIdsByCity(filters.selectedCity);
   return getAllTheaterIds();
 };
 
-type BuildApiFiltersOptions = {
-  includeSubtitleFilter?: boolean;
-};
-
-const buildApiFilters = async (filters?: MovieFilters, options: BuildApiFiltersOptions = {}) => {
-  const dateRange = getDateRange(filters);
-
-  const apiFilters: Record<string, unknown> = {
-    startDate: dateRange,
-    venue: {
-      collections: []
-    }
-  };
-
+const buildEventSearchBody = async (
+  filters?: MovieFilters,
+  includeSubtitleFilter = false
+): Promise<EventSearchBody> => {
   const venueIds = await resolveVenueIds(filters);
-  if (venueIds.length > 0) {
-    apiFilters.venueId = {
-      in: venueIds
-    };
+  const body: EventSearchBody = {
+    startDate: getDateRange(filters),
+    productionId: { isNull: false },
+    isHidden: { eq: false },
+    embed: { production: true, venue: true },
+    sort: { startDate: 'asc' },
+    page: { limit: PAGE_LIMIT }
+  };
+  if (venueIds.length) body.venueId = { in: venueIds };
+  if (includeSubtitleFilter && filters?.selectedSubtitleLanguages?.length) {
+    body.subtitles = { contains: filters.selectedSubtitleLanguages };
   }
-
-  if (options.includeSubtitleFilter && filters?.selectedSubtitleLanguages?.length) {
-    apiFilters.subtitles = {
-      contains: filters.selectedSubtitleLanguages
-    };
-  }
-
-  return { apiFilters, dateRange };
+  return body;
 };
+
+const searchEvents = async (body: EventSearchBody): Promise<CinevilleResponse> => {
+  const cacheKey = JSON.stringify(body);
+  const cached = eventRequests.get(cacheKey);
+  if (cached) return cached;
+
+  const request = fetchJson<CinevilleResponse>(EVENTS_SEARCH_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      locale: API_LOCALE
+    },
+    body: cacheKey
+  });
+  eventRequests.set(cacheKey, request);
+  try {
+    return await request;
+  } catch (error) {
+    eventRequests.delete(cacheKey);
+    throw error;
+  }
+};
+
+const moviesFromEvents = (events: CinevilleShowtime[], filters?: MovieFilters, includePosterless = false): Movie[] => {
+  const grouped = new Map<string, { film: NormalizedFilm; showtimes: NormalizedShowtime[] }>();
+  const selectedSpecials = filters?.selectedSpecials ?? [];
+
+  events.forEach(event => {
+    const rawFilm = event._embedded.production;
+    if (!rawFilm) return;
+    const film = normalizeFilm(rawFilm);
+    const showtime = normalizeEvent(event, film);
+    if (!showtime) return;
+    if (
+      selectedSpecials.length > 0 &&
+      !selectedSpecials.some(selected =>
+        showtime.specials.toLowerCase().includes(selected.toLowerCase())
+      )
+    ) return;
+
+    const entry = grouped.get(film.id) ?? { film, showtimes: [] };
+    entry.showtimes.push(showtime);
+    grouped.set(film.id, entry);
+  });
+
+  let movies = Array.from(grouped.values())
+    .map(({ film, showtimes }) => convertCinevilleFilmToMovie(film, showtimes))
+    .filter(movie => includePosterless || movie.poster_path);
+
+  if (filters?.selectedSubtitleLanguages?.length) {
+    movies = movies.filter(movie => filters.selectedSubtitleLanguages.some(selected =>
+      movie.availableSubtitles.some(available =>
+        available.toLowerCase().includes(selected.toLowerCase())
+      )
+    ));
+  }
+  if (filters?.selectedSpokenLanguages?.length) {
+    movies = movies.filter(movie => filters.selectedSpokenLanguages.some(selected =>
+      movie.spokenLanguages.some(available =>
+        normalizeLanguageCode(available) === normalizeLanguageCode(selected)
+      )
+    ));
+  }
+  return movies;
+};
+
+const asMovieResponse = (movies: Movie[]): MovieResponse => ({
+  page: 1,
+  results: movies,
+  total_pages: 1,
+  total_results: movies.length
+});
 
 export const movieService = {
-  getAvailableLanguages: async (filters?: MovieFilters): Promise<{ subtitleLanguages: string[] }> => {
-    return {
-      subtitleLanguages: ['en']
-    };
-  },
+  getAvailableLanguages: async (): Promise<{ subtitleLanguages: string[] }> => ({
+    subtitleLanguages: ['en']
+  }),
 
   getAvailableSpecials: async (filters?: MovieFilters): Promise<{ specials: string[] }> => {
     try {
-      const { apiFilters } = await buildApiFilters(filters);
-
-      const response = await client.request<{ showtimes: CinevilleResponse['data']['showtimes'] }>(SHOWTIMES_QUERY, {
-        collections: [],
-        country: 'NL',
-        fallbackLocale: 'nl-NL',
-        filters: apiFilters,
-        locale: 'en-GB',
-        page: {
-          limit: 999
-        }
+      const response = await searchEvents(await buildEventSearchBody(filters));
+      const specials = new Set<string>();
+      response._embedded.events.forEach(event => {
+        const value = normalizeSpecials(event);
+        if (value) specials.add(value);
       });
-
-      // Extract unique specials from all showtimes
-      const specialsSet = new Set<string>();
-      response.showtimes.data.forEach(showtime => {
-        if (showtime.specials && showtime.specials.trim()) {
-          specialsSet.add(showtime.specials.trim());
-        }
-      });
-
-      return {
-        specials: Array.from(specialsSet).sort()
-      };
+      return { specials: Array.from(specials).sort() };
     } catch (error) {
       console.error('Error fetching specials from Cineville API:', error);
-      return {
-        specials: []
-      };
+      return { specials: [] };
     }
   },
 
   getTheaters: async (): Promise<City[]> => {
     try {
-      const theaters = await loadTheaters();
-
-      // Group theaters by city
       const theatersByCity = new Map<string, Theater[]>();
-
-      theaters.forEach(theater => {
+      (await loadTheaters()).forEach(theater => {
         const city = theater.address.city;
-        if (!theatersByCity.has(city)) {
-          theatersByCity.set(city, []);
-        }
-        theatersByCity.get(city)!.push({
-          id: theater.id,
-          name: theater.name,
-          city: city
-        });
+        const theaters = theatersByCity.get(city) ?? [];
+        theaters.push({ id: theater.id, name: theater.name, city });
+        theatersByCity.set(city, theaters);
       });
-
-      // Convert to City array and sort
-      const cities: City[] = Array.from(theatersByCity.entries())
-        .map(([cityName, theaters]) => ({
-          name: cityName,
+      return Array.from(theatersByCity.entries())
+        .map(([name, theaters]) => ({
+          name,
           theaters: theaters.sort((a, b) => a.name.localeCompare(b.name))
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
-
-      return cities;
     } catch (error) {
       console.error('Error fetching theaters from Cineville API:', error);
       throw new Error('Failed to fetch theaters');
     }
   },
 
-  getPopularMovies: async (filters?: MovieFilters): Promise<MovieResponse> => {
+  getPopularMovies: async (filters?: MovieFilters, includePosterless = false): Promise<MovieResponse> => {
     try {
-      const { apiFilters } = await buildApiFilters(filters, { includeSubtitleFilter: true });
-
-      const response = await client.request<{ showtimes: CinevilleResponse['data']['showtimes'] }>(SHOWTIMES_QUERY, {
-        collections: [],
-        country: 'NL',
-        fallbackLocale: 'nl-NL',
-        filters: apiFilters,
-        locale: 'en-GB',
-        page: {
-          limit: 999
-        }
-      });
-
-      // Extract unique films from showtimes and group showtimes by film
-      const filmShowtimes = new Map<string, { film: CinevilleFilm; showtimes: any[] }>();
-
-      // Filter showtimes based on specials if selected
-      const shouldFilterBySpecials = (filters?.selectedSpecials?.length ?? 0) > 0;
-
-      response.showtimes.data.forEach(showtime => {
-        // If specials filter is active, only include showtimes that match
-        if (shouldFilterBySpecials && filters) {
-          const showtimeSpecials = showtime.specials?.toLowerCase() || '';
-          const hasMatchingSpecial = filters.selectedSpecials.some(selectedSpecial =>
-            showtimeSpecials.includes(selectedSpecial.toLowerCase())
-          );
-          if (!hasMatchingSpecial) {
-            return; // Skip this showtime
-          }
-        }
-
-        if (!filmShowtimes.has(showtime.film.id)) {
-          filmShowtimes.set(showtime.film.id, {
-            film: showtime.film,
-            showtimes: []
-          });
-        }
-        filmShowtimes.get(showtime.film.id)!.showtimes.push(showtime);
-      });
-
-      let movies = Array.from(filmShowtimes.values())
-        .map(({ film, showtimes }) => convertCinevilleFilmToMovie(film, showtimes))
-        .filter(movie => movie.poster_path); // Only include movies with posters
-
-      // Apply subtitle language filter if specified
-      if (filters?.selectedSubtitleLanguages?.length) {
-        movies = movies.filter(movie => {
-          // Check if the movie has any of the selected subtitle languages
-          return filters.selectedSubtitleLanguages.some(selectedLang =>
-            movie.availableSubtitles.some(availableSubtitle =>
-              availableSubtitle.toLowerCase().includes(selectedLang.toLowerCase())
-            )
-          );
-        });
-      }
-
-      if (filters?.selectedSpokenLanguages?.length) {
-        movies = movies.filter(movie => {
-          return filters.selectedSpokenLanguages.some(selectedLang =>
-            movie.spokenLanguages.some(lang =>
-              lang.toLowerCase().includes(selectedLang.toLowerCase())
-            )
-          );
-        });
-      }
-
-      return {
-        page: 1,
-        results: movies,
-        total_pages: 1,
-        total_results: movies.length
-      };
+      const response = await searchEvents(await buildEventSearchBody(filters, true));
+      return asMovieResponse(moviesFromEvents(response._embedded.events, filters, includePosterless));
     } catch (error) {
       console.error('Error fetching movies from Cineville API:', error);
       throw new Error('Failed to fetch movies');
     }
   },
 
+  getMovieShowtimes: async (movieId: string, filters?: MovieFilters): Promise<Movie | null> => {
+    const body = await buildEventSearchBody(filters);
+    body.productionId = { eq: movieId };
+    if (!filters?.endDate) delete (body.startDate as Record<string, unknown>).lt;
+    const events: CinevilleShowtime[] = [];
+    let nextUrl: string | undefined = EVENTS_SEARCH_URL;
+    const visited = new Set<string>();
+    while (nextUrl) {
+      if (visited.has(nextUrl)) throw new Error('Repeated showtime page');
+      visited.add(nextUrl);
+      const response: CinevilleResponse = await fetchJson<CinevilleResponse>(nextUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', locale: API_LOCALE }, body: JSON.stringify(body)
+      });
+      events.push(...response._embedded.events);
+      const href: string | undefined = response._links.next?.href;
+      nextUrl = href ? new URL(href, CINEVILLE_API_URL).href : undefined;
+    }
+    return moviesFromEvents(events, filters, true).find(movie => movie.id === movieId) || null;
+  },
+
   searchMovies: async (query: string, filters?: MovieFilters): Promise<MovieResponse> => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return asMovieResponse([]);
     try {
-      if (!query.trim()) {
-        return {
-          page: 1,
-          results: [],
-          total_pages: 1,
-          total_results: 0
-        };
-      }
-
-      // Use the films API with title filter
-      const response = await client.request<{ films: { data: CinevilleFilm[]; count: number; totalCount: number } }>(FILMS_QUERY, {
-        filters: {
-          title: {
-            contains: query
-          }
-        },
-        locale: 'en-GB',
-        fallbackLocale: 'nl-NL',
-        page: {
-          limit: 100
-        }
-      });
-
-      // Get showtimes for these films to populate showtime data
-      // This will respect the sidebar filters when the user views the film
-      const filmIds = response.films.data.map(film => film.id);
-
-      if (filmIds.length === 0) {
-        return {
-          page: 1,
-          results: [],
-          total_pages: 1,
-          total_results: 0
-        };
-      }
-
-      // Get showtimes for the found films with current filters
-      const { apiFilters } = await buildApiFilters(filters, { includeSubtitleFilter: true });
-
-      const showtimesResponse = await client.request<{ showtimes: CinevilleResponse['data']['showtimes'] }>(SHOWTIMES_QUERY, {
-        collections: [],
-        country: 'NL',
-        fallbackLocale: 'nl-NL',
-        filters: {
-          ...apiFilters,
-          productionId: {
-            in: filmIds
-          }
-        },
-        locale: 'en-GB',
-        page: {
-          limit: 999
-        }
-      });
-
-      // Group showtimes by film
-      const filmShowtimes = new Map<string, { film: CinevilleFilm; showtimes: any[] }>();
-
-      // Filter showtimes based on specials if selected
-      const shouldFilterBySpecials = (filters?.selectedSpecials?.length ?? 0) > 0;
-
-      showtimesResponse.showtimes.data.forEach(showtime => {
-        // If specials filter is active, only include showtimes that match
-        if (shouldFilterBySpecials && filters) {
-          const showtimeSpecials = showtime.specials?.toLowerCase() || '';
-          const hasMatchingSpecial = filters.selectedSpecials.some(selectedSpecial =>
-            showtimeSpecials.includes(selectedSpecial.toLowerCase())
-          );
-          if (!hasMatchingSpecial) {
-            return; // Skip this showtime
-          }
-        }
-
-        if (!filmShowtimes.has(showtime.film.id)) {
-          filmShowtimes.set(showtime.film.id, {
-            film: showtime.film,
-            showtimes: []
-          });
-        }
-        filmShowtimes.get(showtime.film.id)!.showtimes.push(showtime);
-      });
-
-      // Convert films to movies, including those without showtimes
-      const movies = response.films.data.map(film => {
-        const filmData = filmShowtimes.get(film.id);
-        const showtimes = filmData?.showtimes || [];
-        return convertCinevilleFilmToMovie(film, showtimes);
-      }).filter(movie => movie.poster_path); // Only include movies with posters
-
-      // Apply subtitle language filter if specified
-      let filteredMovies = movies;
-      if (filters?.selectedSubtitleLanguages?.length) {
-        filteredMovies = filteredMovies.filter(movie => {
-          // If movie has no showtimes, include it (user can see it has no matching showtimes)
-          if (movie.showtimes.length === 0) return true;
-
-          return filters.selectedSubtitleLanguages.some(selectedLang =>
-            movie.availableSubtitles.some(availableSubtitle =>
-              availableSubtitle.toLowerCase().includes(selectedLang.toLowerCase())
-            )
-          );
-        });
-      }
-
-      if (filters?.selectedSpokenLanguages?.length) {
-        filteredMovies = filteredMovies.filter(movie => {
-          return filters.selectedSpokenLanguages.some(selectedLang =>
-            movie.spokenLanguages.some(lang =>
-              lang.toLowerCase().includes(selectedLang.toLowerCase())
-            )
-          );
-        });
-      }
-
-      return {
-        page: 1,
-        results: filteredMovies,
-        total_pages: 1,
-        total_results: filteredMovies.length
-      };
+      const response = await searchEvents(await buildEventSearchBody(filters, true));
+      const movies = moviesFromEvents(response._embedded.events, filters)
+        .filter(movie => movie.title.toLocaleLowerCase().includes(normalizedQuery));
+      return asMovieResponse(movies);
     } catch (error) {
       console.error('Error searching movies from Cineville API:', error);
       throw new Error('Failed to search movies');

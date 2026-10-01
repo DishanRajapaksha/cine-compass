@@ -29,6 +29,30 @@ export function getCurrentDateInAmsterdam(): string {
   return `${year}-${month}-${day}`;
 }
 
+export function getCurrentTimeInAmsterdam(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Amsterdam',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(new Date());
+
+  const hour = parts.find((part) => part.type === 'hour')?.value;
+  const minute = parts.find((part) => part.type === 'minute')?.value;
+  if (hour && minute) return `${hour}:${minute}`;
+
+  const localNow = new Date();
+  return `${String(localNow.getHours()).padStart(2, '0')}:${String(localNow.getMinutes()).padStart(2, '0')}`;
+}
+
+export function normalizeLanguageCode(language: string): string {
+  return language.trim().replace('_', '-').split('-')[0].toLowerCase();
+}
+
+export function normalizeLanguageCodes(languages: string[]): string[] {
+  return Array.from(new Set(languages.map(normalizeLanguageCode).filter(Boolean)));
+}
+
 export function hasEnglishSubtitles(subtitles: string | null | undefined): boolean {
   if (!subtitles) return false;
 

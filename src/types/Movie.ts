@@ -1,13 +1,11 @@
 // Cineville API types
 export interface CinevilleAsset {
-  __typename: string;
+  id: string;
   url: string;
-  mime: string | null;
-  alternativeText: string | null;
+  mimeType: string | null;
 }
 
 export interface CinevilleAddress {
-  __typename: string;
   street: string;
   houseNumber: string;
   postalCode: string;
@@ -16,67 +14,59 @@ export interface CinevilleAddress {
 }
 
 export interface CinevilleTheater {
-  __typename: string;
   id: string;
   slug: string;
   name: string;
   address: CinevilleAddress;
-  cover: CinevilleAsset | null;
-  website: string | null;
-  shortDescription: string | null;
-  intro: string | null;
-  description: string | null;
-  ticketInfo: string | null;
-}
-
-export interface CinevilleTheatersResponse {
-  data: {
-    theaters: {
-      data: CinevilleTheater[];
-    };
-  };
+  assets: Record<string, CinevilleAsset | null>;
+  attributes: Record<string, unknown>;
+  localizableAttributes: Record<string, unknown>;
+  isHidden: boolean;
 }
 
 export interface CinevilleFilm {
-  __typename: string;
   id: string;
   slug: string;
   title: string;
-  cover: CinevilleAsset | null;
-  poster: CinevilleAsset | null;
-  trailer: CinevilleAsset | null;
-  cast: string[] | null;
-  duration: number;
-  directors: string[] | null;
-  releaseYear: number;
-  spokenLanguages: string[] | null;
-  contentRatingMinimumAge: number | null;
-  premiereDate: string | null;
-  shortDescription: string;
-  description: string;
-  editorsNote: string | null;
+  assets: Record<string, CinevilleAsset | null>;
+  attributes: Record<string, unknown>;
+  localizableAttributes: Record<string, unknown>;
 }
 
 export interface CinevilleShowtime {
-  __typename: string;
   id: string;
-  film: CinevilleFilm;
-  theater: CinevilleTheater;
+  productionId: string | null;
+  venueId: string;
   startDate: string;
-  endDate: string;
-  subtitles: string;
-  languageVersion: string | null;
+  endDate: string | null;
   ticketingUrl: string | null;
-  specials: string | null;
+  attributes: Record<string, unknown>;
+  localizableAttributes: Record<string, unknown>;
+  _embedded: {
+    production?: CinevilleFilm;
+    venue?: CinevilleTheater;
+  };
 }
 
 export interface CinevilleResponse {
-  data: {
-    showtimes: {
-      count: number;
-      totalCount: number;
-      data: CinevilleShowtime[];
-    };
+  count: number;
+  totalCount: number;
+  _links: {
+    next?: { href: string };
+  };
+  _embedded: {
+    events: CinevilleShowtime[];
+  };
+}
+
+export interface CinevilleTheatersResponse {
+  count: number;
+  totalCount: number;
+  _links: {
+    next?: { href: string };
+  };
+  _embedded: {
+    venues: CinevilleTheater[];
   };
 }
 
@@ -113,6 +103,12 @@ export interface MovieShowtime {
   languageVersion: string | null;
 }
 
+export interface HiddenMovie {
+  id: string;
+  title: string;
+  year?: number;
+}
+
 export interface SavedShowtime {
   movieId: string;
   movieTitle: string;
@@ -146,6 +142,7 @@ export interface City {
 }
 
 export interface MovieFilters {
+  languageMatchMode?: 'any' | 'all';
   selectedCity: string | null;
   selectedTheaters: string[];
   selectedSubtitleLanguages: string[];

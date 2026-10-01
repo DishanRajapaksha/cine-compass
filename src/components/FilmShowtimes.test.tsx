@@ -1,0 +1,28 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import FilmShowtimes from './FilmShowtimes';
+import { movieService } from '../services/movieService';
+import { Movie } from '../types/Movie';
+jest.mock('../services/movieService');
+const service=movieService as jest.Mocked<typeof movieService>;
+const film: Movie={id:'film',title:'A Film',poster_path:'',release_date:'',overview:'',vote_average:0,genre_ids:[],duration:90,directors:[],cast:[],releaseYear:2026,spokenLanguages:['en'],availableSubtitles:['en','nl'],availableLanguageVersions:[],availableSpecials:['classic'],showtimes:[{id:'first',startDate:'2099-10-01T16:00:00Z',endDate:'2099-10-01T17:30:00Z',theaterId:'eye',theaterName:'Eye',theaterCity:'Amsterdam',ticketingUrl:null,specials:'classic',subtitles:'en',languageVersion:null},{id:'second',startDate:'2099-10-02T18:00:00Z',endDate:'2099-10-02T19:30:00Z',theaterId:'lab',theaterName:'LAB111',theaterCity:'Amsterdam',ticketingUrl:null,specials:null,subtitles:'nl',languageVersion:null}]};
+test('all showtimes has independent full filters, filters individual screenings and saves alternatives',async () => {
+  service.getMovieShowtimes.mockResolvedValue(film);
+  const save=jest.fn(); const plan=jest.fn();
+  render(<FilmShowtimes movieId="film" movieTitle="A Film" cities={[{name:'Amsterdam',theaters:[{id:'eye',name:'Eye',city:'Amsterdam'},{id:'lab',name:'LAB111',city:'Amsterdam'}]}]} initialCity="Amsterdam" saved={[]} onSave={save} onPlan={plan}/>);
+  await screen.findByText('2 screenings');
+  fireEvent.click(screen.getByRole('button',{name:'Filter showtimes'}));
+  for(const name of ['City','Subtitles','Spoken language','Special screenings']) expect(screen.getByRole('combobox',{name})).toBeInTheDocument();
+  expect(screen.getByLabelText('After')).toHaveValue('');
+  expect(screen.getByLabelText('To')).toHaveValue('');
+  expect(screen.getByRole('button',{name:'Any (OR)'})).toHaveAttribute('aria-pressed','true');
+  fireEvent.click(screen.getByRole('button',{name:'All (AND)'}));
+  fireEvent.change(screen.getByRole('combobox',{name:'Subtitles'}),{target:{value:'en'}});
+  expect(screen.getByText('1 screening')).toBeInTheDocument();
+  expect(screen.queryByText('LAB111')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Save A Film at 18:00'}));
+  expect(save).toHaveBeenCalledWith({movie:film,showtime:film.showtimes[0]});
+  fireEvent.click(screen.getByRole('button',{name:'18:00 19:30'}));
+  expect(plan).toHaveBeenCalledWith({movie:film,showtime:film.showtimes[0]});
+  expect(service.getMovieShowtimes).toHaveBeenCalledTimes(1);
+});

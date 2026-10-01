@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { City, MovieFilters } from '../types/Movie';
-import { getCurrentDateInAmsterdam } from '../lib/utils';
+import { getCurrentDateInAmsterdam, normalizeLanguageCodes } from '../lib/utils';
 
 interface MovieFiltersProps {
   cities: City[];
@@ -229,10 +229,12 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
 }) => {
   const [selectedCity, setSelectedCity] = useState<string>(filters.selectedCity || '');
   const [selectedTheaters, setSelectedTheaters] = useState<string[]>(filters.selectedTheaters);
-  const [theatersCollapsed, setTheatersCollapsed] = useState<boolean>(false);
+  const [theatersCollapsed, setTheatersCollapsed] = useState<boolean>(true);
 
   const [selectedSubtitleLanguages, setSelectedSubtitleLanguages] = useState<string[]>(filters.selectedSubtitleLanguages);
-  const [selectedSpokenLanguages, setSelectedSpokenLanguages] = useState<string[]>(filters.selectedSpokenLanguages);
+  const [selectedSpokenLanguages, setSelectedSpokenLanguages] = useState<string[]>(
+    normalizeLanguageCodes(filters.selectedSpokenLanguages)
+  );
   const [selectedSpecials, setSelectedSpecials] = useState<string[]>(filters.selectedSpecials);
   const [startTime, setStartTime] = useState<string>(filters.startTime || '');
   const [endTime, setEndTime] = useState<string>(filters.endTime || '');
@@ -243,7 +245,7 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
   };
   const [startDate, setStartDate] = useState<string>(filters.startDate || defaultDates.startDate);
   const [endDate, setEndDate] = useState<string>(filters.endDate || defaultDates.endDate);
-  const [spokenLanguagesCollapsed, setSpokenLanguagesCollapsed] = useState<boolean>(false);
+  const [spokenLanguagesCollapsed, setSpokenLanguagesCollapsed] = useState<boolean>(true);
   const [specialsCollapsed, setSpecialsCollapsed] = useState<boolean>(false);
 
   // Update local state when filters prop changes (for default values)
@@ -252,7 +254,13 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
     setSelectedTheaters(filters.selectedTheaters);
 
     setSelectedSubtitleLanguages(filters.selectedSubtitleLanguages);
-    setSelectedSpokenLanguages(filters.selectedSpokenLanguages);
+    const normalizedSpokenLanguages = normalizeLanguageCodes(filters.selectedSpokenLanguages);
+    setSelectedSpokenLanguages((current) => (
+      current.length === normalizedSpokenLanguages.length &&
+      current.every((language, index) => language === normalizedSpokenLanguages[index])
+        ? current
+        : normalizedSpokenLanguages
+    ));
     setSelectedSpecials(filters.selectedSpecials);
     setStartTime(filters.startTime || '');
     setEndTime(filters.endTime || '');
@@ -266,6 +274,8 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
       .filter(theater => selectedTheaters.includes(theater.id))
       .map(theater => theater.name)
     : [];
+  const otherSpokenLanguages = availableSpokenLanguages.filter(language => language !== 'en');
+  const selectedOtherSpokenLanguages = selectedSpokenLanguages.filter(language => language !== 'en');
 
   useEffect(() => {
     onFiltersChange({
@@ -348,7 +358,8 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
     setEndTime('');
     setStartDate('');
     setEndDate('');
-    setSpokenLanguagesCollapsed(false);
+    setTheatersCollapsed(true);
+    setSpokenLanguagesCollapsed(true);
     setSpecialsCollapsed(false);
   };
 
@@ -492,6 +503,18 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
       )}
 
       <FilterSection>
+        <FilterLabel as="div">Spoken Languages</FilterLabel>
+        <TheatersGrid>
+          <TheaterCheckbox checked={selectedSpokenLanguages.includes('en')}>
+            <CheckboxInput
+              type="checkbox"
+              checked={selectedSpokenLanguages.includes('en')}
+              onChange={(e) => handleSpokenLanguageChange('en', e.target.checked)}
+            />
+            en
+          </TheaterCheckbox>
+        </TheatersGrid>
+
         <SectionHeader
           role="button"
           tabIndex={0}
@@ -503,16 +526,17 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
             }
           }}
           aria-expanded={!spokenLanguagesCollapsed}
-          aria-label="Toggle spoken languages"
+          aria-label="Toggle other spoken languages"
+          style={{ marginTop: 10 }}
         >
-          <FilterLabel as="div" style={{ marginBottom: 0, flex: 1 }}>Spoken Languages</FilterLabel>
+          <FilterLabel as="div" style={{ marginBottom: 0, flex: 1 }}>Other languages</FilterLabel>
           <CollapseIndicator $collapsed={spokenLanguagesCollapsed}>▾</CollapseIndicator>
         </SectionHeader>
 
         {!spokenLanguagesCollapsed && (
           <TheatersGrid>
-            {(availableSpokenLanguages && availableSpokenLanguages.length > 0) ? (
-              availableSpokenLanguages.map(language => {
+            {otherSpokenLanguages.length > 0 ? (
+              otherSpokenLanguages.map(language => {
                 const isChecked = selectedSpokenLanguages.includes(language);
                 return (
                   <TheaterCheckbox key={language} checked={isChecked}>
@@ -531,10 +555,10 @@ const MovieFiltersComponent: React.FC<MovieFiltersProps> = ({
           </TheatersGrid>
         )}
 
-        {spokenLanguagesCollapsed && selectedSpokenLanguages.length > 0 && (
+        {spokenLanguagesCollapsed && selectedOtherSpokenLanguages.length > 0 && (
           <SelectedSummary>
             <SelectedPills>
-              {selectedSpokenLanguages.map(language => (
+              {selectedOtherSpokenLanguages.map(language => (
                 <SelectedPill key={language}>{language}</SelectedPill>
               ))}
             </SelectedPills>

@@ -6,7 +6,13 @@ import MovieModal from './MovieModal';
 import MovieFiltersComponent from './MovieFilters';
 import MovieTimeline from './MovieTimeline';
 import MovieSearch from './MovieSearch';
-import { cn, getCurrentDateInAmsterdam } from '../lib/utils';
+import {
+  cn,
+  getCurrentDateInAmsterdam,
+  getCurrentTimeInAmsterdam,
+  normalizeLanguageCode,
+  normalizeLanguageCodes
+} from '../lib/utils';
 import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 
@@ -195,6 +201,10 @@ const MovieGallery: React.FC = () => {
     startDate: todayInAmsterdam,
     endDate: todayInAmsterdam
   };
+  const defaultTimes = {
+    startTime: getCurrentTimeInAmsterdam(),
+    endTime: '23:59'
+  };
   const loadStoredFilters = (): MovieFilters | null => {
     if (typeof window === 'undefined') return null;
     try {
@@ -207,10 +217,10 @@ const MovieGallery: React.FC = () => {
         selectedCity: parsed.selectedCity ?? 'Amsterdam',
         selectedTheaters: parsed.selectedTheaters ?? [],
         selectedSubtitleLanguages: parsed.selectedSubtitleLanguages ?? [],
-        selectedSpokenLanguages: parsed.selectedSpokenLanguages ?? [],
+        selectedSpokenLanguages: normalizeLanguageCodes(parsed.selectedSpokenLanguages ?? []),
         selectedSpecials: parsed.selectedSpecials ?? [],
-        startTime: parsed.startTime ?? null,
-        endTime: parsed.endTime ?? null,
+        startTime: parsed.startTime ?? defaultTimes.startTime,
+        endTime: parsed.endTime ?? defaultTimes.endTime,
         startDate: normalizedStartDate,
         endDate: normalizedEndDate
       };
@@ -227,8 +237,8 @@ const MovieGallery: React.FC = () => {
       selectedSubtitleLanguages: [],
       selectedSpokenLanguages: [],
       selectedSpecials: [],
-      startTime: null,
-      endTime: null,
+      startTime: defaultTimes.startTime,
+      endTime: defaultTimes.endTime,
       startDate: defaultDates.startDate,
       endDate: defaultDates.endDate
     };
@@ -321,13 +331,13 @@ const MovieGallery: React.FC = () => {
     movies.forEach((movie) => {
       (movie.spokenLanguages || []).forEach((lang) => {
         if (lang && lang.trim()) {
-          set.add(lang.trim());
+          set.add(normalizeLanguageCode(lang));
         }
       });
     });
     filters.selectedSpokenLanguages.forEach((lang) => {
       if (lang && lang.trim()) {
-        set.add(lang.trim());
+        set.add(normalizeLanguageCode(lang));
       }
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));

@@ -61,14 +61,14 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
   savedShowtimeIds = []
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    if (typeof window === 'undefined') return 'grid';
+    if (typeof window === 'undefined') return 'list';
     try {
       const stored = localStorage.getItem(TIMELINE_PREFS_KEY);
-      if (!stored) return 'grid';
+      if (!stored) return 'list';
       const parsed = JSON.parse(stored);
-      return parsed?.viewMode === 'list' ? 'list' : 'grid';
+      return parsed?.viewMode === 'grid' ? 'grid' : 'list';
     } catch {
-      return 'grid';
+      return 'list';
     }
   });
   const [availabilityMode, setAvailabilityMode] = useState<'highlight' | 'hide'>(() => {
