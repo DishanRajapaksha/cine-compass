@@ -88,3 +88,7 @@ Public listings continue to work. CineCompass accounts do not authenticate with 
 - A display preference persisted in PostgreSQL and was restored after clearing browser storage and signing in again.
 - Settings dialog inspected at 390 × 844 with no horizontal overflow.
 - Docker image build and remote HTTPS deployment were not verified: the local Docker daemon was unavailable. No physical authenticator ceremony was performed.
+
+## Gont
+
+The checkout is `/home/dishan/Projects/cine-compass`. Use `compose.yaml` plus `compose.gont.yaml` and a server-only `.env` with `PUBLIC_ORIGIN=https://cinecompass.talesfrom.earth`. The Gont override removes published ports and joins `cinecompass_gateway`, where Caddy reaches `cinecompass-app:8080`. Shared gateway configuration is tracked in the `galenor` infrastructure repository. Run `./deploy-gont.sh` for subsequent updates. The Cloudflare Tunnel hostname routes to the existing gateway at `http://127.0.0.1:8888`.

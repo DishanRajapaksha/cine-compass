@@ -1,0 +1,18 @@
+name: cinecompass
+services:
+  app:
+    ports: !reset []
+    networks:
+      default: {}
+      gateway:
+        aliases:
+          - cinecompass-app
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+networks:
+  gateway:
+    external: true
+    name: cinecompass_gateway
