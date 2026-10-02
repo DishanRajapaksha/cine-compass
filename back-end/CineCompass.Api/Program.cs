@@ -47,12 +47,14 @@ app.UseAuthentication(); app.UseAuthorization(); app.UseRateLimiter();
 app.Use(async (context, next) => {
     if (context.Request.Path.StartsWithSegments("/api"))
     {
+        // The app is behind the private gateway; the configured public origin determines
+        // the scheme for secure cookies/antiforgery, including GET /auth/csrf.
+        // Never infer it from client-supplied forwarded headers.
+        context.Request.Scheme = originUri.Scheme;
         context.Response.Headers.CacheControl = "no-store";
         if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
         {
             if (context.Request.Headers.Origin != origin) { context.Response.StatusCode = 403; return; }
-            // Do not trust forwarded headers: the configured HTTPS origin controls verification.
-            context.Request.Scheme = originUri.Scheme;
             try { await context.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context); }
             catch (AntiforgeryValidationException) { context.Response.StatusCode = 400; await context.Response.WriteAsJsonAsync(new { error = "Refresh the page and try again." }); return; }
         }

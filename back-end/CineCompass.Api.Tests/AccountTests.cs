@@ -17,13 +17,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public sealed class ApiFactory(bool production = false) : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         connection.Open();
-        builder.UseEnvironment("Development").UseSetting("Passkeys:Origin", "http://localhost:3000").UseSetting("Passkeys:ServerDomain", "localhost").UseSetting("DataProtection:Path", Path.Combine(Path.GetTempPath(), "cinecompass-test-keys"));
+        builder.UseEnvironment(production ? "Production" : "Development").UseSetting("ConnectionStrings:Database", "Host=localhost;Database=test;Username=test").UseSetting("Passkeys:Origin", production ? "https://localhost:3000" : "http://localhost:3000").UseSetting("Passkeys:ServerDomain", "localhost").UseSetting("DataProtection:Path", Path.Combine(Path.GetTempPath(), "cinecompass-test-keys"));
         builder.ConfigureServices(services => {
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
@@ -96,6 +96,16 @@ public sealed class AccountTests
         using var scope=f.Services.CreateScope();Assert.Null(await scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>().FindByNameAsync("new-user"));
         Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/register/complete",new {credentialJson="{}"})).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/register/complete",new {credentialJson="{}"})).StatusCode);
+    }
+    [Fact] public async Task Production_gateway_can_issue_secure_csrf_cookie_over_its_private_http_hop()
+    {
+        using var f = new ApiFactory(production: true);
+        using var c = f.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://localhost"), AllowAutoRedirect = false });
+        var response = await c.GetAsync("/api/auth/csrf");
+        response.EnsureSuccessStatusCode();
+        Assert.Contains(response.Headers.GetValues("Set-Cookie"), cookie => cookie.Contains("cc.csrf=") && cookie.Contains("secure"));
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(string.IsNullOrEmpty(json.GetProperty("token").GetString()));
     }
     [Fact] public void Ceremonies_are_browser_bound_mode_bound_and_single_use()
     {
