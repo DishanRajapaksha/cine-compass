@@ -45,11 +45,11 @@ test('server errors remain visible instead of being replaced with an offline pag
 
 test('activation removes only old CineCompass caches', async () => {
   const removed = [];
-  const handlers = worker(undefined, { keys: async () => ['cinecompass-pwa-v0', 'cinecompass-pwa-v1', 'other-app'], delete: async key => removed.push(key) });
+  const handlers = worker(undefined, { keys: async () => ['cinecompass-pwa-v1', 'cinecompass-pwa-v2', 'other-app'], delete: async key => removed.push(key) });
   let done;
   handlers.activate({ waitUntil: promise => { done = promise; } });
   await done;
-  assert.deepEqual(removed, ['cinecompass-pwa-v0']);
+  assert.deepEqual(removed, ['cinecompass-pwa-v1']);
 });
 
 test('unavailable cache storage does not break online assets', async () => {

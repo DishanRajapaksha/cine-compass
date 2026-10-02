@@ -1,6 +1,6 @@
 /* Cache only a public offline page and immutable frontend assets. */
 const CACHE_PREFIX = 'cinecompass-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const OFFLINE_URL = '/offline.html';
 const OFFLINE_ASSETS = [OFFLINE_URL, '/apple-touch-icon.png'];
 
