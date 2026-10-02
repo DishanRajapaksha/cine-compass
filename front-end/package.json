@@ -35,7 +35,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "eject": "react-scripts eject",
-    "test": "react-scripts test"
+    "test": "react-scripts test",
+    "test:pwa": "node --test scripts/service-worker.test.cjs"
   },
   "eslintConfig": {
     "extends": [

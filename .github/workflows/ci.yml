@@ -19,6 +19,7 @@ jobs:
           cache-dependency-path: front-end/package-lock.json
       - run: npm ci
       - run: CI=true npm exec react-scripts test -- --watchAll=false --runInBand
+      - run: npm run test:pwa
       - run: npm run build
   backend:
     runs-on: ubuntu-latest

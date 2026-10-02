@@ -92,3 +92,11 @@ Public listings continue to work. CineCompass accounts do not authenticate with 
 ## Gont
 
 The checkout is `/home/dishan/Projects/cine-compass`. Use `compose.yaml` plus `compose.gont.yaml` and a server-only `.env` with `PUBLIC_ORIGIN=https://cinecompass.talesfrom.earth`. The Gont override removes published ports and joins `cinecompass_gateway`, where Caddy reaches `cinecompass-app:8080`. Shared gateway configuration is tracked in the `galenor` infrastructure repository. Run `./deploy-gont.sh` for subsequent updates. The Cloudflare Tunnel hostname routes to the existing gateway at `http://127.0.0.1:8888`.
+
+## Install on iPhone or iPad
+
+Open CineCompass over HTTPS in Safari, open the Share menu, choose **Add to Home Screen**, keep **Open as Web App** enabled if shown, and tap **Add**. The home-screen icon opens CineCompass in its own standalone window. Passkeys use the same configured HTTPS hostname.
+
+Production builds register a service worker. It caches a public offline reconnect page and content-hashed JavaScript/CSS only. Account APIs, settings responses, passkey ceremonies, live Cineville data, and OMDb requests are never cached by the worker. An offline launch shows the reconnect page; live screenings and account sync require an internet connection. Updates activate after existing app windows close; reopening online loads the current app.
+
+App icons use the schedule UI's compass sparkle and paper/wine colors. Regenerate the PNGs with `python3 front-end/scripts/generate-pwa-icons.py` (requires Pillow).
