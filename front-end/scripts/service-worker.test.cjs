@@ -33,7 +33,7 @@ test('account APIs, mutations and third-party data bypass the worker', () => {
 
 test('offline navigation returns the public reconnect page', async () => {
   const offline = new Response('Reconnect');
-  const handlers = worker(async () => { throw new TypeError('offline'); }, { open: async () => ({ match: async key => { assert.equal(key, '/offline.html'); return offline; } }) });
+  const handlers = worker(async (_request, options) => { assert.equal(options.cache, 'no-store'); throw new TypeError('offline'); }, { open: async () => ({ match: async key => { assert.equal(key, '/offline.html'); return offline; } }) });
   assert.equal(await dispatch(handlers.fetch, '/', { mode: 'navigate' }), offline);
 });
 

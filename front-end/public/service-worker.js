@@ -23,7 +23,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(async () => {
+    event.respondWith(fetch(request, { cache: 'no-store' }).catch(async () => {
       const cache = await caches.open(CACHE_NAME);
       return await cache.match(OFFLINE_URL) || Response.error();
     }));

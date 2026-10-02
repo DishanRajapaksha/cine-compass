@@ -141,7 +141,13 @@ app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserM
     return Results.Ok(new { revision = row.Revision });
 }).RequireAuthorization();
 app.Map("/api/{**path}", () => Results.NotFound());
-app.UseDefaultFiles(); app.UseStaticFiles();
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions {
+    OnPrepareResponse = context => {
+        if (context.File.Name == "service-worker.js") context.Context.Response.Headers.CacheControl = "no-store";
+        else if (context.File.Name is "index.html" or "manifest.json" or "offline.html") context.Context.Response.Headers.CacheControl = "no-cache";
+    }
+});
 app.MapFallbackToFile("index.html");
 app.Run();
 public record NameRequest(string Name);
