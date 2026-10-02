@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="back-end/CineCompass.Api/CineCompass.Api.csproj" />
+  <Project Path="back-end/CineCompass.Api.Tests/CineCompass.Api.Tests.csproj" />
+</Solution>

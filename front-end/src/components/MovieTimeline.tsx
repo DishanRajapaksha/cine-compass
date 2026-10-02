@@ -1,3 +1,4 @@
+import { setPreference } from '../lib/accountStorage';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Movie } from '../types/Movie';
 import { cn, hasEnglishSubtitles as hasEnglishSubtitleFlag } from '../lib/utils';
@@ -213,9 +214,9 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       viewMode,
       theaterOrder
     };
-    localStorage.setItem(TIMELINE_PREFS_KEY, JSON.stringify(payload));
+    setPreference(TIMELINE_PREFS_KEY, JSON.stringify(payload));
     if (theaterOrder.length > 0) {
-      localStorage.setItem(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
+      setPreference(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
     }
   }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder, viewMode]);
 
@@ -229,9 +230,9 @@ const MovieTimeline: React.FC<MovieTimelineProps> = ({
       viewMode,
       theaterOrder
     };
-    localStorage.setItem(TIMELINE_PREFS_KEY, JSON.stringify(payload));
+    setPreference(TIMELINE_PREFS_KEY, JSON.stringify(payload));
     if (theaterOrder.length > 0) {
-      localStorage.setItem(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
+      setPreference(TIMELINE_THEATER_ORDER_KEY, JSON.stringify(theaterOrder));
     }
   }, [availabilityMode, bufferMinutes, hideSameMovie, theaterOrder, theaters, viewMode]);
 

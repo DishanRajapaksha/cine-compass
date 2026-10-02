@@ -1,0 +1,10 @@
+import React, { useState } from 'react';
+import { useAccount } from './AccountProvider';
+export default function AccountSettings() {
+  const account=useAccount();const [name,setName]=useState('');
+  if(!account) return null;
+  return <section aria-labelledby="cc-account-title"><h3 id="cc-account-title">Account & sync</h3>
+    {account.user ? <><p>Signed in as <strong>{account.user.name}</strong>.</p><div className="cc-account-actions"><button className="cc-text-button" disabled={account.busy} onClick={account.addPasskey}>Add another passkey</button><button className="cc-text-button" disabled={account.busy} onClick={account.logout}>Sign out</button></div><p>Add a second passkey on another device or security key. If you lose every passkey, this account cannot be recovered.</p><details><summary>Settings on this device</summary><p>Replace account settings with the guest preferences saved on this device, or reload the latest account settings. Reloading discards unsynced changes.</p><div className="cc-account-actions"><button disabled={account.busy} onClick={account.importGuest}>Import guest settings</button><button disabled={account.busy} onClick={account.reload}>Reload account settings</button></div></details></> : <><p>Sync your preferences, saved screenings and hidden films across devices. Sign in with a passkey using your device or a security key.</p><button className="cc-primary" disabled={account.busy} onClick={account.login}>Sign in with a passkey</button><form onSubmit={e=>{e.preventDefault();void account.register(name);}}><label className="cc-field">New account username<input required minLength={3} maxLength={40} pattern="(?:[a-zA-Z0-9_]|-)+" autoComplete="username webauthn" value={name} onChange={e=>setName(e.target.value)}/></label><button className="cc-text-button" disabled={account.busy}>Create account with a passkey</button></form><p>No password or email required. You can keep browsing without an account.</p></>}
+    {account.status && <p role="status">{account.status}</p>}{account.error && <p className="cc-error" role="alert">{account.error}</p>}
+  </section>;
+}

@@ -1,0 +1,11 @@
+**/node_modules
+**/build
+**/bin
+**/obj
+**/.data
+**/wwwroot
+.git
+.env
+.env.*
+output
+.playwright-cli

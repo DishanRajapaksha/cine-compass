@@ -1,3 +1,4 @@
+import { setPreference } from '../lib/accountStorage';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, City, MovieFilters, SavedShowtime } from '../types/Movie';
 import { movieService } from '../services/movieService';
@@ -289,17 +290,17 @@ const MovieGallery: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    setPreference(FILTERS_STORAGE_KEY, JSON.stringify(filters));
   }, [filters]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(SAVED_SHOWTIMES_KEY, JSON.stringify(savedShowtimes));
+    setPreference(SAVED_SHOWTIMES_KEY, JSON.stringify(savedShowtimes));
   }, [savedShowtimes]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(FILTERS_PANEL_KEY, String(filtersOpen));
+    setPreference(FILTERS_PANEL_KEY, String(filtersOpen));
   }, [filtersOpen]);
 
   const handleMovieClick = (movie: Movie) => {

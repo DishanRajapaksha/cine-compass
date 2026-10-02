@@ -1,3 +1,4 @@
+import { setPreference } from './accountStorage';
 import { Movie, MovieFilters, MovieShowtime } from '../types/Movie';
 import { normalizeLanguageCode, hasEnglishSubtitles } from './utils';
 
@@ -38,5 +39,5 @@ export function readStorage<T>(key: string, fallback: T, valid: (value: unknown)
   catch { return fallback; }
 }
 export function writeStorage(key: string, value: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Browsing remains available without storage. */ }
+  try { setPreference(key, JSON.stringify(value)); } catch { /* Browsing remains available without storage. */ }
 }

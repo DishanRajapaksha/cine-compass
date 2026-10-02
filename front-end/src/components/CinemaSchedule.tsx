@@ -1,3 +1,4 @@
+import { setPreference } from '../lib/accountStorage';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, SlidersHorizontal, Sparkle, X } from 'lucide-react';
 import { City, HiddenMovie, Movie, MovieFilters, SavedShowtime } from '../types/Movie';
@@ -82,7 +83,7 @@ export default function CinemaSchedule() {
   const hiddenIds = new Set(hidden.map(m => m.id));
   const visibleSaved = saved.filter(s => !hiddenIds.has(s.movieId));
   const updateHidden = (next: HiddenMovie[]) => {
-    try {localStorage.setItem('cinecompass_hidden_movies',JSON.stringify(next));setHidden(next);setHiddenError('');return true;}
+    try {setPreference('cinecompass_hidden_movies',JSON.stringify(next));setHidden(next);setHiddenError('');return true;}
     catch {setHiddenError('Hidden movies could not be saved. Please allow browser storage and try again.');return false;}
   };
   const hideMovie = (movie: HiddenMovie) => {

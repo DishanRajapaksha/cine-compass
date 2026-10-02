@@ -1,0 +1,42 @@
+services:
+  database:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: cinecompass
+      POSTGRES_USER: cinecompass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinecompass -d cinecompass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    build: .
+    image: cinecompass:local
+    command: ["--migrate"]
+    environment: &app-environment
+      ConnectionStrings__Database: Host=database;Database=cinecompass;Username=cinecompass;Password=${POSTGRES_PASSWORD}
+      Passkeys__Origin: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN to the public HTTPS origin}
+    volumes:
+      - keys:/data/keys
+    depends_on:
+      database:
+        condition: service_healthy
+  app:
+    image: cinecompass:local
+    build: .
+    environment: *app-environment
+    ports:
+      - "127.0.0.1:5080:8080"
+    volumes:
+      - keys:/data/keys
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+volumes:
+  database:
+  keys:
