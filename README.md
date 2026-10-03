@@ -79,6 +79,8 @@ Backend HTTP tests use isolated SQLite databases. Also validate PostgreSQL migra
 
 Public listings continue to work. CineCompass accounts do not authenticate with Cineville. Authenticated Cineville watchlist access is a later integration, pending verification of Cineville's login/session flow. Future Cineville tokens must be stored privately on the backend, outside settings sync.
 
+Movie details offer **Translate to English** for Dutch descriptions, followed by **Show original**. Cineville's own English description takes priority when present. Translation uses the [MyMemory public API](https://mymemory.translated.net/doc/spec.php) directly from the browser, only after clicking the control; only the public description is sent, without account cookies or credentials. Successful translations are cached in memory for the current tab and are excluded from account sync and offline storage. Long descriptions are split at word boundaries within the provider's 500-byte request limit. Anonymous service usage has a [5,000-character daily limit](https://mymemory.translated.net/doc/usagelimits.php); quota and network errors leave the original visible and allow retrying. No API key or backend configuration is required.
+
 ### Verified in this change
 
 - Release build and five backend tests passed on .NET 11 RC1.
@@ -92,6 +94,8 @@ Public listings continue to work. CineCompass accounts do not authenticate with 
 ## Gont
 
 The checkout is `/home/dishan/Projects/cine-compass`. Use `compose.yaml` plus `compose.gont.yaml` and a server-only `.env` with `PUBLIC_ORIGIN=https://cinecompass.talesfrom.earth`. The Gont override removes published ports and joins `cinecompass_gateway`, where Caddy reaches `cinecompass-app:8080`. Shared gateway configuration is tracked in the `galenor` infrastructure repository. Run `./deploy-gont.sh` for subsequent updates. The Cloudflare Tunnel hostname routes to the existing gateway at `http://127.0.0.1:8888`.
+
+Deployment builds the shared app/migration image once, then starts the stack with `--no-build`. It prints build, startup, and total elapsed times. BuildKit keeps npm downloads, NuGet packages, and the React compiler cache between builds; production images omit JavaScript source maps. Lint and type checks remain enabled. The first build after these Dockerfile changes warms the new caches; later frontend changes can reuse them. Removing Docker builder caches removes this speedup. Source compilation still runs on Gont.
 
 ## Install on iPhone or iPad
 

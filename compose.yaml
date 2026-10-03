@@ -14,7 +14,6 @@ services:
       retries: 20
     restart: unless-stopped
   migrate:
-    build: .
     image: cinecompass:local
     command: ["--migrate"]
     environment: &app-environment

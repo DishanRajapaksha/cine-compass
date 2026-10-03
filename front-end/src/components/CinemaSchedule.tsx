@@ -143,7 +143,7 @@ export default function CinemaSchedule() {
   const visible = screenings.filter(s => !hiddenIds.has(s.movie.id) && !(hideUnavailable && blocked(s)) && !(hideSameMovie && selected && s.movie.id===selected.movie.id && s.showtime.id!==selected.showtime.id));
   const groups = visible.reduce<Record<string,Screening[]>>((map,s) => { const key=amsterdamDate(s.showtime.startDate); (map[key] ||= []).push(s); return map; }, {});
   const reset = () => { setFilters(defaults()); setQuery(''); setSelected(null); };
-  const chooseDate = (date: string) => setFilters(f => ({...f,startDate:date,endDate:date}));
+  const chooseDate = (date: string) => setFilters(f => ({...f,startDate:date,endDate:date,startTime:date === getCurrentDateInAmsterdam() ? getCurrentTimeInAmsterdam() : '00:00',endTime:'23:59'}));
   const toggleSave = ({movie,showtime}: Screening) => setSaved(prev => prev.some(s => s.showtimeId === showtime.id) ? prev.filter(s => s.showtimeId !== showtime.id) : [...prev,{movieId:movie.id,movieTitle:movie.title,posterPath:movie.poster_path,showtimeId:showtime.id,startDate:showtime.startDate,endDate:showtime.endDate,theaterId:showtime.theaterId,theaterName:showtime.theaterName,theaterCity:showtime.theaterCity,ticketingUrl:showtime.ticketingUrl}].sort((a,b) => Date.parse(a.startDate)-Date.parse(b.startDate)));
   const planScreening = (screening: Screening) => {
     setDetails(null); setPage('schedule'); setSelected(screening); setQuery('');
@@ -151,7 +151,7 @@ export default function CinemaSchedule() {
     setFilters(f => ({...f,selectedCity:screening.showtime.theaterCity,selectedTheaters:[],selectedSubtitleLanguages:[],selectedSpokenLanguages:[],selectedSpecials:[],startDate:date,endDate:date,startTime:null,endTime:'23:59'}));
   };
   return <div className="cc-app">
-    <header className="cc-header"><a className="cc-brand" href="#schedule"><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
+    <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
     <main className="cc-main">
     {hiddenError && <p className="cc-error" role="alert">{hiddenError}</p>}
     {page === 'watchlist' ? <SavedFilms saved={visibleSaved} onHide={hideMovie} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : <>
