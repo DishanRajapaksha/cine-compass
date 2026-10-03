@@ -59,9 +59,10 @@
 @media(max-width:800px){.cc-cinema-animation{display:none}}
 @media(max-width:480px){
   .cc-header .cc-brand{flex:0 0 auto}
-  .cc-cinema-animation{display:flex;flex:1 1 0;min-width:0;order:0}
-  .cc-cinema-animation svg{width:100%;height:auto}
-  .cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene{height:auto}
+  .cc-cinema-animation{display:flex;flex:0 0 100%;min-width:0;order:4;margin-top:6px}
+  .cc-cinema-animation svg{width:100%;height:76px}
+  .cc-cinema-animation-wide svg{height:56px}
+  .cc-cinema-animation-wide .cc-moonlit-scene{height:76px}
   .cc-cinema-animation .cc-filmstrip-desktop{display:none}
   .cc-cinema-animation .cc-filmstrip-mobile{display:block}
 }
