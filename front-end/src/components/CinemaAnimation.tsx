@@ -90,7 +90,46 @@ function FilmstripScene() {
   </svg>;
 }
 
-const scenes = ['projector', 'theatre', 'filmstrip'] as const;
+function MoonlitScene() {
+  return <svg className="cc-moonlit-scene" viewBox="0 0 360 76" fill="none" focusable="false">
+    <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path className="cc-cinema-ground" d="M20 69h320"/>
+      <path className="cc-moonlit-string" d="M25 12q155 31 310 0"/>
+      {[48,78,108,138,168,198,228,258,288,318].map((x,i) => <circle key={x} cx={x} cy={16 + Math.sin((i+1)*Math.PI/11)*12} r="1.7" className="cc-moonlit-lights"/>)}
+      <path className="cc-moonlit-moon" d="M327 30a9 9 0 1 1-10-13 8 8 0 0 0 10 13Z"/>
+      <path className="cc-moonlit-beam" d="m113 43 138-12v25L113 49Z" fill="currentColor" stroke="none"/>
+      <rect x="32" y="32" width="79" height="30" rx="11" className="cc-projector-body"/>
+      <path d="M34 53h75m2-14 7 2v11l-7 2M26 61h7"/>
+      <circle cx="48" cy="63" r="6" className="cc-projector-body"/><circle cx="94" cy="63" r="6" className="cc-projector-body"/>
+      <circle cx="48" cy="63" r="1.6"/><circle cx="94" cy="63" r="1.6"/>
+      <rect x="43" y="38" width="26" height="15" rx="3" className="cc-moonlit-window"/>
+      <path d="M56 38v15m-10-12v9m20-9v9"/>
+      <rect x="80" y="39" width="17" height="23" rx="3"/>
+      <path d="M92 51h1m-22 11v6m-5 1h10"/>
+      <path className="cc-moonlit-awning" d="m135 38-6 8h35l-6-8Z"/>
+      <path d="M133 46v21m27-21v21m-27-11h27m-23 11h19"/>
+      <path className="cc-moonlit-popcorn" d="m141 50 1 6h8l1-6c3-3 0-5-2-3-1-4-6-4-6 0-3-2-5 0-2 3Z"/>
+      <rect x="251" y="29" width="64" height="30" rx="3" className="cc-projector-body"/>
+      <path d="m258 59-3 10m53-10 3 10"/>
+      <path className="cc-cinema-star cc-moonlit-screen-star" d="m283 35 2.2 6.8L292 44l-6.8 2.2L283 53l-2.2-6.8L274 44l6.8-2.2Z"/>
+      <g className="cc-theatre-audience">
+        <circle cx="207" cy="53" r="4" className="cc-projector-body"/>
+        <circle cx="229" cy="53" r="4" className="cc-projector-body"/>
+      </g>
+      {[199,221].map(x => <g key={x}>
+        <rect x={x} y="57" width="16" height="11" rx="3" className="cc-projector-body"/>
+        <path d={`M${x-2} 62v7h20v-7`}/>
+      </g>)}
+      <path className="cc-moonlit-sparkles" d="M124 24v4m-2-2h4m107 9v4m-2-2h4M21 34v4m-2-2h4"/>
+      <g className="cc-moonlit-shooting-star">
+        <path d="m158 5 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="currentColor" fillOpacity=".16"/>
+        <path d="m149 9-13-6m10 10-8-2" strokeOpacity=".35"/>
+      </g>
+    </g>
+  </svg>;
+}
+
+const scenes = ['projector', 'theatre', 'filmstrip', 'moonlit'] as const;
 type Scene = typeof scenes[number];
 let pageScene: Scene | undefined;
 
@@ -110,7 +149,7 @@ function sceneForPage(): Scene {
 /** A decorative cinema vignette, alternating on each page load. */
 export default function CinemaAnimation() {
   const scene = sceneForPage();
-  return <span className={`cc-cinema-animation${scene === 'filmstrip' ? ' cc-cinema-animation-wide' : ''}`} aria-hidden="true" data-scene={scene}>
-    {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : <FilmstripScene/>}
+  return <span className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' ? ' cc-cinema-animation-wide' : ''}`} aria-hidden="true" data-scene={scene}>
+    {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : <MoonlitScene/>}
   </span>;
 }

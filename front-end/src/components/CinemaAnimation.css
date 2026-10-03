@@ -20,6 +20,16 @@
 .cc-filmstrip-perforation{fill:currentColor;fill-opacity:.18;stroke:none}
 .cc-filmstrip-motif{fill:currentColor;fill-opacity:.08;stroke-opacity:.7}
 .cc-filmstrip-track{animation:cc-filmstrip-drift 4.8s ease-in-out 1 both}
+.cc-cinema-animation-wide .cc-moonlit-scene{height:76px}
+.cc-moonlit-string{stroke:var(--rule);stroke-width:.8}
+.cc-moonlit-lights,.cc-moonlit-window,.cc-moonlit-moon{fill:#c19a62;fill-opacity:.25}
+.cc-moonlit-lights{stroke:#a77d49;stroke-width:.8;animation:cc-moonlit-warmth 2.4s ease-in-out 2}
+.cc-moonlit-window{animation:cc-moonlit-warmth 2.4s ease-in-out 2}
+.cc-moonlit-beam{opacity:.045;animation:cc-cinema-light 2.4s ease-in-out 2}
+.cc-moonlit-awning,.cc-moonlit-popcorn{fill:currentColor;fill-opacity:.12}
+.cc-moonlit-screen-star{transform-origin:283px 44px}
+.cc-moonlit-sparkles{stroke-opacity:.45}
+.cc-moonlit-shooting-star{opacity:0;animation:cc-moonlit-wish 4.8s ease-in-out 1}
 @media(hover:hover){
   .cc-cinema-animation:hover .cc-projector-reel{animation-name:cc-cinema-roll-again}
   .cc-cinema-animation:hover .cc-projector-beam{animation-name:cc-cinema-light-again}
@@ -27,6 +37,9 @@
   .cc-cinema-animation:hover .cc-theatre-glow{animation-name:cc-cinema-light-again}
   .cc-cinema-animation:hover .cc-theatre-audience{animation-name:cc-cinema-settle-again}
   .cc-cinema-animation:hover .cc-filmstrip-track{animation-name:cc-filmstrip-drift-again}
+  .cc-cinema-animation:hover .cc-moonlit-shooting-star{animation-name:cc-moonlit-wish-again}
+  .cc-cinema-animation:hover .cc-moonlit-lights,.cc-cinema-animation:hover .cc-moonlit-window{animation-name:cc-moonlit-warmth-again}
+  .cc-cinema-animation:hover .cc-moonlit-beam{animation-name:cc-cinema-light-again}
 }
 @keyframes cc-cinema-roll{to{transform:rotate(360deg)}}
 @keyframes cc-cinema-roll-again{to{transform:rotate(360deg)}}
@@ -38,6 +51,10 @@
 @keyframes cc-cinema-settle-again{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
 @keyframes cc-filmstrip-drift{to{transform:translateX(-252px)}}
 @keyframes cc-filmstrip-drift-again{to{transform:translateX(-252px)}}
+@keyframes cc-moonlit-warmth{0%,100%{fill-opacity:.25}50%{fill-opacity:.5}}
+@keyframes cc-moonlit-warmth-again{0%,100%{fill-opacity:.25}50%{fill-opacity:.5}}
+@keyframes cc-moonlit-wish{0%,20%{opacity:0;transform:translate(0,0)}35%{opacity:1}70%,100%{opacity:0;transform:translate(63px,12px)}}
+@keyframes cc-moonlit-wish-again{0%,20%{opacity:0;transform:translate(0,0)}35%{opacity:1}70%,100%{opacity:0;transform:translate(63px,12px)}}
 @media(max-width:800px){.cc-cinema-animation{display:none}}
 @media(max-width:480px){
   .cc-cinema-animation{display:flex;flex:0 0 clamp(60px,20vw,90px);min-width:0;margin-left:auto}
