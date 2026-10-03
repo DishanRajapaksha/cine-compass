@@ -101,5 +101,8 @@
 .cc-settings-dialog form {margin-top:20px;}
 
 /* Keep standalone Safari content clear of the notch and home indicator. */
-.cc-app{min-height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.cc-app{--cc-safe-area-top:env(safe-area-inset-top,0px);min-height:100dvh;padding-top:var(--cc-safe-area-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+/* iOS home-screen apps can blur below the status-bar safe area. Keep the
+   brand and illustration clear of that edge without shifting browser tabs. */
+.ios-standalone .cc-app{--cc-status-bar-gap:min(20px, calc(var(--cc-safe-area-top) * 1000));padding-top:calc(var(--cc-safe-area-top) + var(--cc-status-bar-gap))}
 .cc-translation{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:-8px 0 22px;font-family:Arial,sans-serif}.cc-app .cc-translation button{display:inline-flex;align-items:center;gap:6px;color:var(--wine);font-size:12px;min-height:32px;text-decoration:underline;text-underline-offset:3px}.cc-translation button:disabled{opacity:.6;cursor:wait}.cc-translation small{font-size:10px;line-height:1.5;color:var(--muted)}.cc-translation-status,.cc-translation-error{width:100%;font-size:12px;line-height:1.5}.cc-translation-error{color:var(--wine)}

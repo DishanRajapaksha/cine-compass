@@ -5,6 +5,10 @@ import App from './App';
 import AccountProvider from './components/AccountProvider';
 import reportWebVitals from './reportWebVitals';
 
+// iOS exposes home-screen mode here even when its display-mode query is false.
+const iosNavigator = navigator as Navigator & { standalone?: boolean };
+document.documentElement.classList.toggle('ios-standalone', iosNavigator.standalone === true);
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
