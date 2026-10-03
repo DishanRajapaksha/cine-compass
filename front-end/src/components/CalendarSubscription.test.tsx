@@ -1,0 +1,63 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import CalendarSubscription, { appleCalendarUrl } from './CalendarSubscription';
+import { useAccount } from './AccountProvider';
+import { api } from '../services/accountService';
+jest.mock('./AccountProvider',()=>({useAccount:jest.fn()}));
+jest.mock('../services/accountService',()=>({api:jest.fn()}));
+const account=useAccount as jest.Mock;
+const request=api as jest.Mock;
+const url='https://cinecompass.example/api/calendar/feed/private-token.ics';
+beforeEach(()=>{
+  jest.clearAllMocks();account.mockReturnValue({user:{id:'alice'},login:jest.fn()});
+  Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function(){this.setAttribute('open','');}});
+  Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function(){this.removeAttribute('open');}});
+  request.mockResolvedValue({enabled:false,url:null,reminderMinutes:null});
+});
+test('creates one subscription for all screenings and exposes the Apple Calendar link',async()=>{
+  const view=render(<CalendarSubscription/>);
+  expect(request).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button',{name:'Set up calendar subscription'}));
+  await screen.findByRole('button',{name:'Enable calendar subscription'});
+  expect(screen.getByRole('dialog',{name:'Calendar subscription'})).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Reminder for each film'),{target:{value:'30'}});
+  request.mockResolvedValue({enabled:true,url,reminderMinutes:30});
+  fireEvent.click(screen.getByRole('button',{name:'Enable calendar subscription'}));
+  await screen.findByRole('link',{name:'Open in Apple Calendar'});
+  expect(request).toHaveBeenCalledWith('/calendar/subscription','POST',{reminderMinutes:30});
+  expect(screen.getByRole('link',{name:'Open in Apple Calendar'})).toHaveAttribute('href','webcal://cinecompass.example/api/calendar/feed/private-token.ics');
+  fireEvent.change(screen.getByLabelText('Reminder for each film'),{target:{value:'15'}});
+  request.mockResolvedValue({enabled:true,url,reminderMinutes:15});
+  fireEvent.click(screen.getByRole('button',{name:'Save reminder'}));
+  await screen.findByText('Reminder saved');
+  expect(screen.queryByRole('button',{name:'Save reminder'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Link and subscription controls'));
+  expect(screen.getByLabelText('Subscription link')).toHaveValue(url);
+  request.mockResolvedValue(undefined);
+  fireEvent.click(screen.getByRole('button',{name:'Turn off subscription'}));
+  await screen.findByRole('button',{name:'Enable calendar subscription'});
+  expect(request).toHaveBeenCalledWith('/calendar/subscription','DELETE');
+  expect(screen.queryByRole('link',{name:'Open in Apple Calendar'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Close calendar subscription'}));
+  expect(document.body.style.overflow).toBe('');view.unmount();
+});
+test('guests see sign-in instructions without creating a public feed',()=>{
+  account.mockReturnValue({user:null,login:jest.fn()});render(<CalendarSubscription/>);
+  fireEvent.click(screen.getByRole('button',{name:'Set up calendar subscription'}));
+  expect(screen.getByRole('button',{name:'Sign in with a passkey'})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Enable calendar subscription'})).not.toBeInTheDocument();
+  expect(request).not.toHaveBeenCalled();
+});
+test('failed settings load offers retry and does not enable an unverified link',async()=>{
+  request.mockRejectedValueOnce(new Error('Service unavailable'));render(<CalendarSubscription/>);
+  fireEvent.click(screen.getByRole('button',{name:'Set up calendar subscription'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Service unavailable');
+  expect(screen.getByRole('button',{name:'Enable calendar subscription'})).toBeDisabled();
+  request.mockResolvedValue({enabled:false,url:null,reminderMinutes:null});
+  fireEvent.click(screen.getByRole('button',{name:'Retry loading settings'}));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Enable calendar subscription'})).not.toBeDisabled());
+});
+test('subscription links retain host and path but reject unsupported schemes',()=>{
+  expect(appleCalendarUrl('http://localhost:3000/api/calendar/feed/token.ics')).toBe('webcal://localhost:3000/api/calendar/feed/token.ics');
+  expect(()=>appleCalendarUrl('javascript:alert(1)')).toThrow();
+});

@@ -1,6 +1,7 @@
-.cc-cinema-animation{flex:1;display:flex;justify-content:center;align-items:center;min-width:150px;height:76px;color:var(--wine)}
+.cc-cinema-animation{position:relative;flex:1;display:flex;justify-content:center;align-items:center;min-width:150px;height:76px;color:var(--wine)}
 .cc-app .cc-cinema-animation{color:var(--wine)}
-.cc-cinema-animation:focus-visible{outline:2px solid var(--wine);outline-offset:4px;border-radius:4px}
+.cc-app .cc-cinema-animation:focus-visible{outline:none}
+.cc-cinema-animation:focus-visible::after{content:"";position:absolute;bottom:1px;left:50%;width:4px;height:4px;border-radius:50%;background:var(--wine);transform:translateX(-50%)}
 .cc-cinema-animation svg{display:block;width:174px;height:70px;overflow:visible}
 .cc-projector-body{fill:var(--paper)}
 .cc-cinema-ground{stroke:var(--rule)}
@@ -33,6 +34,35 @@
 .cc-moonlit-screen-star{transform-origin:283px 44px}
 .cc-moonlit-sparkles{stroke-opacity:.45}
 .cc-moonlit-shooting-star{opacity:0;animation:cc-moonlit-wish 4.8s ease-in-out 1}
+.cc-cinema-animation-wide .cc-autumn-scene{height:76px}
+.cc-autumn-canopy{fill:#b9793d;fill-opacity:.14;stroke:#a77b50}
+.cc-autumn-screen-leaf,.cc-autumn-ground-leaves{fill:#bd783e;fill-opacity:.3;stroke:#a77b50}
+.cc-autumn-bench{fill:var(--paper)}
+.cc-autumn-beam{opacity:.06;animation:cc-cinema-light 2.4s ease-in-out 2}
+.cc-autumn-leaf{fill:#bd783e;fill-opacity:.45;stroke:#a77b50;animation:cc-autumn-fall 4.8s ease-in-out 1 both}
+.cc-autumn-leaf-1{fill:#b99a49;stroke:#a38a43;animation-delay:.35s}
+.cc-autumn-leaf-2{fill:#aa5844;stroke:#aa5844;animation-delay:.7s}
+.cc-cinema-animation-wide .cc-premiere-scene{height:76px}
+.cc-premiere-cloud{stroke:var(--rule);animation:cc-premiere-cloud 5s ease-in-out 1 both}
+.cc-premiere-moon,.cc-premiere-lantern,.cc-premiere-window,.cc-premiere-bulb{fill:#c19a62;stroke:#a77d49}
+.cc-premiere-moon{fill-opacity:.25}
+.cc-premiere-window,.cc-premiere-lantern{fill-opacity:.35;animation:cc-premiere-glow 1.6s ease-in-out 3}
+.cc-premiere-bulb{stroke:none;fill-opacity:.6;animation:cc-premiere-glow 1.6s ease-in-out 3}
+.cc-premiere-marquee{fill:#c19a62;fill-opacity:.12}
+.cc-premiere-light{fill:#c19a62;opacity:.07;animation:cc-cinema-light 2.4s ease-in-out 2}
+.cc-premiere-screen{fill:#c19a62;fill-opacity:.1}
+.cc-premiere-feature{fill:#c19a62;fill-opacity:.3;transform-origin:180px 43px;animation:cc-premiere-reveal 5s ease-in-out 1}
+.cc-premiere-curtain{fill:var(--wine);stroke:var(--paper);stroke-opacity:.35;transform:translateX(var(--curtain-open));animation:cc-premiere-open 5s ease-in-out 1 both}
+.cc-premiere-curtain-left{--curtain-open:-32px}
+.cc-premiere-curtain-right{--curtain-open:32px}
+.cc-premiere-carpet{fill:var(--wine);fill-opacity:.18;stroke-opacity:.4}
+.cc-premiere-kiosk{fill:var(--paper)}
+.cc-premiere-guest{animation:cc-cinema-settle 2.4s ease-in-out 2}
+.cc-premiere-cat{fill:var(--wine);fill-opacity:.15}
+.cc-premiere-water,.cc-premiere-wake{stroke:#a77d49;stroke-opacity:.3}
+.cc-premiere-water{animation:cc-premiere-ripple 1.6s ease-in-out 3}
+.cc-premiere-boat{animation:cc-premiere-sail 5s ease-in-out 1 both}
+.cc-premiere-sparkles{stroke:#a77d49;stroke-opacity:.6;animation:cc-premiere-ripple 1.6s ease-in-out 3}
 @media(hover:hover){
   .cc-cinema-animation:hover .cc-projector-reel{animation-name:cc-cinema-roll-again}
   .cc-cinema-animation:hover .cc-projector-beam{animation-name:cc-cinema-light-again}
@@ -43,7 +73,30 @@
   .cc-cinema-animation:hover .cc-moonlit-shooting-star{animation-name:cc-moonlit-wish-again}
   .cc-cinema-animation:hover .cc-moonlit-lights,.cc-cinema-animation:hover .cc-moonlit-window{animation-name:cc-moonlit-warmth-again}
   .cc-cinema-animation:hover .cc-moonlit-beam{animation-name:cc-cinema-light-again}
+  .cc-cinema-animation:hover .cc-autumn-leaf{animation-name:cc-autumn-fall-again}
+  .cc-cinema-animation:hover .cc-autumn-beam{animation-name:cc-cinema-light-again}
+  .cc-cinema-animation:hover .cc-premiere-cloud{animation-name:cc-premiere-cloud-again}
+  .cc-cinema-animation:hover .cc-premiere-window,.cc-cinema-animation:hover .cc-premiere-lantern,.cc-cinema-animation:hover .cc-premiere-bulb{animation-name:cc-premiere-glow-again}
+  .cc-cinema-animation:hover .cc-premiere-light{animation-name:cc-cinema-light-again}
+  .cc-cinema-animation:hover .cc-premiere-feature{animation-name:cc-premiere-reveal-again}
+  .cc-cinema-animation:hover .cc-premiere-curtain{animation-name:cc-premiere-open-again}
+  .cc-cinema-animation:hover .cc-premiere-water,.cc-cinema-animation:hover .cc-premiere-sparkles{animation-name:cc-premiere-ripple-again}
+  .cc-cinema-animation:hover .cc-premiere-boat{animation-name:cc-premiere-sail-again}
 }
+@keyframes cc-premiere-cloud{to{transform:translateX(9px)}}
+@keyframes cc-premiere-cloud-again{to{transform:translateX(9px)}}
+@keyframes cc-premiere-glow{0%,100%{fill-opacity:.25}50%{fill-opacity:.7}}
+@keyframes cc-premiere-glow-again{0%,100%{fill-opacity:.25}50%{fill-opacity:.7}}
+@keyframes cc-premiere-reveal{0%,25%{opacity:0;transform:scale(.8)}60%,100%{opacity:1;transform:scale(1)}}
+@keyframes cc-premiere-reveal-again{0%,25%{opacity:0;transform:scale(.8)}60%,100%{opacity:1;transform:scale(1)}}
+@keyframes cc-premiere-open{0%,15%{transform:translateX(0)}65%,100%{transform:translateX(var(--curtain-open))}}
+@keyframes cc-premiere-open-again{0%,15%{transform:translateX(0)}65%,100%{transform:translateX(var(--curtain-open))}}
+@keyframes cc-premiere-ripple{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes cc-premiere-ripple-again{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes cc-premiere-sail{to{transform:translateX(26px)}}
+@keyframes cc-premiere-sail-again{to{transform:translateX(26px)}}
+@keyframes cc-autumn-fall{0%{transform:translate(0,0) rotate(-20deg)}35%{transform:translate(14px,15px) rotate(25deg)}70%{transform:translate(3px,32px) rotate(-15deg)}100%{transform:translate(17px,44px) rotate(35deg)}}
+@keyframes cc-autumn-fall-again{0%{transform:translate(0,0) rotate(-20deg)}35%{transform:translate(14px,15px) rotate(25deg)}70%{transform:translate(3px,32px) rotate(-15deg)}100%{transform:translate(17px,44px) rotate(35deg)}}
 @keyframes cc-cinema-roll{to{transform:rotate(360deg)}}
 @keyframes cc-cinema-roll-again{to{transform:rotate(360deg)}}
 @keyframes cc-cinema-light{0%,100%{opacity:.07}50%{opacity:.13}}
@@ -65,7 +118,7 @@
   .cc-app .cc-header nav{grid-column:1;grid-row:2;gap:10px;width:auto;margin:0;order:0}
   .cc-app .cc-header nav button{font-size:13px}
   .cc-cinema-animation{display:flex;grid-column:2;grid-row:1 / span 2;min-width:0;height:84px;align-self:stretch;order:0}
-  .cc-cinema-animation svg,.cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene{width:100%;height:100%}
+  .cc-cinema-animation svg,.cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene,.cc-cinema-animation-wide .cc-autumn-scene,.cc-cinema-animation-wide .cc-premiere-scene{width:100%;height:100%}
   .cc-cinema-animation .cc-filmstrip-desktop{display:none}
   .cc-cinema-animation .cc-filmstrip-mobile{display:block}
 }

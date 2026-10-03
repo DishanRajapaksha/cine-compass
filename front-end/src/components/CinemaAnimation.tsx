@@ -135,7 +135,89 @@ function MoonlitScene() {
   </svg>;
 }
 
-const scenes = ['projector', 'theatre', 'filmstrip', 'moonlit'] as const;
+function AutumnScene() {
+  return <svg className="cc-autumn-scene" viewBox="0 0 360 76" fill="none" focusable="false" aria-hidden="true">
+    <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path className="cc-cinema-ground" d="M20 69h320"/>
+      <path d="M64 68V29m0 22L46 37m18 5 17-15"/>
+      <path className="cc-autumn-canopy" d="M42 43c-16-2-19-20-7-27-1-13 17-19 26-10 11-9 28-1 27 11 15 7 10 25-3 27"/>
+      <rect x="224" y="20" width="77" height="40" rx="3" className="cc-projector-body"/>
+      <path d="m232 60-3 9m64-9 3 9"/>
+      <path className="cc-autumn-screen-leaf" d="M250 48c-3-13 4-21 20-20 1 13-5 23-20 20Z"/>
+      <path d="m247 51 18-18m-10 10 9 1m-5-5-1-7"/>
+      <path className="cc-autumn-beam" d="m139 43 84-16v27l-84-5Z" fill="currentColor" stroke="none"/>
+      <rect x="115" y="37" width="22" height="16" rx="3" className="cc-projector-body"/>
+      <path d="m137 41 5-2v12l-5-2m-15 4-4 16m13-16 4 16"/>
+      <g transform="translate(119 30)"><g className="cc-projector-reel"><circle r="6" className="cc-projector-body"/><circle r="1.5"/><path d="M0-4v1m4 3H3M0 4V3m-4-3h1"/></g></g>
+      <g transform="translate(133 30)"><g className="cc-projector-reel cc-projector-reel-back"><circle r="6" className="cc-projector-body"/><circle r="1.5"/><path d="M0-4v1m4 3H3M0 4V3m-4-3h1"/></g></g>
+      <path className="cc-autumn-bench" d="M166 56h35v6h-35Zm3 6v7m29-7v7m-32-18h35v8h-35Z"/>
+      {[{x:99,y:13},{x:166,y:8},{x:204,y:19}].map(({x,y},i) => <g key={x} transform={`translate(${x} ${y})`}>
+        <g className={`cc-autumn-leaf cc-autumn-leaf-${i}`}>
+          <path d="M-5 0c0-5 5-7 11-6 1 6-2 11-7 11Z"/>
+          <path d="m-3 7 6-10"/>
+        </g>
+      </g>)}
+      <path className="cc-autumn-ground-leaves" d="m37 66 7-2 4 3-8 1Zm43 1 5-3 6 2-7 2Zm226-1 7-2 4 3-8 1Z"/>
+    </g>
+  </svg>;
+}
+
+function PremiereScene() {
+  const screenId = useId();
+  return <svg className="cc-premiere-scene" viewBox="0 0 360 76" fill="none" focusable="false" aria-hidden="true">
+    <defs><clipPath id={screenId}><rect x="143" y="32" width="74" height="23" rx="2"/></clipPath></defs>
+    <g stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+      <path className="cc-premiere-cloud" d="M53 11h28c6 0 6-7 1-7-2-6-11-6-14-1-5-3-11 1-10 5h-5"/>
+      <path className="cc-premiere-moon" d="M290 13a7 7 0 1 1-8-10 6 6 0 0 0 8 10Z"/>
+      <path className="cc-premiere-sparkles" d="M108 8v4m-2-2h4m148-6v4m-2-2h4m63 3v4m-2-2h4"/>
+      <g className="cc-premiere-houses">
+        <path d="M24 60V28l12-12 12 12v32m-20-32h16M54 60V23h4v-5h4v-5h8v5h4v5h4v37m7 0V31l12-9 12 9v29"/>
+        {[31,40,61,70,92,101].map((x,i) => <g key={x}>
+          <path className="cc-premiere-window" style={{animationDelay:`${i * .15}s`}} d={`M${x} 34h4v6h-4Zm0 11h4v6h-4Z`}/>
+        </g>)}
+        <path d="M33 60V50h7v10m21 0v-6h10v6m22 0v-6h7v6"/>
+      </g>
+      <path className="cc-premiere-light" d="m130 59-22-42 44 12Zm100 0 22-42-44 12Z" stroke="none"/>
+      <path className="cc-projector-body" d="M122 61V25l8-9h100l8 9v36Z" stroke="none"/>
+      <rect x="127" y="13" width="106" height="13" rx="3" className="cc-premiere-marquee" stroke="none"/>
+      <text x="180" y="22" textAnchor="middle" stroke="none" fill="currentColor" fontSize="7" fontFamily="Georgia, serif" letterSpacing="2">CINEMA</text>
+      {[133,145,157,169,181,193,205,217,229].map((x,i) => <g key={x} className="cc-premiere-bulb" style={{animationDelay:`${i * .12}s`}}>
+        <circle cx={x} cy="14" r="1"/><circle cx={x} cy="25" r="1"/>
+      </g>)}
+      <g clipPath={`url(#${screenId})`}>
+        <rect x="143" y="32" width="74" height="23" className="cc-premiere-screen" stroke="none"/>
+        <g className="cc-premiere-feature">
+          <path d="m180 34 2.7 6.8 7.3 2.7-7.3 2.7L180 53l-2.7-6.8-7.3-2.7 7.3-2.7Z"/>
+          <path d="M158 41v4m-2-2h4m42-5v4m-2-2h4"/>
+        </g>
+        <g className="cc-premiere-curtain cc-premiere-curtain-left"><path d="M143 32h37v23h-37Z"/><path d="M150 32v23m8-23v23m8-23v23m8-23v23"/></g>
+        <g className="cc-premiere-curtain cc-premiere-curtain-right"><path d="M180 32h37v23h-37Z"/><path d="M186 32v23m8-23v23m8-23v23m8-23v23"/></g>
+      </g>
+      <path className="cc-premiere-carpet" d="m171 57-8 8h34l-8-8Z"/>
+      <g className="cc-premiere-guest">
+        <circle cx="250" cy="43" r="3" className="cc-projector-body"/>
+        <path d="M247 48h6l2 9h-10Zm2 9-1 7m4-7 1 7m-7-14-4 3"/>
+      </g>
+      <g>
+        <path className="cc-premiere-kiosk" d="M271 42h23v20h-23Zm-3 0 4-6h21l4 6Z"/>
+        <path d="M277 45h11v9h-11Zm-1 13h13m-10-8h6"/>
+        <circle cx="283" cy="49" r="2"/>
+      </g>
+      <path d="M321 64V27m-6 0h12m-10-10h8l2 10h-12Zm4-4h2"/>
+      <path className="cc-premiere-lantern" d="M318 19h6v6h-6Z"/>
+      <g className="cc-premiere-cat"><path d="M305 62v-7l3 2 3-2v7q0 3-3 3h-5c-4 0-4-5-1-5"/><path d="M307 60h.1m2 0h.1"/></g>
+      <path className="cc-cinema-ground" d="M18 65h324"/>
+      <path className="cc-premiere-water" d="M20 70h17m55 0h20m28 0h29m42 0h29m35 0h18m25 0h23M26 74h31m70 0h24m31 0h33m58 0h29"/>
+      <g className="cc-premiere-boat">
+        <path className="cc-projector-body" d="m43 64 4 7h35l7-7Z"/>
+        <path d="M54 64v-6h21v6m-17-6v6m10-6v6"/>
+        <path className="cc-premiere-wake" d="M29 70h10m-15 3h17"/>
+      </g>
+    </g>
+  </svg>;
+}
+
+const scenes = ['projector', 'theatre', 'filmstrip', 'moonlit', 'autumn', 'premiere'] as const;
 type Scene = typeof scenes[number];
 let pageScene: Scene | undefined;
 
@@ -161,9 +243,9 @@ export default function CinemaAnimation() {
     try { localStorage.setItem('cinecompass_header_scene', next); } catch { /* Cycling still works without storage. */ }
     setScene(next);
   };
-  return <button type="button" className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' ? ' cc-cinema-animation-wide' : ''}`} aria-label="Show next cinema animation" title="Show next cinema animation" data-scene={scene} onClick={nextScene}>
+  return <button type="button" className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' || scene === 'autumn' || scene === 'premiere' ? ' cc-cinema-animation-wide' : ''}`} aria-label="Show next cinema animation" title="Show next cinema animation" data-scene={scene} onClick={nextScene}>
     <React.Fragment key={scene}>
-      {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : <MoonlitScene/>}
+      {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : scene === 'moonlit' ? <MoonlitScene/> : scene === 'autumn' ? <AutumnScene/> : <PremiereScene/>}
     </React.Fragment>
   </button>;
 }

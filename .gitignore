@@ -3,6 +3,9 @@ build/
 coverage/
 bin/
 obj/
+# Some .NET tooling emits literal Windows-style directory names on macOS.
+bin\\*/
+obj\\*/
 .data/
 .env
 .env.*

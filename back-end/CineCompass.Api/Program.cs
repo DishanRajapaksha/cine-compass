@@ -140,6 +140,7 @@ app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserM
     catch (DbUpdateException) { return Results.Conflict(new { error = "Settings changed on another device. Reload account settings before saving." }); }
     return Results.Ok(new { revision = row.Revision });
 }).RequireAuthorization();
+app.MapCalendarFeed(origin);
 app.Map("/api/{**path}", () => Results.NotFound());
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions {

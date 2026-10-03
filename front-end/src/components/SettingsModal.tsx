@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { HiddenMovie } from '../types/Movie';
 import ImdbSettings from './ImdbSettings';
 import AccountSettings from './AccountSettings';
+import CalendarSubscription from './CalendarSubscription';
 
 export default function SettingsModal({hidden,onRestore,onClose}: {hidden:HiddenMovie[];onRestore:(id:string) => void;onClose:() => void}) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -14,6 +15,7 @@ export default function SettingsModal({hidden,onRestore,onClose}: {hidden:Hidden
     </header>
     <div className="cc-settings-body">
     <AccountSettings/>
+    <CalendarSubscription/>
     <section aria-labelledby="cc-imdb-title"><h3 id="cc-imdb-title">IMDb</h3><ImdbSettings/></section>
     <section aria-labelledby="cc-hidden-title"><h3 id="cc-hidden-title">Hidden movies <span>({hidden.length})</span></h3>
       <p>Hidden movies stay out of the schedule and watchlist until you restore them. These choices are saved locally and sync when you sign in. Saved screenings are kept.</p>

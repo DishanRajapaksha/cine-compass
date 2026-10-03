@@ -3,14 +3,11 @@ import { Bookmark, Check, ExternalLink, EyeOff, CalendarPlus, Calendar, Ticket, 
 import { Screening, languageName, screeningTime } from '../lib/schedule';
 import { hasEnglishSubtitles } from '../lib/utils';
 import ImdbLink from './ImdbLink';
-import CalendarButton from './CalendarButton';
-import { calendarScreening } from '../lib/calendar';
 export const plainDescription = (html: string) => {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
 };
-export default function ScreeningRow({ screening: {movie, showtime}, compact, saved, selected, unavailable, available, onSave, onSelect, onDetails, onHide, onPlan, filmSaved, onToggleFilm, doubleBill }: {
-  doubleBill?: Screening[];
+export default function ScreeningRow({ screening: {movie, showtime}, compact, saved, selected, unavailable, available, onSave, onSelect, onDetails, onHide, onPlan, filmSaved, onToggleFilm }: {
   filmSaved?: boolean; onToggleFilm?: () => void; screening: Screening; compact: boolean; saved: boolean; selected: boolean; unavailable: boolean; available?: boolean;
   onSave: () => void; onSelect: () => void; onDetails: () => void; onHide?: () => void; onPlan?: () => void;
 }) {
@@ -29,16 +26,12 @@ export default function ScreeningRow({ screening: {movie, showtime}, compact, sa
         {onToggleFilm && <button className="cc-film-watchlist" aria-label={`${filmSaved ? 'Remove' : 'Save'} film ${movie.title} ${filmSaved ? 'from' : 'to'} watchlist`} aria-pressed={Boolean(filmSaved)} onClick={onToggleFilm}><Bookmark size={13} fill={filmSaved ? 'currentColor' : 'none'}/><span className="cc-action-label">{filmSaved ? 'On watchlist' : 'Watchlist'}</span></button>}
         {onHide && <button className="cc-hide-movie cc-mobile-secondary" onClick={onHide} aria-label={`Hide ${movie.title} permanently`} title="Hide all screenings until restored in Settings"><EyeOff size={13}/><span className="cc-action-label">Hide</span></button>}
         {showtime.ticketingUrl && <a href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer" aria-label={`Tickets for ${movie.title}`} title="Tickets (opens in a new tab)"><Ticket size={14}/><span className="cc-action-label">Tickets</span><ExternalLink className="cc-action-label" size={13}/></a>}
-        <CalendarButton className="cc-mobile-secondary" screenings={[calendarScreening({movie,showtime})]}/>
-        {doubleBill && <CalendarButton className="cc-mobile-secondary" screenings={doubleBill.map(calendarScreening)} label="Add double bill"/>}
         <button title={saved ? 'Remove saved screening' : 'Save screening'} className={`cc-screening-save ${saved ? 'is-saved' : ''}`} onClick={onSave} aria-label={`${saved ? 'Remove' : 'Save'} ${movie.title} at ${screeningTime(showtime.startDate)}`} aria-pressed={saved}>{saved ? <Check size={14}/> : <Calendar size={14}/>}<span className="cc-action-label">{saved ? 'Screening saved' : 'Save screening'}</span></button>
         {onPlan && <button className="cc-screening-plan cc-mobile-secondary" onClick={onPlan} aria-pressed={selected} aria-label={`Plan my evening after ${movie.title} at ${screeningTime(showtime.startDate)}`} title="Plan my evening"><CalendarPlus size={14}/><span className="cc-action-label">Plan my evening</span></button>}
         <button className="cc-mobile-more" aria-label={`More actions for ${movie.title} at ${screeningTime(showtime.startDate)}`} aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(v => !v)} title="More actions"><MoreHorizontal size={20}/></button>
       </div>
       {moreOpen && <div className="cc-screening-more" id={moreId} role="group" aria-label={`More actions for ${movie.title}`}>
         {onHide && <button onClick={() => {setMoreOpen(false);onHide();}}><EyeOff size={16}/> Hide this film</button>}
-        <CalendarButton screenings={[calendarScreening({movie,showtime})]}/>
-        {doubleBill && <CalendarButton screenings={doubleBill.map(calendarScreening)} label="Add double bill"/>}
         {onPlan && <button onClick={() => {setMoreOpen(false);onPlan();}}><CalendarPlus size={16}/> Plan my evening</button>}
       </div>}
     </div>

@@ -79,6 +79,18 @@ Backend HTTP tests use isolated SQLite databases. Also validate PostgreSQL migra
 
 Save films from the schedule or film details without choosing a screening. The Watchlist counts films and keeps them after screening times pass or are removed. Find showtimes opens upcoming screenings with independent city, language, cinema, and date filters. Saving a screening also adds its film; removing a film keeps its saved screening times under Other saved screenings. Existing saved screenings populate the film watchlist once on upgrade. Hidden films stay saved and return when restored in Settings. Film watchlists remain device-local for guests and sync with a CineCompass account. On phones, each screening shows IMDb, Watchlist, Tickets, Save screening, and More icons; More contains labelled hiding and evening-planning actions.
 
+## Apple Calendar subscription
+
+Open **Settings → Calendar → Set up calendar subscription**, sign in, choose an optional reminder, and enable the subscription. Tap **Open in Apple Calendar** and confirm there. The copy-link action also supports calendar apps that accept an HTTPS subscription URL. On iPhone, manual setup is Calendar → Calendars → Add Calendar → Add Subscription Calendar.
+
+Each saved screening becomes a separate event with its title, cinema/city, exact start/end times, and ticket link when available. Double bills require no separate action. Saved films without a chosen screening time do not create events. The feed includes all saved screenings, including past screenings, hidden films, and screenings kept after removing a film from the watchlist. Removing a saved screening removes it from the feed. Changes arrive after account sync and the calendar client's next refresh; the suggested hourly refresh interval is advisory. Reminders depend on the client's subscription/alert settings.
+
+Subscriptions require a CineCompass account and the publicly reachable HTTPS deployment. Guest screenings remain local until explicitly imported into account settings. The private feed link works without browser cookies, so Calendar can refresh it independently. Keep it private: anyone with the link can read the saved screening events. It exposes no other preferences, account details, or credentials. The server stores a token hash for lookup and an encrypted copy for restoring the link; preserving the Data Protection keys preserves access to that copy. Avoid logging full calendar-feed paths in reverse proxies or sharing them in screenshots.
+
+**Turn off subscription** revokes the current link immediately. Remove the CineCompass calendar in Calendar to clear retained events. Re-enabling creates a new link, which must be subscribed to again. Calendar subscriptions are read-only, and the web app cannot detect whether the subscription was confirmed. This replaces the earlier per-screening `.ics` download/share modal and separate double-bill button.
+
+The `CalendarSubscriptions` database migration is applied by the existing deployment migration service. No additional service or secret configuration is required. A physical iPhone subscription must still be verified against the deployed HTTPS feed; localhost cannot be fetched by an iPhone calendar client.
+
 ## Cineville integration
 
 Public listings continue to work. CineCompass accounts do not authenticate with Cineville. Authenticated Cineville watchlist access is a later integration, pending verification of Cineville's login/session flow. Future Cineville tokens must be stored privately on the backend, outside settings sync.
