@@ -13,12 +13,20 @@
 .cc-theatre-seat{fill:var(--paper)}
 .cc-theatre-seat-front{fill:var(--paper);stroke-width:1.6}
 .cc-theatre-audience{animation:cc-cinema-settle 2.4s ease-in-out 2}
+.cc-cinema-animation-wide{min-width:0;overflow:hidden}
+.cc-cinema-animation-wide svg{width:100%;height:56px;overflow:hidden}
+.cc-filmstrip-rail{stroke:var(--rule)}
+.cc-filmstrip-frame{stroke-opacity:.35}
+.cc-filmstrip-perforation{fill:currentColor;fill-opacity:.18;stroke:none}
+.cc-filmstrip-motif{fill:currentColor;fill-opacity:.08;stroke-opacity:.7}
+.cc-filmstrip-track{animation:cc-filmstrip-drift 4.8s ease-in-out 1 both}
 @media(hover:hover){
   .cc-cinema-animation:hover .cc-projector-reel{animation-name:cc-cinema-roll-again}
   .cc-cinema-animation:hover .cc-projector-beam{animation-name:cc-cinema-light-again}
   .cc-cinema-animation:hover .cc-cinema-star{animation-name:cc-cinema-glimmer-again}
   .cc-cinema-animation:hover .cc-theatre-glow{animation-name:cc-cinema-light-again}
   .cc-cinema-animation:hover .cc-theatre-audience{animation-name:cc-cinema-settle-again}
+  .cc-cinema-animation:hover .cc-filmstrip-track{animation-name:cc-filmstrip-drift-again}
 }
 @keyframes cc-cinema-roll{to{transform:rotate(360deg)}}
 @keyframes cc-cinema-roll-again{to{transform:rotate(360deg)}}
@@ -28,9 +36,15 @@
 @keyframes cc-cinema-glimmer-again{0%,100%{transform:scale(1);fill-opacity:.16}50%{transform:scale(.88);fill-opacity:.3}}
 @keyframes cc-cinema-settle{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
 @keyframes cc-cinema-settle-again{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+@keyframes cc-filmstrip-drift{to{transform:translateX(-252px)}}
+@keyframes cc-filmstrip-drift-again{to{transform:translateX(-252px)}}
 @media(max-width:800px){.cc-cinema-animation{display:none}}
 @media(max-width:480px){
   .cc-cinema-animation{display:flex;flex:0 0 clamp(60px,20vw,90px);min-width:0;margin-left:auto}
   .cc-cinema-animation svg{width:100%;height:auto}
+}
+@media(max-width:800px){
+  .cc-cinema-animation-wide{display:flex;order:4;flex:0 0 100%;margin:0 0 8px}
+  .cc-cinema-animation-wide svg{height:56px}
 }
 @media(prefers-reduced-motion:reduce){.cc-cinema-animation svg *{animation:none!important}}

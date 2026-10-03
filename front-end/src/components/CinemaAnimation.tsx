@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import './CinemaAnimation.css';
 
 function ProjectorScene() {
@@ -60,7 +60,38 @@ function TheatreScene() {
   </svg>;
 }
 
-type Scene = 'projector' | 'theatre';
+function FilmstripScene() {
+  const patternId = useId();
+  return <svg fill="none" focusable="false">
+    <defs>
+      <pattern id={patternId} width="252" height="56" patternUnits="userSpaceOnUse">
+        <g stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M0 5h252M0 51h252" className="cc-filmstrip-rail"/>
+          {[0,84,168].map(x => <g key={x} transform={`translate(${x} 0)`}>
+            <rect x="7" y="14" width="70" height="28" rx="3" className="cc-filmstrip-frame"/>
+            {[7,21,35,49,63,77].map(hole => <g key={hole} className="cc-filmstrip-perforation">
+              <rect x={hole} y="7.5" width="4" height="3" rx=".7"/>
+              <rect x={hole} y="45.5" width="4" height="3" rx=".7"/>
+            </g>)}
+          </g>)}
+          <path className="cc-filmstrip-motif" d="m42 19 2.2 6.8L51 28l-6.8 2.2L42 37l-2.2-6.8L33 28l6.8-2.2Z"/>
+          <g className="cc-filmstrip-motif">
+            <path d="m119 26 2 11h11l2-11Z"/>
+            <path d="M119 26c-5-3-1-8 3-6 0-6 8-6 8 0 5-3 9 3 4 6Z"/>
+            <path d="m124 29 .5 5m4.5-5-.5 5"/>
+          </g>
+          <path className="cc-filmstrip-motif" d="M210 36s-13-7-10-13c2-4 7-4 10 0 3-4 8-4 10 0 3 6-10 13-10 13Z"/>
+        </g>
+      </pattern>
+    </defs>
+    <g className="cc-filmstrip-track">
+      <rect x="-252" width="calc(100% + 504px)" height="56" fill={`url(#${patternId})`}/>
+    </g>
+  </svg>;
+}
+
+const scenes = ['projector', 'theatre', 'filmstrip'] as const;
+type Scene = typeof scenes[number];
 let pageScene: Scene | undefined;
 
 function sceneForPage(): Scene {
@@ -68,7 +99,9 @@ function sceneForPage(): Scene {
   if (pageScene) return pageScene;
   pageScene = 'projector';
   try {
-    if (localStorage.getItem('cinecompass_header_scene') === 'projector') pageScene = 'theatre';
+    const previous = localStorage.getItem('cinecompass_header_scene');
+    const index = scenes.findIndex(scene => scene === previous);
+    pageScene = scenes[(index + 1) % scenes.length];
     localStorage.setItem('cinecompass_header_scene', pageScene);
   } catch { /* The illustration still works when browser storage is unavailable. */ }
   return pageScene;
@@ -77,7 +110,7 @@ function sceneForPage(): Scene {
 /** A decorative cinema vignette, alternating on each page load. */
 export default function CinemaAnimation() {
   const scene = sceneForPage();
-  return <span className="cc-cinema-animation" aria-hidden="true" data-scene={scene}>
-    {scene === 'projector' ? <ProjectorScene/> : <TheatreScene/>}
+  return <span className={`cc-cinema-animation${scene === 'filmstrip' ? ' cc-cinema-animation-wide' : ''}`} aria-hidden="true" data-scene={scene}>
+    {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : <FilmstripScene/>}
   </span>;
 }
