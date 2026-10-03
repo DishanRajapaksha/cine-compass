@@ -77,6 +77,7 @@ export interface Movie {
   poster_path: string;
   release_date: string;
   overview: string;
+  overviewLanguage?: 'en' | 'nl';
   vote_average: number;
   genre_ids: number[];
   duration: number;

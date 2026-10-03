@@ -8,7 +8,8 @@ import { amsterdamDate, dateLabel, filterScreenings, languageName, readStorage, 
 import ScheduleFilters from './ScheduleFilters';
 import SavedFilms from './SavedFilms';
 import FilmShowtimes from './FilmShowtimes';
-import ScreeningRow, { plainDescription } from './ScreeningRow';
+import ScreeningRow from './ScreeningRow';
+import FilmDescription from './FilmDescription';
 import './CinemaSchedule.css';
 import ImdbLink from './ImdbLink';
 import SettingsModal from './SettingsModal';
@@ -21,11 +22,15 @@ const validFilters = (value: unknown): value is MovieFilters => {
   if (f.languageMatchMode !== undefined && f.languageMatchMode !== 'any' && f.languageMatchMode !== 'all') return false;
   return (f.selectedCity === null || typeof f.selectedCity === 'string') && ['selectedTheaters','selectedSubtitleLanguages','selectedSpokenLanguages','selectedSpecials'].every(key => Array.isArray((f as unknown as Record<string, unknown>)[key]) && ((f as unknown as Record<string, string[]>)[key]).every(item => typeof item === 'string')) && ['startDate','endDate','startTime','endTime'].every(key => (f as unknown as Record<string, unknown>)[key] === null || typeof (f as unknown as Record<string, unknown>)[key] === 'string');
 };
-const loadFilters = () => {
-  const f = readStorage('cinecompass_schedule_filters', defaults(), validFilters);
+const refreshTimeWindow = (f: MovieFilters): MovieFilters => {
   const today = getCurrentDateInAmsterdam();
   const stale = !f.startDate || f.startDate < today;
-  return {...f, ...(f.languageMatchMode ? {} : {selectedSubtitleLanguages:['en'],selectedSpokenLanguages:['en'],languageMatchMode:'any' as const}), startDate: stale ? today : f.startDate, endDate: !f.endDate || f.endDate < today ? today : f.endDate, startTime: stale || !f.startTime ? getCurrentTimeInAmsterdam() : f.startTime, endTime: f.endTime || '23:59'};
+  const startTime = stale || f.startDate === today || !f.startTime ? getCurrentTimeInAmsterdam() : f.startTime;
+  return {...f, startDate: stale ? today : f.startDate, endDate: !f.endDate || f.endDate < today ? today : f.endDate, startTime, endTime: !f.endTime || (startTime && f.endTime < startTime) ? '23:59' : f.endTime};
+};
+const loadFilters = () => {
+  const f = readStorage('cinecompass_schedule_filters', defaults(), validFilters);
+  return refreshTimeWindow({...f, ...(f.languageMatchMode ? {} : {selectedSubtitleLanguages:['en'],selectedSpokenLanguages:['en'],languageMatchMode:'any' as const})});
 };
 const validSaved = (value: unknown): value is SavedShowtime[] => Array.isArray(value) && value.every(s => s && typeof s.showtimeId === 'string' && typeof s.movieId === 'string' && typeof s.startDate === 'string' && typeof s.endDate === 'string' && typeof s.movieTitle === 'string');
 const shiftDate = (date: string, amount: number) => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate()+amount); return d.toISOString().slice(0,10); };
@@ -49,7 +54,7 @@ function FilmDetails({ screening, cities, city, saved, onSave, onPlan, onClose, 
         <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-hide-movie" onClick={onHide}>Hide this movie</button></div>
       </div>
       <div className="cc-detail-story">
-        <p className="cc-detail-synopsis">{plainDescription(movie.overview)}</p>
+        <FilmDescription key={`${movie.id}:${movie.overview}`} movie={movie}/>
         {(movie.directors.length > 0 || movie.cast.length > 0) && <dl className="cc-detail-credits">
           {movie.directors.length > 0 && <div><dt>Directed by</dt><dd>{movie.directors.join(', ')}</dd></div>}
           {movie.cast.length > 0 && <div><dt>Cast</dt><dd>{movie.cast.join(', ')}</dd></div>}
@@ -67,6 +72,18 @@ function FilmDetails({ screening, cities, city, saved, onSave, onPlan, onClose, 
 
 export default function CinemaSchedule() {
   const [filters,setFilters] = useState<MovieFilters>(loadFilters);
+  useEffect(() => {
+    // Installed PWAs can resume the existing page without mounting again.
+    const resume = () => setFilters(refreshTimeWindow);
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') resume(); };
+    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) resume(); };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
   const [query,setQuery] = useState('');
   const [cities,setCities] = useState<City[]>([]);
   const [movies,setMovies] = useState<Movie[]>([]);
@@ -99,7 +116,7 @@ export default function CinemaSchedule() {
   const [plannerPrefs,setPlannerPrefs] = useState(() => {
     const valid = (v: unknown): v is Record<string, unknown> => Boolean(v && typeof v === 'object');
     const prefs = readStorage('cinecompass_planner_prefs', readStorage('cineville_timeline_prefs', {} as Record<string, unknown>, valid), valid);
-    return { buffer: typeof prefs.bufferMinutes === 'number' ? Math.min(180,Math.max(0,prefs.bufferMinutes)) : 15, hideUnavailable:prefs.availabilityMode === 'hide', hideSameMovie:Boolean(prefs.hideSameMovie) };
+    return { buffer: typeof prefs.bufferMinutes === 'number' ? Math.min(180,Math.max(0,prefs.bufferMinutes)) : 15, hideUnavailable:prefs.availabilityMode !== 'highlight', hideSameMovie:typeof prefs.hideSameMovie === 'boolean' ? prefs.hideSameMovie : true };
   });
   const {buffer,hideUnavailable,hideSameMovie} = plannerPrefs;
   useEffect(() => writeStorage('cinecompass_planner_prefs',{bufferMinutes:buffer,availabilityMode:hideUnavailable ? 'hide' : 'highlight',hideSameMovie}),[buffer,hideUnavailable,hideSameMovie]);
@@ -133,7 +150,7 @@ export default function CinemaSchedule() {
     setFilters(f => ({...f,selectedCity:screening.showtime.theaterCity,selectedTheaters:[],selectedSubtitleLanguages:[],selectedSpokenLanguages:[],selectedSpecials:[],startDate:date,endDate:date,startTime:null,endTime:'23:59'}));
   };
   return <div className="cc-app">
-    <header className="cc-header"><a className="cc-brand" href="#schedule"><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><span className="cc-header-tagline">A good film. A favourite cinema. Your kind of evening.</span><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
+    <header className="cc-header"><a className="cc-brand" href="#schedule"><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
     <main className="cc-main">
     {hiddenError && <p className="cc-error" role="alert">{hiddenError}</p>}
     {page === 'watchlist' ? <SavedFilms saved={visibleSaved} onHide={hideMovie} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : <>

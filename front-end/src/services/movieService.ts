@@ -27,8 +27,8 @@ type NormalizedFilm = {
   title: string;
   posterUrl: string;
   premiereDate: string | null;
-  shortDescription: string;
-  description: string;
+  overview: string;
+  overviewLanguage?: 'en' | 'nl';
   duration: number;
   directors: string[];
   cast: string[];
@@ -74,13 +74,25 @@ const stringArray = (value: unknown): string[] => {
 const normalizeFilm = (film: CinevilleFilm): NormalizedFilm => {
   const attributes = film.attributes;
   const poster = film.assets.poster ?? film.assets.cover;
+  const localized = film.localizableAttributes;
+  const english = localized[PRIMARY_LOCALE] as Record<string, unknown> | undefined;
+  const dutch = localized[FALLBACK_LOCALE] as Record<string, unknown> | undefined;
+  const description = [
+    {value: english?.shortDescription, language: 'en' as const},
+    {value: english?.description, language: 'en' as const},
+    {value: dutch?.shortDescription, language: 'nl' as const},
+    {value: dutch?.description, language: 'nl' as const},
+    // Unlocalized descriptions from the Dutch API are Dutch by default.
+    {value: localized.shortDescription, language: 'nl' as const},
+    {value: localized.description, language: 'nl' as const}
+  ].find(item => typeof item.value === 'string' && item.value.trim());
   return {
     id: film.id,
     title: film.title,
     posterUrl: poster?.url ?? '',
     premiereDate: typeof attributes.premiereDate === 'string' ? attributes.premiereDate : null,
-    shortDescription: getLocalizedValue<string>(film.localizableAttributes, 'shortDescription') ?? '',
-    description: getLocalizedValue<string>(film.localizableAttributes, 'description') ?? '',
+    overview: description ? description.value as string : 'No description available.',
+    overviewLanguage: description?.language,
     duration: typeof attributes.duration === 'number' ? attributes.duration : 0,
     directors: stringArray(attributes.directors),
     cast: stringArray(attributes.cast),
@@ -146,7 +158,8 @@ const convertCinevilleFilmToMovie = (
     title: film.title,
     poster_path: film.posterUrl,
     release_date: film.premiereDate || (film.releaseYear ? `${film.releaseYear}-01-01` : ''),
-    overview: film.shortDescription || film.description || 'No description available.',
+    overview: film.overview,
+    overviewLanguage: film.overviewLanguage,
     vote_average: 0,
     genre_ids: [],
     duration: film.duration,

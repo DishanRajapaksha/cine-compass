@@ -100,6 +100,64 @@ test('defaults to the current Amsterdam time through the end of today',async () 
   await screen.findByRole('button',{name:'Perfect Days'});
 });
 
+test('reopening on the same day refreshes the saved start time and keeps other preferences',async () => {
+  const view = render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'All (AND)'}));
+  fireEvent.input(screen.getByLabelText('After'),{target:{value:'15:00'}});
+  fireEvent.input(screen.getByLabelText('Before'),{target:{value:'16:00'}});
+  view.unmount();
+  jest.mocked(dateUtils.getCurrentTimeInAmsterdam).mockReturnValue('17:30');
+  render(<App/>);
+  expect(screen.getByLabelText('After')).toHaveValue('17:30');
+  expect(screen.getByLabelText('Before')).toHaveValue('23:59');
+  expect(screen.getByRole('button',{name:'All (AND)'})).toHaveAttribute('aria-pressed','true');
+  await screen.findByText('No screenings in this window.');
+});
+
+test('resuming a backgrounded PWA refreshes time only when it becomes visible',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.input(screen.getByLabelText('After'),{target:{value:'15:00'}});
+  jest.mocked(dateUtils.getCurrentTimeInAmsterdam).mockReturnValue('18:30');
+  const visibility = jest.spyOn(document,'visibilityState','get');
+  visibility.mockReturnValue('hidden');
+  fireEvent(document,new Event('visibilitychange'));
+  expect(screen.getByLabelText('After')).toHaveValue('15:00');
+  visibility.mockReturnValue('visible');
+  fireEvent(document,new Event('visibilitychange'));
+  expect(screen.getByLabelText('After')).toHaveValue('18:30');
+  expect(JSON.parse(localStorage.getItem('cinecompass_schedule_filters') || '{}').startTime).toBe('18:30');
+});
+
+test('restoring a cached page after midnight refreshes the date and time window',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  jest.mocked(dateUtils.getCurrentDateInAmsterdam).mockReturnValue('2026-10-02');
+  jest.mocked(dateUtils.getCurrentTimeInAmsterdam).mockReturnValue('00:15');
+  fireEvent(window,new PageTransitionEvent('pageshow',{persisted:true}));
+  expect(screen.getByLabelText('From')).toHaveValue('2026-10-02');
+  expect(screen.getByLabelText('To')).toHaveValue('2026-10-02');
+  expect(screen.getByLabelText('After')).toHaveValue('00:15');
+  expect(screen.getByLabelText('Before')).toHaveValue('23:59');
+  await screen.findByText('No screenings in this window.');
+});
+
+test('resuming and reopening preserve an explicitly chosen future date and time',async () => {
+  const view = render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Tomorrow'}));
+  fireEvent.input(screen.getByLabelText('After'),{target:{value:'10:00'}});
+  jest.mocked(dateUtils.getCurrentTimeInAmsterdam).mockReturnValue('18:30');
+  fireEvent(document,new Event('visibilitychange'));
+  expect(screen.getByLabelText('After')).toHaveValue('10:00');
+  view.unmount();
+  render(<App/>);
+  expect(screen.getByLabelText('From')).toHaveValue('2026-10-02');
+  expect(screen.getByLabelText('After')).toHaveValue('10:00');
+  await screen.findByText('No screenings in this window.');
+});
+
 test('OR shows English-subtitled and English-spoken films together, persists AND, and resets to OR',async () => {
   const response = await service.getPopularMovies();
   const base = response.results[0];
@@ -147,22 +205,33 @@ test('cinema dropdown allows multiple selections and Escape closes it',async () 
   expect(screen.queryByRole('checkbox',{name:'Eye'})).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Cinemas 2 selected'})).toHaveFocus();
 });
-test.each(['Posters','Compact'])('row planning in %s highlights reachable films, hides repeats, and keeps the anchor',async view => {
+test.each(['Posters','Compact'])('row planning in %s hides unavailable films and repeats by default, and keeps the anchor',async view => {
   const base=(await service.getPopularMovies()).results[0];
   const st=base.showtimes[0];
   const anchor={...st,id:'anchor',startDate:'2026-10-01T16:00:00Z',endDate:'2026-10-01T18:00:00Z'};
   const repeat={...st,id:'repeat',startDate:'2026-10-01T20:00:00Z',endDate:'2026-10-01T22:00:00Z'};
+  const blocked={...st,id:'blocked',startDate:'2026-10-01T17:00:00Z',endDate:'2026-10-01T19:00:00Z'};
   const next={...st,id:'next',startDate:'2026-10-01T18:30:00Z',endDate:'2026-10-01T20:00:00Z'};
-  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:2,results:[{...base,showtimes:[anchor,repeat]},{...base,id:'next-film',title:'Next Film',showtimes:[next]}]});
-  render(<App/>); await screen.findByRole('button',{name:'Next Film'});
+  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:2,results:[{...base,showtimes:[anchor,repeat]},{...base,id:'next-film',title:'Next Film',showtimes:[blocked,next]}]});
+  render(<App/>); await screen.findAllByRole('button',{name:'Next Film'});
   fireEvent.click(screen.getByRole('button',{name:view}));
   fireEvent.click(screen.getByRole('button',{name:'Plan my evening after Perfect Days at 18:00'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Plan my evening after Perfect Days at 18:00'})).toHaveAttribute('aria-pressed','true');
-  expect(screen.getByRole('button',{name:'20:30 22:00 Available after your pick'}).closest('article')).toHaveClass('is-available');
-  fireEvent.click(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'}));
+  expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
+  expect(screen.queryByRole('button',{name:/^19:00 /})).not.toBeInTheDocument();
   expect(screen.queryByRole('button',{name:/^22:00 /})).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'Hide unavailable'}));
   expect(screen.getByRole('button',{name:'18:00 20:00 Your starting point'})).toBeInTheDocument();
   expect(screen.getByRole('button',{name:'20:30 22:00'})).toBeInTheDocument();
+});
+
+test('preserves saved planner choices to highlight unavailable films and show repeats',async () => {
+  localStorage.setItem('cinecompass_planner_prefs',JSON.stringify({availabilityMode:'highlight',hideSameMovie:false,bufferMinutes:25}));
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:/Plan my evening after Perfect Days/}));
+  expect(screen.getByRole('button',{name:'Highlight available'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).not.toBeChecked();
+  expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
 });
