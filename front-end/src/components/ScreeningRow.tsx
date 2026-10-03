@@ -22,17 +22,25 @@ export default function ScreeningRow({ screening: {movie, showtime}, compact, sa
     <div className="cc-venue"><strong>{showtime.theaterName}</strong><span>{showtime.theaterCity}</span></div>
     <div className="cc-screening-footer">
       <div className="cc-screening-actions">
+        {!compact && <>
         <ImdbLink title={movie.title} year={movie.releaseYear}/>
         {onToggleFilm && <button className="cc-film-watchlist" aria-label={`${filmSaved ? 'Remove' : 'Save'} film ${movie.title} ${filmSaved ? 'from' : 'to'} watchlist`} aria-pressed={Boolean(filmSaved)} onClick={onToggleFilm}><Bookmark size={13} fill={filmSaved ? 'currentColor' : 'none'}/><span className="cc-action-label">{filmSaved ? 'On watchlist' : 'Watchlist'}</span></button>}
         {onHide && <button className="cc-hide-movie cc-mobile-secondary" onClick={onHide} aria-label={`Hide ${movie.title} permanently`} title="Hide all screenings until restored in Settings"><EyeOff size={13}/><span className="cc-action-label">Hide</span></button>}
         {showtime.ticketingUrl && <a href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer" aria-label={`Tickets for ${movie.title}`} title="Tickets (opens in a new tab)"><Ticket size={14}/><span className="cc-action-label">Tickets</span><ExternalLink className="cc-action-label" size={13}/></a>}
         <button title={saved ? 'Remove saved screening' : 'Save screening'} className={`cc-screening-save ${saved ? 'is-saved' : ''}`} onClick={onSave} aria-label={`${saved ? 'Remove' : 'Save'} ${movie.title} at ${screeningTime(showtime.startDate)}`} aria-pressed={saved}>{saved ? <Check size={14}/> : <Calendar size={14}/>}<span className="cc-action-label">{saved ? 'Screening saved' : 'Save screening'}</span></button>
         {onPlan && <button className="cc-screening-plan cc-mobile-secondary" onClick={onPlan} aria-pressed={selected} aria-label={`Plan my evening after ${movie.title} at ${screeningTime(showtime.startDate)}`} title="Plan my evening"><CalendarPlus size={14}/><span className="cc-action-label">Plan my evening</span></button>}
+        </>}
         <button className="cc-mobile-more" aria-label={`More actions for ${movie.title} at ${screeningTime(showtime.startDate)}`} aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(v => !v)} title="More actions"><MoreHorizontal size={20}/></button>
       </div>
       {moreOpen && <div className="cc-screening-more" id={moreId} role="group" aria-label={`More actions for ${movie.title}`}>
+        {compact && <>
+          <ImdbLink title={movie.title} year={movie.releaseYear}/>
+          {onToggleFilm && <button aria-label={`${filmSaved ? 'Remove' : 'Save'} film ${movie.title} ${filmSaved ? 'from' : 'to'} watchlist`} aria-pressed={Boolean(filmSaved)} onClick={() => {setMoreOpen(false);onToggleFilm();}}><Bookmark size={16} fill={filmSaved ? 'currentColor' : 'none'}/> {filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button>}
+          {showtime.ticketingUrl && <a href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer" aria-label={`Tickets for ${movie.title}`}><Ticket size={16}/> Tickets <ExternalLink size={13}/></a>}
+          <button aria-label={`${saved ? 'Remove' : 'Save'} ${movie.title} at ${screeningTime(showtime.startDate)}`} aria-pressed={saved} onClick={() => {setMoreOpen(false);onSave();}}>{saved ? <Check size={16}/> : <Calendar size={16}/>} {saved ? 'Remove saved screening' : 'Save screening'}</button>
+        </>}
         {onHide && <button onClick={() => {setMoreOpen(false);onHide();}}><EyeOff size={16}/> Hide this film</button>}
-        {onPlan && <button onClick={() => {setMoreOpen(false);onPlan();}}><CalendarPlus size={16}/> Plan my evening</button>}
+        {onPlan && <button aria-label={compact ? `Plan my evening after ${movie.title} at ${screeningTime(showtime.startDate)}` : undefined} aria-pressed={selected} onClick={() => {setMoreOpen(false);onPlan();}}><CalendarPlus size={16}/> Plan my evening</button>}
       </div>}
     </div>
   </article>;

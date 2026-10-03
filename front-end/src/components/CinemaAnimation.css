@@ -1,4 +1,4 @@
-.cc-cinema-animation{position:relative;flex:1;display:flex;justify-content:center;align-items:center;min-width:150px;height:76px;color:var(--wine)}
+.cc-cinema-animation{position:relative;flex:1;display:flex;justify-content:center;align-items:center;min-width:150px;height:76px;color:var(--wine);border:0;border-radius:0;background:transparent;box-shadow:none}
 .cc-app .cc-cinema-animation{color:var(--wine)}
 .cc-app .cc-cinema-animation:focus-visible{outline:none}
 .cc-cinema-animation:focus-visible::after{content:"";position:absolute;bottom:1px;left:50%;width:4px;height:4px;border-radius:50%;background:var(--wine);transform:translateX(-50%)}
@@ -121,5 +121,6 @@
   .cc-cinema-animation svg,.cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene,.cc-cinema-animation-wide .cc-autumn-scene,.cc-cinema-animation-wide .cc-premiere-scene{width:100%;height:100%}
   .cc-cinema-animation .cc-filmstrip-desktop{display:none}
   .cc-cinema-animation .cc-filmstrip-mobile{display:block}
+  .cc-cinema-animation[data-scene="starry-night"]{display:none}
 }
 @media(prefers-reduced-motion:reduce){.cc-cinema-animation svg *{animation:none!important}}

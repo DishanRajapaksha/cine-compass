@@ -1,0 +1,135 @@
+.cc-cinema-animation-wide .cc-starry-scene {
+  width: 100%;
+  height: 76px;
+  overflow: visible;
+}
+
+.cc-starry-scene {
+  --starry-flow: cc-starry-flow;
+  --starry-turn: cc-starry-turn;
+  --starry-breathe: cc-starry-breathe;
+  --starry-shimmer: cc-starry-shimmer;
+  --starry-drift: cc-starry-drift;
+  --starry-wish: cc-starry-wish;
+  --starry-sway: cc-starry-sway;
+  --starry-trace: cc-starry-trace;
+}
+
+/* A complete 4.8-second performance settles into the painting. Hover or focus
+   replays it; reduced motion keeps every layer in its finished composition. */
+.cc-starry-current { animation: var(--starry-flow) 4.8s ease-in-out both; }
+.cc-starry-swirl { transform-origin: 0 0; animation: var(--starry-turn) 4.8s ease-in-out both; }
+.cc-starry-swirl-reverse { animation-direction: reverse; }
+.cc-starry-swirl path, .cc-starry-current path { animation: var(--starry-trace) 4.8s ease-in-out both; }
+.cc-starry-star { transform-origin: 0 0; animation: var(--starry-breathe) 2.4s ease-in-out 2; }
+.cc-starry-star-1 { animation-direction: reverse; animation-duration: 1.6s; animation-iteration-count: 3; }
+.cc-starry-star-2 { animation-duration: 1.2s; animation-iteration-count: 4; }
+.cc-starry-moon { transform-origin: 0 0; animation: var(--starry-breathe) 4.8s ease-in-out; }
+.cc-starry-atmosphere { animation: var(--starry-drift) 4.8s ease-in-out both; }
+.cc-starry-windows { animation: var(--starry-shimmer) 2.4s ease-in-out 2; }
+.cc-starry-windows-1 { animation-duration: 1.6s; animation-iteration-count: 3; animation-direction: reverse; }
+.cc-starry-windows-2 { animation-duration: 1.2s; animation-iteration-count: 4; }
+.cc-starry-reflections { animation: var(--starry-flow) 1.6s ease-in-out 3; }
+.cc-starry-comet { opacity: 0; animation: var(--starry-wish) 4.8s ease-in-out both; }
+.cc-starry-cypress { transform-origin: 61px 112px; animation: var(--starry-sway) 4.8s ease-in-out; }
+
+@media (hover: hover) {
+  .cc-cinema-animation:hover .cc-starry-scene {
+    --starry-flow: cc-starry-flow-replay;
+    --starry-turn: cc-starry-turn-replay;
+    --starry-breathe: cc-starry-breathe-replay;
+    --starry-shimmer: cc-starry-shimmer-replay;
+    --starry-drift: cc-starry-drift-replay;
+    --starry-wish: cc-starry-wish-replay;
+    --starry-sway: cc-starry-sway-replay;
+    --starry-trace: cc-starry-trace-replay;
+  }
+}
+
+.cc-cinema-animation:focus-visible .cc-starry-scene {
+  --starry-flow: cc-starry-flow-replay;
+  --starry-turn: cc-starry-turn-replay;
+  --starry-breathe: cc-starry-breathe-replay;
+  --starry-shimmer: cc-starry-shimmer-replay;
+  --starry-drift: cc-starry-drift-replay;
+  --starry-wish: cc-starry-wish-replay;
+  --starry-sway: cc-starry-sway-replay;
+  --starry-trace: cc-starry-trace-replay;
+}
+
+@keyframes cc-starry-flow {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-6px, 1px); }
+  70% { transform: translate(5px, -1px); }
+}
+@keyframes cc-starry-flow-replay {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-6px, 1px); }
+  70% { transform: translate(5px, -1px); }
+}
+@keyframes cc-starry-turn {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  35% { transform: rotate(12deg) scale(1.06, .96); }
+  70% { transform: rotate(-7deg) scale(.98, 1.04); }
+}
+@keyframes cc-starry-turn-replay {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  35% { transform: rotate(12deg) scale(1.06, .96); }
+  70% { transform: rotate(-7deg) scale(.98, 1.04); }
+}
+@keyframes cc-starry-breathe {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: .9; }
+  50% { transform: scale(1.14) rotate(8deg); opacity: 1; }
+}
+@keyframes cc-starry-breathe-replay {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: .9; }
+  50% { transform: scale(1.14) rotate(8deg); opacity: 1; }
+}
+@keyframes cc-starry-shimmer {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
+@keyframes cc-starry-shimmer-replay {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
+@keyframes cc-starry-drift {
+  0%, 100% { transform: translateX(0); opacity: .8; }
+  50% { transform: translateX(4px); opacity: 1; }
+}
+@keyframes cc-starry-drift-replay {
+  0%, 100% { transform: translateX(0); opacity: .8; }
+  50% { transform: translateX(4px); opacity: 1; }
+}
+@keyframes cc-starry-wish {
+  0%, 28% { opacity: 0; transform: translate(0, 0); }
+  38% { opacity: .9; }
+  65%, 100% { opacity: 0; transform: translate(65px, 15px); }
+}
+@keyframes cc-starry-wish-replay {
+  0%, 28% { opacity: 0; transform: translate(0, 0); }
+  38% { opacity: .9; }
+  65%, 100% { opacity: 0; transform: translate(65px, 15px); }
+}
+@keyframes cc-starry-sway {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-1.8deg); }
+  70% { transform: rotate(1deg); }
+}
+@keyframes cc-starry-sway-replay {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-1.8deg); }
+  70% { transform: rotate(1deg); }
+}
+@keyframes cc-starry-trace {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes cc-starry-trace-replay {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-starry-scene * { animation: none !important; }
+}

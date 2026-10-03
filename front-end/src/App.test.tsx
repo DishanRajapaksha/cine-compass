@@ -93,6 +93,7 @@ test('switches to one compact layout with no posters and preserves saved screeni
   expect(screen.getByRole('img',{name:'Perfect Days'})).toBeInTheDocument();
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toHaveAttribute('href','https://www.imdb.com/find/?q=Perfect%20Days%202023&s=tt');
   fireEvent.click(screen.getByRole('button',{name:'Compact'}));
+  fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'}));
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toHaveAttribute('target','_blank');
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   expect(within(screen.getByRole('article')).getByText('English subtitles')).toBeInTheDocument();
@@ -200,6 +201,62 @@ test('resuming and reopening preserve an explicitly chosen future date and time'
   await screen.findByText('No screenings in this window.');
 });
 
+test('date navigation and date inputs preserve every non-time filter and search',async () => {
+  const preferences={selectedCity:null,selectedTheaters:['eye'],selectedSubtitleLanguages:['nl'],selectedSpokenLanguages:['ja'],languageMatchMode:'all',selectedSpecials:['Premiere'],watchlistOnly:true,startDate:'2026-10-01',endDate:'2026-10-01',startTime:'14:00',endTime:'23:59'};
+  localStorage.setItem('cinecompass_schedule_filters',JSON.stringify(preferences));
+  const base=(await service.getPopularMovies()).results[0];
+  localStorage.setItem('cinecompass_saved_films',JSON.stringify([{id:base.id,title:base.title,posterPath:base.poster_path}]));
+  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:1,results:[{...base,showtimes:[{...base.showtimes[0],subtitles:'nl',specials:'Premiere'}]}]});
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.change(screen.getByRole('textbox',{name:'Search films'}),{target:{value:'Perfect'}});
+  const expectPreserved=() => {
+    const {startDate,endDate,startTime,endTime,...expected}=preferences;
+    expect(JSON.parse(localStorage.getItem('cinecompass_schedule_filters') || '{}')).toMatchObject(expected);
+    expect(screen.getByRole('textbox',{name:'Search films'})).toHaveValue('Perfect');
+    expect(screen.getByRole('button',{name:'Watchlist only'})).toHaveAttribute('aria-pressed','true');
+    expect(screen.getByRole('combobox',{name:'City'})).toHaveValue('');
+    expect(screen.getByRole('button',{name:'Cinemas 1 selected'})).toBeInTheDocument();
+    expect(screen.getByRole('combobox',{name:'Subtitles'})).toHaveValue('nl');
+    expect(screen.getByRole('combobox',{name:'Spoken language'})).toHaveValue('ja');
+    expect(screen.getByRole('button',{name:'All (AND)'})).toHaveAttribute('aria-pressed','true');
+    expect(screen.getByRole('combobox',{name:'Special screenings'})).toHaveValue('Premiere');
+  };
+  for (const name of ['Next day','Previous day','Tomorrow','Today']) {
+    fireEvent.click(screen.getByRole('button',{name}));
+    expectPreserved();
+    expect(screen.getByLabelText('After')).toHaveValue(name==='Today' || name==='Previous day' ? '14:00' : '00:00');
+    expect(screen.getByLabelText('Before')).toHaveValue('23:59');
+    await waitFor(() => expect(screen.queryByText('Gathering the programme…')).not.toBeInTheDocument());
+  }
+  fireEvent.input(screen.getByLabelText('From'),{target:{value:'2026-10-02'}});
+  expectPreserved();
+  fireEvent.input(screen.getByLabelText('To'),{target:{value:'2026-10-03'}});
+  expectPreserved();
+  await screen.findByText('No watchlist films in this window.');
+});
+
+test('planning from film details preserves schedule filters and search',async () => {
+  const preferences={selectedCity:null,selectedTheaters:['eye'],selectedSubtitleLanguages:['nl'],selectedSpokenLanguages:['ja'],languageMatchMode:'all',selectedSpecials:['Premiere'],watchlistOnly:true,startDate:'2026-10-01',endDate:'2026-10-01',startTime:'14:00',endTime:'23:59'};
+  localStorage.setItem('cinecompass_schedule_filters',JSON.stringify(preferences));
+  const base=(await service.getPopularMovies()).results[0];
+  localStorage.setItem('cinecompass_saved_films',JSON.stringify([{id:base.id,title:base.title,posterPath:base.poster_path}]));
+  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:1,results:[{...base,showtimes:[{...base.showtimes[0],subtitles:'nl',specials:'Premiere'}]}]});
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.change(screen.getByRole('textbox',{name:'Search films'}),{target:{value:'Perfect'}});
+  fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan my evening'}));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  const {startDate,endDate,startTime,endTime,...expected}=preferences;
+  expect(JSON.parse(localStorage.getItem('cinecompass_schedule_filters') || '{}')).toMatchObject(expected);
+  expect(screen.getByRole('textbox',{name:'Search films'})).toHaveValue('Perfect');
+  expect(screen.getByLabelText('After')).toHaveValue('');
+  expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
+});
+
 test('OR shows English-subtitled and English-spoken films together, persists AND, and resets to OR',async () => {
   const response = await service.getPopularMovies();
   const base = response.results[0];
@@ -257,9 +314,10 @@ test.each(['Posters','Compact'])('row planning in %s hides unavailable films and
   service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:2,results:[{...base,showtimes:[anchor,repeat]},{...base,id:'next-film',title:'Next Film',showtimes:[blocked,next]}]});
   render(<App/>); await screen.findAllByRole('button',{name:'Next Film'});
   fireEvent.click(screen.getByRole('button',{name:view}));
+  if (view==='Compact') fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));
   fireEvent.click(screen.getByRole('button',{name:'Plan my evening after Perfect Days at 18:00'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'Plan my evening after Perfect Days at 18:00'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('button',{name:'18:00 20:00 Your starting point'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
   expect(screen.queryByRole('button',{name:/^19:00 /})).not.toBeInTheDocument();
@@ -268,14 +326,40 @@ test.each(['Posters','Compact'])('row planning in %s hides unavailable films and
   expect(screen.getByRole('button',{name:'20:30 22:00'})).toBeInTheDocument();
 });
 
-test('preserves saved planner choices to highlight unavailable films and show repeats',async () => {
-  localStorage.setItem('cinecompass_planner_prefs',JSON.stringify({availabilityMode:'highlight',hideSameMovie:false,bufferMinutes:25}));
+test.each(['cinecompass_planner_prefs','cineville_timeline_prefs'])('starts planning with both hide options despite saved choices in %s, and keeps the buffer',async storageKey => {
+  localStorage.setItem(storageKey,JSON.stringify({availabilityMode:'highlight',hideSameMovie:false,bufferMinutes:25}));
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getByRole('button',{name:/Plan my evening after Perfect Days/}));
+  expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
+  expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
+  fireEvent.click(screen.getByRole('button',{name:'Highlight available'}));
+  fireEvent.click(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'}));
   expect(screen.getByRole('button',{name:'Highlight available'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button',{name:'Clear starting point'}));
+  fireEvent.click(screen.getByRole('button',{name:/Plan my evening after Perfect Days/}));
+  expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
   expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
+});
+
+test.each(['time','film details'])('planning from %s resets both hide options',async entry => {
+  localStorage.setItem('cinecompass_planner_prefs',JSON.stringify({availabilityMode:'highlight',hideSameMovie:false}));
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  if (entry==='time') {
+    fireEvent.click(screen.getByRole('button',{name:'23:58 01:59'}));
+  } else {
+    Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
+    Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});
+    fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan my evening'}));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  }
+  expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
 });
 
 test('saves a film without a screening, persists across reload, and finds upcoming showtimes',async () => {
@@ -289,6 +373,7 @@ test('saves a film without a screening, persists across reload, and finds upcomi
   expect(screen.getByText('On your watchlist. Choose a screening whenever you’re ready.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Find showtimes'}));
   await screen.findByText('1 screening');
+  fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));
   fireEvent.click(screen.getByRole('button',{name:'Save Perfect Days at 18:00'}));
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
   view.unmount();
@@ -356,4 +441,28 @@ test('More offers labelled secondary actions and closes after planning',async ()
   expect(more).toHaveAttribute('aria-expanded','false');
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(0);
   expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
+});
+
+test('compact More contains all screening actions and closes after saving',async () => {
+  const response=await service.getPopularMovies();
+  const base=response.results[0];
+  service.getPopularMovies.mockResolvedValue({...response,results:[{...base,showtimes:[{...base.showtimes[0],ticketingUrl:'https://example.com/tickets'}]}]});
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Compact'}));
+  expect(screen.queryByRole('button',{name:'Save Perfect Days at 23:58'})).not.toBeInTheDocument();
+  const more=screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'});
+  fireEvent.click(more);
+  const actions=within(screen.getByRole('group',{name:'More actions for Perfect Days'}));
+  expect(actions.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toBeInTheDocument();
+  expect(actions.getByRole('link',{name:'Tickets for Perfect Days'})).toHaveAttribute('href','https://example.com/tickets');
+  expect(actions.getByRole('button',{name:'Save film Perfect Days to watchlist'})).toBeInTheDocument();
+  expect(actions.getByRole('button',{name:'Hide this film'})).toBeInTheDocument();
+  expect(actions.getByRole('button',{name:'Plan my evening after Perfect Days at 23:58'})).toBeInTheDocument();
+  fireEvent.click(actions.getByRole('button',{name:'Save Perfect Days at 23:58'}));
+  expect(more).toHaveAttribute('aria-expanded','false');
+  expect(screen.queryByRole('group',{name:'More actions for Perfect Days'})).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
+  fireEvent.click(more);
+  expect(within(screen.getByRole('group',{name:'More actions for Perfect Days'})).getByRole('button',{name:'Remove Perfect Days at 23:58'})).toHaveAttribute('aria-pressed','true');
 });

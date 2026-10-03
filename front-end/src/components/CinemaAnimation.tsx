@@ -1,4 +1,5 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import StarryNightScene from './StarryNightScene';
 import './CinemaAnimation.css';
 
 function ProjectorScene() {
@@ -217,18 +218,24 @@ function PremiereScene() {
   </svg>;
 }
 
-const scenes = ['projector', 'theatre', 'filmstrip', 'moonlit', 'autumn', 'premiere'] as const;
+const scenes = ['projector', 'theatre', 'filmstrip', 'moonlit', 'autumn', 'premiere', 'starry-night'] as const;
 type Scene = typeof scenes[number];
+const mobileScenes = scenes.filter(scene => scene !== 'starry-night');
 let pageScene: Scene | undefined;
+
+function isDesktopViewport(): boolean {
+  return typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 801px)').matches;
+}
 
 function sceneForPage(): Scene {
   // Choose once per page load, including React StrictMode and later re-renders.
   if (pageScene) return pageScene;
-  pageScene = 'projector';
+  const availableScenes: readonly Scene[] = isDesktopViewport() ? scenes : mobileScenes;
+  pageScene = isDesktopViewport() ? 'starry-night' : 'projector';
   try {
     const previous = localStorage.getItem('cinecompass_header_scene');
-    const index = scenes.findIndex(scene => scene === previous);
-    pageScene = scenes[(index + 1) % scenes.length];
+    const index = availableScenes.findIndex(scene => scene === previous);
+    if (index >= 0) pageScene = availableScenes[(index + 1) % availableScenes.length];
     localStorage.setItem('cinecompass_header_scene', pageScene);
   } catch { /* The illustration still works when browser storage is unavailable. */ }
   return pageScene;
@@ -237,15 +244,27 @@ function sceneForPage(): Scene {
 /** A cinema vignette, cycling on activation and alternating on page load. */
 export default function CinemaAnimation() {
   const [scene, setScene] = useState(sceneForPage);
+  const [desktop, setDesktop] = useState(isDesktopViewport);
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const media = window.matchMedia('(min-width: 801px)');
+    const updateViewport = () => setDesktop(media.matches);
+    updateViewport();
+    media.addEventListener('change', updateViewport);
+    return () => media.removeEventListener('change', updateViewport);
+  }, []);
+  // Keep mobile cycling usable when a desktop-only scene was selected earlier.
+  const displayScene = !desktop && scene === 'starry-night' ? 'projector' : scene;
+  const availableScenes: readonly Scene[] = desktop ? scenes : mobileScenes;
   const nextScene = () => {
-    const next = scenes[(scenes.indexOf(scene) + 1) % scenes.length];
+    const next = availableScenes[(availableScenes.indexOf(displayScene) + 1) % availableScenes.length];
     pageScene = next;
     try { localStorage.setItem('cinecompass_header_scene', next); } catch { /* Cycling still works without storage. */ }
     setScene(next);
   };
-  return <button type="button" className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' || scene === 'autumn' || scene === 'premiere' ? ' cc-cinema-animation-wide' : ''}`} aria-label="Show next cinema animation" title="Show next cinema animation" data-scene={scene} onClick={nextScene}>
-    <React.Fragment key={scene}>
-      {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : scene === 'moonlit' ? <MoonlitScene/> : scene === 'autumn' ? <AutumnScene/> : <PremiereScene/>}
+  return <button type="button" className={`cc-cinema-animation${displayScene !== 'projector' && displayScene !== 'theatre' ? ' cc-cinema-animation-wide' : ''}`} aria-label="Show next cinema animation" title="Show next cinema animation" data-scene={displayScene} onClick={nextScene}>
+    <React.Fragment key={displayScene}>
+      {displayScene === 'projector' ? <ProjectorScene/> : displayScene === 'theatre' ? <TheatreScene/> : displayScene === 'filmstrip' ? <FilmstripScene/> : displayScene === 'moonlit' ? <MoonlitScene/> : displayScene === 'autumn' ? <AutumnScene/> : displayScene === 'premiere' ? <PremiereScene/> : <StarryNightScene/>}
     </React.Fragment>
   </button>;
 }

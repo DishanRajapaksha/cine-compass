@@ -20,6 +20,7 @@ test('all showtimes has independent full filters, filters individual screenings 
   fireEvent.change(screen.getByRole('combobox',{name:'Subtitles'}),{target:{value:'en'}});
   expect(screen.getByText('1 screening')).toBeInTheDocument();
   expect(screen.queryByText('LAB111')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'More actions for A Film at 18:00'}));
   fireEvent.click(screen.getByRole('button',{name:'Save A Film at 18:00'}));
   expect(save).toHaveBeenCalledWith({movie:film,showtime:film.showtimes[0]});
   fireEvent.click(screen.getByRole('button',{name:'18:00 19:30'}));
