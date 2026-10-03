@@ -93,7 +93,6 @@ test('switches to one compact layout with no posters and preserves saved screeni
   expect(screen.getByRole('img',{name:'Perfect Days'})).toBeInTheDocument();
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toHaveAttribute('href','https://www.imdb.com/find/?q=Perfect%20Days%202023&s=tt');
   fireEvent.click(screen.getByRole('button',{name:'Compact'}));
-  fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'}));
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toHaveAttribute('target','_blank');
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   expect(within(screen.getByRole('article')).getByText('English subtitles')).toBeInTheDocument();
@@ -374,7 +373,7 @@ test('saves a film without a screening, persists across reload, and finds upcomi
   fireEvent.click(screen.getByRole('button',{name:'Find showtimes'}));
   await screen.findByText('1 screening');
   fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));
-  fireEvent.click(screen.getByRole('button',{name:'Save Perfect Days at 18:00'}));
+  fireEvent.click(within(screen.getByRole('group',{name:'More actions for Perfect Days'})).getByRole('button',{name:'Save Perfect Days at 18:00'}));
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
   view.unmount();
   render(<App/>);
@@ -443,14 +442,14 @@ test('More offers labelled secondary actions and closes after planning',async ()
   expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
 });
 
-test('compact More contains all screening actions and closes after saving',async () => {
+test('compact primary actions and More share save state, and More closes after saving',async () => {
   const response=await service.getPopularMovies();
   const base=response.results[0];
   service.getPopularMovies.mockResolvedValue({...response,results:[{...base,showtimes:[{...base.showtimes[0],ticketingUrl:'https://example.com/tickets'}]}]});
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getByRole('button',{name:'Compact'}));
-  expect(screen.queryByRole('button',{name:'Save Perfect Days at 23:58'})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Save Perfect Days at 23:58'})).toBeInTheDocument();
   const more=screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'});
   fireEvent.click(more);
   const actions=within(screen.getByRole('group',{name:'More actions for Perfect Days'}));

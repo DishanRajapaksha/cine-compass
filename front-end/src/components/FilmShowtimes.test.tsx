@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import FilmShowtimes from './FilmShowtimes';
 import { movieService } from '../services/movieService';
 import { Movie } from '../types/Movie';
@@ -21,7 +21,7 @@ test('all showtimes has independent full filters, filters individual screenings 
   expect(screen.getByText('1 screening')).toBeInTheDocument();
   expect(screen.queryByText('LAB111')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'More actions for A Film at 18:00'}));
-  fireEvent.click(screen.getByRole('button',{name:'Save A Film at 18:00'}));
+  fireEvent.click(within(screen.getByRole('group',{name:'More actions for A Film'})).getByRole('button',{name:'Save A Film at 18:00'}));
   expect(save).toHaveBeenCalledWith({movie:film,showtime:film.showtimes[0]});
   fireEvent.click(screen.getByRole('button',{name:'18:00 19:30'}));
   expect(plan).toHaveBeenCalledWith({movie:film,showtime:film.showtimes[0]});
