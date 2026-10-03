@@ -369,7 +369,7 @@ test('saves a film without a screening, persists across reload, and finds upcomi
   fireEvent.click(screen.getByRole('button',{name:'Save film Perfect Days to watchlist'}));
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
-  expect(screen.getByText('On your watchlist. Choose a screening whenever you’re ready.')).toBeInTheDocument();
+  expect(screen.queryByText('On your watchlist. Choose a screening whenever you’re ready.')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Find showtimes'}));
   await screen.findByText('1 screening');
   fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowRight, Bookmark, ChevronDown, X } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { ArrowRight, Bookmark, ChevronDown, EyeOff, Film as FilmIcon, Ticket, X } from 'lucide-react';
 import { City, HiddenMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
 import { amsterdamDate, dateLabel, Screening, screeningTime } from '../lib/schedule';
 import FilmShowtimes from './FilmShowtimes';
@@ -8,17 +8,26 @@ import ImdbLink from './ImdbLink';
 type Props = {films: Film[]; onRemoveFilm: (id: string) => void; onHide: (movie: HiddenMovie) => void; saved: SavedShowtime[]; cities: City[]; city: string | null; onRemove: (id: string) => void; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onBrowse: () => void};
 function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBrowse'> & {film:Film;entries:SavedShowtime[];inWatchlist:boolean}) {
   const [expanded,setExpanded] = useState(false);
+  const [posterFailed,setPosterFailed] = useState(false);
+  const showtimesId = useId();
   return <section className="cc-saved-film" aria-label={`Saved ${film.title}`}>
-    <div className="cc-saved-film-heading"><div className="cc-watchlist-film-info">
-      {film.posterPath && <img className="cc-watchlist-poster" src={film.posterPath} alt={`${film.title} poster`} loading="lazy" onError={e => {e.currentTarget.style.display='none';}}/>}
-      <div><h3>{film.title}{film.year ? <small className="cc-watchlist-year">{film.year}</small> : null}</h3><ImdbLink title={film.title} year={film.year}/><div className="cc-watchlist-film-actions">
-        {inWatchlist && <button className="cc-text-button" aria-label={`Remove film ${film.title} from watchlist`} onClick={() => props.onRemoveFilm(film.id)}>Remove film</button>}
-        <button className="cc-hide-movie" aria-label={`Hide ${film.title} permanently`} onClick={() => props.onHide({id:film.id,title:film.title,year:film.year})}>Hide</button>
-      </div></div>
-    </div><button className="cc-text-button" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button></div>
-    {!entries.length && <p className="cc-watchlist-hint">On your watchlist. Choose a screening whenever you’re ready.</p>}
-    {entries.map(s => <article className="cc-saved-row" key={s.showtimeId}><div className="cc-saved-time"><strong>{screeningTime(s.startDate)}</strong><small>{dateLabel(amsterdamDate(s.startDate))}</small><small>ends {screeningTime(s.endDate)}</small></div><div><p>{s.theaterName} · {s.theaterCity}</p><small className="cc-saved-marker">{Date.parse(s.startDate) < Date.now() ? 'Past saved screening' : 'Saved screening'}</small></div>{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl}>Tickets <ArrowRight size={15}/></a>}<button aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} onClick={() => props.onRemove(s.showtimeId)}><X size={18}/></button></article>)}
-    {expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onHide={movie => props.onHide({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}
+    <div className="cc-saved-film-heading">
+      <div className="cc-watchlist-artwork">
+        {film.posterPath && !posterFailed ? <img className="cc-watchlist-poster" src={film.posterPath} alt={`${film.title} poster`} loading="lazy" onError={() => setPosterFailed(true)}/> : <FilmIcon size={24} aria-hidden="true"/>}
+      </div>
+      <div className="cc-watchlist-film-info"><h3>{film.title}{film.year ? <small className="cc-watchlist-year">{film.year}</small> : null}</h3><ImdbLink title={film.title} year={film.year}/></div>
+      <div className="cc-watchlist-film-actions">
+        <button className="cc-watchlist-showtimes" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button>
+        {inWatchlist && <button className="cc-watchlist-icon" aria-label={`Remove film ${film.title} from watchlist`} title="Remove film from watchlist" aria-pressed="true" onClick={() => props.onRemoveFilm(film.id)}><Bookmark size={17} fill="currentColor"/></button>}
+        <button className="cc-watchlist-icon" aria-label={`Hide ${film.title} permanently`} title="Hide this film" onClick={() => props.onHide({id:film.id,title:film.title,year:film.year})}><EyeOff size={17}/></button>
+      </div>
+    </div>
+    {entries.length > 0 && <div className="cc-watchlist-screenings">{entries.map(s => <article className="cc-saved-row" key={s.showtimeId} aria-label={`Saved screening for ${s.movieTitle} at ${screeningTime(s.startDate)}`}>
+      <div className="cc-saved-time"><strong>{screeningTime(s.startDate)} <span>–</span> {screeningTime(s.endDate)}</strong><small>{dateLabel(amsterdamDate(s.startDate))}</small></div>
+      <div className="cc-saved-venue"><strong>{s.theaterName}</strong><span>{s.theaterCity}</span>{Date.parse(s.startDate) < Date.now() && <small className="cc-saved-marker">Past saved screening</small>}</div>
+      <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/> Tickets</a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
+    </article>)}</div>}
+    <div id={showtimesId} className="cc-watchlist-showtimes-panel" hidden={!expanded}>{expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onHide={movie => props.onHide({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}</div>
   </section>;
 }
 export default function SavedFilms(props: Props) {

@@ -26,7 +26,7 @@ reportWebVitals();
 // Only production builds install a worker; development always uses fresh assets.
 if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js?v=2', { updateViaCache: 'none' })
+    navigator.serviceWorker.register('/service-worker.js?v=3', { updateViaCache: 'none' })
       .catch(error => console.warn('CineCompass offline support could not start.', error));
   });
 }
