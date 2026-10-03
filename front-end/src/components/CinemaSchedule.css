@@ -53,6 +53,7 @@
 .cc-language-mode{display:flex;gap:18px}.cc-language-mode button{padding:4px 0;border-bottom:2px solid transparent;font-size:13px}.cc-language-mode button[aria-pressed=true]{border-color:var(--wine);color:var(--wine);font-weight:bold}.cc-filters .cc-language-match{margin-bottom:18px}
 
 .cc-imdb-link{display:inline-flex;align-items:center;gap:3px;color:var(--wine);text-decoration:underline;text-underline-offset:3px;font-size:inherit;white-space:nowrap}.cc-saved-film-heading .cc-imdb-link{margin-top:7px;font-size:12px}.cc-dialog>.cc-imdb-link{font-size:13px;margin-bottom:12px}
+@media(max-width:800px){.cc-imdb-link svg{display:none}}
 
 .cc-imdb-settings{padding:14px 0;border-bottom:1px solid var(--rule);font-size:13px}.cc-imdb-settings>button{color:var(--wine)}.cc-imdb-settings form{max-width:420px;padding:18px 0}.cc-imdb-settings p{font-size:13px;line-height:1.5;color:var(--muted)}.cc-imdb-settings .cc-field{margin-bottom:10px}.cc-imdb-settings input{padding:8px;border:1px solid var(--rule);background:transparent}.cc-imdb-settings .cc-primary{font-size:13px;padding:8px 12px}
 
