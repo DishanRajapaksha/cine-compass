@@ -1,0 +1,36 @@
+.cc-cinema-animation{flex:1;display:flex;justify-content:center;align-items:center;min-width:150px;color:var(--wine)}
+.cc-cinema-animation svg{display:block;width:174px;height:70px;overflow:visible}
+.cc-projector-body{fill:var(--paper)}
+.cc-cinema-ground{stroke:var(--rule)}
+.cc-cinema-curtain{fill:currentColor;fill-opacity:.1;stroke:none}
+.cc-projector-beam{opacity:.07;animation:cc-cinema-light 2.4s ease-in-out 2}
+.cc-projector-reel{animation:cc-cinema-roll 2.4s linear 2;transform-origin:0 0}
+.cc-projector-reel-back{animation-direction:reverse}
+.cc-cinema-star{fill:currentColor;fill-opacity:.16;transform-origin:156px 37px;animation:cc-cinema-glimmer 2.4s ease-in-out 2}
+.cc-theatre-star{transform-origin:95px 26px}
+.cc-theatre-glow{opacity:.045;animation:cc-cinema-light 2.4s ease-in-out 2}
+.cc-theatre-curtains{fill:currentColor;fill-opacity:.1}
+.cc-theatre-seat{fill:var(--paper)}
+.cc-theatre-seat-front{fill:var(--paper);stroke-width:1.6}
+.cc-theatre-audience{animation:cc-cinema-settle 2.4s ease-in-out 2}
+@media(hover:hover){
+  .cc-cinema-animation:hover .cc-projector-reel{animation-name:cc-cinema-roll-again}
+  .cc-cinema-animation:hover .cc-projector-beam{animation-name:cc-cinema-light-again}
+  .cc-cinema-animation:hover .cc-cinema-star{animation-name:cc-cinema-glimmer-again}
+  .cc-cinema-animation:hover .cc-theatre-glow{animation-name:cc-cinema-light-again}
+  .cc-cinema-animation:hover .cc-theatre-audience{animation-name:cc-cinema-settle-again}
+}
+@keyframes cc-cinema-roll{to{transform:rotate(360deg)}}
+@keyframes cc-cinema-roll-again{to{transform:rotate(360deg)}}
+@keyframes cc-cinema-light{0%,100%{opacity:.07}50%{opacity:.13}}
+@keyframes cc-cinema-light-again{0%,100%{opacity:.07}50%{opacity:.13}}
+@keyframes cc-cinema-glimmer{0%,100%{transform:scale(1);fill-opacity:.16}50%{transform:scale(.88);fill-opacity:.3}}
+@keyframes cc-cinema-glimmer-again{0%,100%{transform:scale(1);fill-opacity:.16}50%{transform:scale(.88);fill-opacity:.3}}
+@keyframes cc-cinema-settle{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+@keyframes cc-cinema-settle-again{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+@media(max-width:800px){.cc-cinema-animation{display:none}}
+@media(max-width:480px){
+  .cc-cinema-animation{display:flex;flex:0 0 clamp(60px,20vw,90px);min-width:0;margin-left:auto}
+  .cc-cinema-animation svg{width:100%;height:auto}
+}
+@media(prefers-reduced-motion:reduce){.cc-cinema-animation svg *{animation:none!important}}

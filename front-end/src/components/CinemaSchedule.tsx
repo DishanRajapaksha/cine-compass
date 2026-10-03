@@ -12,6 +12,7 @@ import ScreeningRow from './ScreeningRow';
 import FilmDescription from './FilmDescription';
 import './CinemaSchedule.css';
 import ImdbLink from './ImdbLink';
+import CinemaAnimation from './CinemaAnimation';
 import SettingsModal from './SettingsModal';
 
 type View = 'posters' | 'compact';
@@ -150,7 +151,7 @@ export default function CinemaSchedule() {
     setFilters(f => ({...f,selectedCity:screening.showtime.theaterCity,selectedTheaters:[],selectedSubtitleLanguages:[],selectedSpokenLanguages:[],selectedSpecials:[],startDate:date,endDate:date,startTime:null,endTime:'23:59'}));
   };
   return <div className="cc-app">
-    <header className="cc-header"><a className="cc-brand" href="#schedule"><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
+    <header className="cc-header"><a className="cc-brand" href="#schedule"><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleSaved.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
     <main className="cc-main">
     {hiddenError && <p className="cc-error" role="alert">{hiddenError}</p>}
     {page === 'watchlist' ? <SavedFilms saved={visibleSaved} onHide={hideMovie} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : <>
