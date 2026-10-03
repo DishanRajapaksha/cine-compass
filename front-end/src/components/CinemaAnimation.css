@@ -58,9 +58,10 @@
 @keyframes cc-moonlit-wish-again{0%,20%{opacity:0;transform:translate(0,0)}35%{opacity:1}70%,100%{opacity:0;transform:translate(63px,12px)}}
 @media(max-width:800px){.cc-cinema-animation{display:none}}
 @media(max-width:480px){
-  .cc-cinema-animation{display:flex;flex:0 0 clamp(60px,20vw,90px);min-width:0;margin-left:auto;order:0}
+  .cc-header .cc-brand{flex:0 0 auto}
+  .cc-cinema-animation{display:flex;flex:1 1 0;min-width:0;order:0}
   .cc-cinema-animation svg{width:100%;height:auto}
-  .cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene{height:auto;max-height:32px}
+  .cc-cinema-animation-wide svg,.cc-cinema-animation-wide .cc-moonlit-scene{height:auto}
   .cc-cinema-animation .cc-filmstrip-desktop{display:none}
   .cc-cinema-animation .cc-filmstrip-mobile{display:block}
 }

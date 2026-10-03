@@ -17,6 +17,45 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+test('watchlist filter includes every showtime of saved films, persists, and resets',async () => {
+  const base = (await service.getPopularMovies()).results[0];
+  const other = {...base,id:'other',title:'Another Film',showtimes:[{...base.showtimes[0],id:'other-screening'}]};
+  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:2,results:[{...base,showtimes:[base.showtimes[0],{...base.showtimes[0],id:'alternative'}]},other]});
+  const view = render(<App/>);
+  await screen.findByRole('button',{name:'Another Film'});
+  fireEvent.click(screen.getAllByRole('button',{name:/^Save Perfect Days/})[0]);
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
+  expect(screen.getByRole('button',{name:'Watchlist only'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.getAllByRole('button',{name:'Perfect Days'})).toHaveLength(2);
+  expect(screen.queryByRole('button',{name:'Another Film'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Compact'}));
+  expect(screen.getAllByRole('button',{name:'Perfect Days'})).toHaveLength(2);
+  fireEvent.input(screen.getByLabelText('After'),{target:{value:'23:59'}});
+  expect(screen.getByText('No watchlist films in this window.')).toBeInTheDocument();
+  fireEvent.input(screen.getByLabelText('After'),{target:{value:'14:00'}});
+  view.unmount();
+  render(<App/>);
+  await screen.findAllByRole('button',{name:'Perfect Days'});
+  expect(screen.getByRole('button',{name:'Watchlist only'})).toHaveAttribute('aria-pressed','true');
+  expect(screen.queryByRole('button',{name:'Another Film'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Reset'}));
+  expect(screen.getByRole('button',{name:'Watchlist only'})).toHaveAttribute('aria-pressed','false');
+  expect(screen.getByRole('button',{name:'Another Film'})).toBeInTheDocument();
+});
+
+test('watchlist filter updates when the last saved screening is removed and can show all films',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
+  expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Show all films'}));
+  fireEvent.click(screen.getByRole('button',{name:/^Save Perfect Days/}));
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
+  expect(screen.getByRole('button',{name:'Perfect Days'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:/^Remove Perfect Days/}));
+  expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
+});
+
 test('hides all screenings across views and reloads, then restores from Settings',async () => {
   Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
   Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});

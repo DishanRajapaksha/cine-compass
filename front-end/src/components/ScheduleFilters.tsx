@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState, useId } from 'react';
-import { Search, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Bookmark, Search, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { City, MovieFilters } from '../types/Movie';
 import { languageName } from '../lib/schedule';
 
 type Props = {
   filters: MovieFilters; cities: City[]; query: string; languages: string[]; specials: string[];
-  showSearch?: boolean; loading: boolean; onQuery: (query: string) => void; onChange: (filters: MovieFilters) => void; onReset: () => void;
+  showSearch?: boolean; showWatchlistFilter?: boolean; loading: boolean; onQuery: (query: string) => void; onChange: (filters: MovieFilters) => void; onReset: () => void;
 };
-export default function ScheduleFilters({ filters, cities, query, languages, specials, loading, showSearch = true, onQuery, onChange, onReset }: Props) {
+export default function ScheduleFilters({ filters, cities, query, languages, specials, loading, showSearch = true, showWatchlistFilter = false, onQuery, onChange, onReset }: Props) {
   const cinemaId = useId();
   const [cinemasOpen, setCinemasOpen] = useState(false);
   const [cinemaQuery, setCinemaQuery] = useState('');
@@ -23,6 +23,7 @@ export default function ScheduleFilters({ filters, cities, query, languages, spe
   return <aside className="cc-filters" aria-label="Screening filters">
     <div className="cc-filter-heading"><h2><SlidersHorizontal size={18}/> Filters</h2><button className="cc-text-button" onClick={onReset}>Reset</button></div>
     {showSearch && <label className="cc-search"><Search size={17}/><input aria-label="Search films" placeholder="Search films…" value={query} onChange={e => onQuery(e.currentTarget.value)}/></label>}
+    {showWatchlistFilter && <button className="cc-watchlist-filter" aria-pressed={filters.watchlistOnly === true} onClick={() => update({watchlistOnly:!filters.watchlistOnly})}><Bookmark size={16} fill={filters.watchlistOnly ? 'currentColor' : 'none'}/> Watchlist only</button>}
     <label className="cc-field">City<select value={filters.selectedCity || ''} onChange={e => update({selectedCity:e.currentTarget.value || null, selectedTheaters:[]})}><option value="">All cities</option>{cities.map(city => <option key={city.name}>{city.name}</option>)}</select></label>
     <fieldset><legend>Date</legend><div className="cc-field-pair">
       <label className="cc-field cc-secondary-label">From<input type="date" value={filters.startDate || ''} onInput={e => update({startDate:e.currentTarget.value || null, endDate: e.currentTarget.value > (filters.endDate || '') ? e.currentTarget.value : filters.endDate})}/></label>

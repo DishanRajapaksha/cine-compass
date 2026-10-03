@@ -143,6 +143,7 @@ export interface City {
 }
 
 export interface MovieFilters {
+  watchlistOnly?: boolean;
   languageMatchMode?: 'any' | 'all';
   selectedCity: string | null;
   selectedTheaters: string[];
