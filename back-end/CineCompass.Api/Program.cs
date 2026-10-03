@@ -127,7 +127,7 @@ app.MapGet("/api/settings", async (HttpContext c, UserManager<AppUser> users, Ap
     return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = JsonSerializer.Deserialize<JsonElement>(row?.Json ?? "{}") });
 }).RequireAuthorization();
 app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
-    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cineville_saved_showtimes", "cinecompass_hidden_movies", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
+    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cineville_saved_showtimes", "cinecompass_saved_films", "cinecompass_hidden_movies", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
     if (request.Values.ValueKind != JsonValueKind.Object || request.Values.EnumerateObject().Any(x => !allowed.Contains(x.Name) || x.Value.ValueKind != JsonValueKind.String) || request.Values.GetRawText().Length > 200000)
         return Results.BadRequest(new { error = "Invalid settings." });
     var id = users.GetUserId(c.User)!;

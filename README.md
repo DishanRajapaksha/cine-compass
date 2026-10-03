@@ -39,7 +39,7 @@ Open Settings to create an account with a username/passkey or sign in with a dis
 
 Guest settings remain separately saved on this device and are restored on sign-out. Signing in loads account settings. Settings → Settings on this device → Import guest settings replaces account settings with that guest snapshot. Changes save after a short delay.
 
-Filters, display mode, cinema order, planner preferences, hidden films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
+Filters, display mode, cinema order, planner preferences, hidden films, saved films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
 
 Saves include the expected account ID and revision. Conflicting edits are rejected rather than silently overwritten. Reload account settings discards unsynced changes and loads the server version. Concurrent list edits are not merged in this initial implementation. Offline changes retry while the page stays open and when connectivity returns; there is no persistent offline upload queue. A session switch in another tab reloads this tab to prevent mixing accounts.
 
@@ -74,6 +74,10 @@ npm run build
 ```
 
 Backend HTTP tests use isolated SQLite databases. Also validate PostgreSQL migrations and browser ceremonies against PostgreSQL for deployment acceptance. Docker builds need a running daemon.
+
+## Film watchlist
+
+Save films from the schedule or film details without choosing a screening. The Watchlist counts films and keeps them after screening times pass or are removed. Find showtimes opens upcoming screenings with independent city, language, cinema, and date filters. Saving a screening also adds its film; removing a film keeps its saved screening times under Other saved screenings. Existing saved screenings populate the film watchlist once on upgrade. Hidden films stay saved and return when restored in Settings. Film watchlists remain device-local for guests and sync with a CineCompass account. On phones, each screening shows IMDb, Watchlist, Tickets, Save screening, and More icons; More contains labelled hiding and evening-planning actions.
 
 ## Cineville integration
 

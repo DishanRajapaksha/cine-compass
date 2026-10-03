@@ -104,6 +104,13 @@ export interface MovieShowtime {
   languageVersion: string | null;
 }
 
+export interface SavedFilm {
+  id: string;
+  title: string;
+  posterPath: string;
+  year?: number;
+}
+
 export interface HiddenMovie {
   id: string;
   title: string;

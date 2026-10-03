@@ -1,4 +1,4 @@
-export const syncKeys = ['cinecompass_schedule_filters','cinecompass_schedule_view','cineville_saved_showtimes','cinecompass_hidden_movies','cinecompass_planner_prefs','cineville_filters','cineville_filters_open','cineville_timeline_prefs','cineville_timeline_theater_order'];
+export const syncKeys = ['cinecompass_schedule_filters','cinecompass_schedule_view','cineville_saved_showtimes','cinecompass_saved_films','cinecompass_hidden_movies','cinecompass_planner_prefs','cineville_filters','cineville_filters_open','cineville_timeline_prefs','cineville_timeline_theater_order'];
 export const settingsEvent = 'cinecompass-settings-changed';
 export function setPreference(key: string, value: string) {
   const previous = localStorage.getItem(key);

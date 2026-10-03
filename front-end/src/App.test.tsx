@@ -43,7 +43,7 @@ test('watchlist filter includes every showtime of saved films, persists, and res
   expect(screen.getByRole('button',{name:'Another Film'})).toBeInTheDocument();
 });
 
-test('watchlist filter updates when the last saved screening is removed and can show all films',async () => {
+test('watchlist filter keeps films when the last saved screening is removed',async () => {
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
@@ -53,6 +53,8 @@ test('watchlist filter updates when the last saved screening is removed and can 
   fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
   expect(screen.getByRole('button',{name:'Perfect Days'})).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:/^Remove Perfect Days/}));
+  expect(screen.getByRole('button',{name:'Perfect Days'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'}));
   expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
 });
 
@@ -93,14 +95,15 @@ test('switches to one compact layout with no posters and preserves saved screeni
   fireEvent.click(screen.getByRole('button',{name:'Compact'}));
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toHaveAttribute('target','_blank');
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
-  expect(screen.getByText('Language / subtitles')).toBeInTheDocument();
+  expect(within(screen.getByRole('article')).getByText('English subtitles')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:/^Save Perfect Days/}));
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
-  expect(screen.getByRole('heading',{name:'Perfect Days'})).toBeInTheDocument();
-  expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days'})).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
+  expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button',{name:/^Remove Perfect Days at/}));
-  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
+  expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
 });
 
 test('film details shows artwork, readable language, screening actions, and a missing-poster fallback',async () => {
@@ -273,4 +276,84 @@ test('preserves saved planner choices to highlight unavailable films and show re
   expect(screen.getByRole('button',{name:'Highlight available'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).not.toBeChecked();
   expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
+});
+
+test('saves a film without a screening, persists across reload, and finds upcoming showtimes',async () => {
+  const base=(await service.getPopularMovies()).results[0];
+  service.getMovieShowtimes.mockResolvedValue({...base,showtimes:[{...base.showtimes[0],startDate:'2099-10-01T16:00:00Z',endDate:'2099-10-01T18:00:00Z'}]});
+  const view=render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Save film Perfect Days to watchlist'}));
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getByText('On your watchlist. Choose a screening whenever you’re ready.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Find showtimes'}));
+  await screen.findByText('1 screening');
+  fireEvent.click(screen.getByRole('button',{name:'Save Perfect Days at 18:00'}));
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
+  view.unmount();
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  expect(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'})).toHaveAttribute('aria-pressed','true');
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  fireEvent.click(screen.getByRole('button',{name:'Remove Perfect Days at 18:00'}));
+  expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
+  expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
+});
+
+test('removing a film retains screening access and does not resurrect it on reload',async () => {
+  const view=render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:/^Save Perfect Days at/}));
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  fireEvent.click(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'}));
+  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+  expect(screen.getByRole('region',{name:'Saved screenings outside your watchlist'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:/^Remove Perfect Days at/})).toBeInTheDocument();
+  view.unmount();
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist only'}));
+  expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
+});
+
+test('upgrades existing past saved screenings into a deduplicated film watchlist',async () => {
+  const old={movieId:'film',movieTitle:'Perfect Days',posterPath:'',showtimeId:'past',startDate:'2020-01-01T18:00:00Z',endDate:'2020-01-01T20:00:00Z',theaterId:'eye',theaterName:'Eye',theaterCity:'Amsterdam',ticketingUrl:null};
+  localStorage.setItem('cineville_saved_showtimes',JSON.stringify([old,{...old,showtimeId:'past-2'}]));
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toEqual([{id:'film',title:'Perfect Days',posterPath:''}]);
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getAllByText('Past saved screening')).toHaveLength(2);
+});
+
+test('film details can save a film without saving the selected screening',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
+  const dialog=screen.getByRole('dialog',{name:'Perfect Days'});
+  fireEvent.click(within(dialog).getByRole('button',{name:'Save film to watchlist'}));
+  expect(within(dialog).getByRole('button',{name:'Remove film from watchlist'})).toHaveAttribute('aria-pressed','true');
+  expect(within(dialog).getByRole('button',{name:'Save screening'})).toHaveAttribute('aria-pressed','false');
+  fireEvent.click(within(dialog).getByRole('button',{name:'Remove film from watchlist'}));
+  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+});
+
+test('More offers labelled secondary actions and closes after planning',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  const more=screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'});
+  fireEvent.click(more);
+  const actions=screen.getByRole('group',{name:'More actions for Perfect Days'});
+  expect(within(actions).getByRole('button',{name:'Plan my evening'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Hide Perfect Days permanently'})).toBeInTheDocument();
+  expect(within(actions).getByRole('button',{name:'Hide this film'})).toBeInTheDocument();
+  fireEvent.click(within(actions).getByRole('button',{name:'Plan my evening'}));
+  expect(screen.queryByRole('group',{name:'More actions for Perfect Days'})).not.toBeInTheDocument();
+  expect(more).toHaveAttribute('aria-expanded','false');
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(0);
+  expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
 });

@@ -70,9 +70,11 @@ public sealed class AccountTests
     [Fact] public async Task Settings_are_owner_scoped_and_stale_updates_cannot_overwrite()
     {
         using var f = new ApiFactory(); await f.Seed();using var alice = await Client(f,"alice");using var bob = await Client(f,"bob");
-        var body = new { userId="alice", revision=0, values=new Dictionary<string,string> { ["cinecompass_schedule_view"]="\"compact\"" } };
+        var body = new { userId="alice", revision=0, values=new Dictionary<string,string> { ["cinecompass_schedule_view"]="\"compact\"", ["cinecompass_saved_films"]="[{\"id\":\"film\",\"title\":\"A Film\",\"posterPath\":\"\"}]" } };
         Assert.Equal(HttpStatusCode.OK,(await alice.PutAsJsonAsync("/api/settings",body)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,(await bob.PutAsJsonAsync("/api/settings",body)).StatusCode);
+        var saved = await alice.GetFromJsonAsync<JsonElement>("/api/settings");
+        Assert.Equal(body.values["cinecompass_saved_films"],saved.GetProperty("values").GetProperty("cinecompass_saved_films").GetString());
         var result = await bob.GetFromJsonAsync<JsonElement>("/api/settings");
         Assert.Equal(0,result.GetProperty("revision").GetInt64());Assert.Empty(result.GetProperty("values").EnumerateObject());
         Assert.Equal(HttpStatusCode.Conflict,(await alice.PutAsJsonAsync("/api/settings",body)).StatusCode);

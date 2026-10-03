@@ -18,5 +18,5 @@ export default function ImdbLink({ title, year }: { title: string; year?: number
     return () => {active=false;};
   },[title,year,key]);
   const query = `${title}${year ? ` ${year}` : ''}`;
-  return <a className="cc-imdb-link" href={match ? `https://www.imdb.com/title/${match.id}/` : `https://www.imdb.com/find/?q=${encodeURIComponent(query)}&s=tt`} target="_blank" rel="noopener noreferrer" aria-label={match ? `View ${query} on IMDb${match.rating ? `, rated ${match.rating} out of 10` : ''}` : `Search IMDb for ${query}`} title={`${match ? 'View on' : 'Search'} IMDb (opens in a new tab)`}>IMDb{match?.rating ? ` ${match.rating}` : ''} <ExternalLink size={11}/></a>;
+  return <a className="cc-imdb-link" href={match ? `https://www.imdb.com/title/${match.id}/` : `https://www.imdb.com/find/?q=${encodeURIComponent(query)}&s=tt`} target="_blank" rel="noopener noreferrer" aria-label={match ? `View ${query} on IMDb${match.rating ? `, rated ${match.rating} out of 10` : ''}` : `Search IMDb for ${query}`} title={`${match ? 'View on' : 'Search'} IMDb (opens in a new tab)`}><span className="cc-imdb-wordmark">IMDb</span>{match?.rating ? ` ${match.rating}` : ''} <ExternalLink size={11}/></a>;
 }

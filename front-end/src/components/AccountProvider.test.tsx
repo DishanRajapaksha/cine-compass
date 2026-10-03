@@ -34,3 +34,23 @@ test('snapshots exclude credentials and temporary dates and times',()=>{
   localStorage.setItem('cinecompass_schedule_filters',JSON.stringify({selectedCity:'Amsterdam',startDate:'2026-10-02',endDate:'2026-10-02',startTime:'12:00',endTime:'23:59'}));
   const values=snapshot();expect(Object.keys(values)).toEqual(['cinecompass_schedule_filters']);expect(JSON.parse(values.cinecompass_schedule_filters)).toEqual({selectedCity:'Amsterdam',startDate:null,endDate:null,startTime:null,endTime:null});
 });
+
+test('film watchlists sync to their owner and guest films return on sign-out',async()=>{
+  const guestFilms=JSON.stringify([{id:'guest-film',title:'Guest Film',posterPath:''}]);
+  const accountFilms=JSON.stringify([{id:'account-film',title:'Account Film',posterPath:''}]);
+  localStorage.setItem('cinecompass_saved_films',guestFilms);
+  request.mockImplementation(async(path,method)=>{
+    if(path==='/auth/me')return {user:{id:'alice',name:'Alice'}};
+    if(path==='/settings' && method!=='PUT')return {userId:'alice',revision:7,values:{cinecompass_saved_films:accountFilms}};
+    if(path==='/settings')return {revision:8};
+  });
+  render(<AccountProvider><Controls/></AccountProvider>);
+  await screen.findByText('Alice');
+  expect(localStorage.getItem('cinecompass_saved_films')).toBe(accountFilms);
+  fireEvent.click(screen.getByText('Change view'));
+  await waitFor(()=>expect(request).toHaveBeenCalledWith('/settings','PUT',{userId:'alice',revision:7,values:{cinecompass_saved_films:accountFilms,cinecompass_schedule_view:'"posters"'}}));
+  await screen.findByText('Saved');
+  fireEvent.click(screen.getByText('Sign out'));
+  await screen.findByText('Guest');
+  expect(localStorage.getItem('cinecompass_saved_films')).toBe(guestFilms);
+});
