@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import './CinemaAnimation.css';
 
 function ProjectorScene() {
@@ -152,10 +152,18 @@ function sceneForPage(): Scene {
   return pageScene;
 }
 
-/** A decorative cinema vignette, alternating on each page load. */
+/** A cinema vignette, cycling on activation and alternating on page load. */
 export default function CinemaAnimation() {
-  const scene = sceneForPage();
-  return <span className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' ? ' cc-cinema-animation-wide' : ''}`} aria-hidden="true" data-scene={scene}>
-    {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : <MoonlitScene/>}
-  </span>;
+  const [scene, setScene] = useState(sceneForPage);
+  const nextScene = () => {
+    const next = scenes[(scenes.indexOf(scene) + 1) % scenes.length];
+    pageScene = next;
+    try { localStorage.setItem('cinecompass_header_scene', next); } catch { /* Cycling still works without storage. */ }
+    setScene(next);
+  };
+  return <button type="button" className={`cc-cinema-animation${scene === 'filmstrip' || scene === 'moonlit' ? ' cc-cinema-animation-wide' : ''}`} aria-label="Show next cinema animation" title="Show next cinema animation" data-scene={scene} onClick={nextScene}>
+    <React.Fragment key={scene}>
+      {scene === 'projector' ? <ProjectorScene/> : scene === 'theatre' ? <TheatreScene/> : scene === 'filmstrip' ? <FilmstripScene/> : <MoonlitScene/>}
+    </React.Fragment>
+  </button>;
 }
