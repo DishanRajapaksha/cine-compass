@@ -1,7 +1,8 @@
 import React, { useId, useState } from 'react';
 import { ArrowRight, Bookmark, ChevronDown, EyeOff, Film as FilmIcon, Ticket, X } from 'lucide-react';
 import { City, HiddenMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
-import { amsterdamDate, dateLabel, Screening, screeningTime } from '../lib/schedule';
+import { amsterdamDate, dateLabel, languageName, Screening, screeningTime } from '../lib/schedule';
+import { normalizeLanguageCode } from '../lib/utils';
 import FilmShowtimes from './FilmShowtimes';
 import ImdbLink from './ImdbLink';
 
@@ -10,14 +11,17 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
   const [expanded,setExpanded] = useState(false);
   const [posterFailed,setPosterFailed] = useState(false);
   const showtimesId = useId();
+  const languages = Array.from(new Set((film.spokenLanguages || []).map(normalizeLanguageCode))).map(languageName);
+  const subtitles = Array.from(new Set((film.availableSubtitles || []).map(normalizeLanguageCode))).map(languageName);
+  const metadata = [film.duration ? `${film.duration} min` : null,languages.length ? languages.join(', ') : null].filter(Boolean);
   return <section className="cc-saved-film" aria-label={`Saved ${film.title}`}>
     <div className="cc-saved-film-heading">
       <div className="cc-watchlist-artwork">
         {film.posterPath && !posterFailed ? <img className="cc-watchlist-poster" src={film.posterPath} alt={`${film.title} poster`} loading="lazy" onError={() => setPosterFailed(true)}/> : <FilmIcon size={24} aria-hidden="true"/>}
       </div>
-      <div className="cc-watchlist-film-info"><h3>{film.title}{film.year ? <small className="cc-watchlist-year">{film.year}</small> : null}</h3><ImdbLink title={film.title} year={film.year}/></div>
+      <div className="cc-watchlist-film-info"><h3>{film.title}{film.year ? <small className="cc-watchlist-year">{film.year}</small> : null}</h3>{metadata.length > 0 && <p className="cc-watchlist-metadata">{metadata.join(' · ')}</p>}{subtitles.length > 0 && <p className="cc-watchlist-subtitles">Subtitles available: {subtitles.join(', ')}</p>}</div>
       <div className="cc-watchlist-film-actions">
-        <button className="cc-watchlist-showtimes" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button>
+        <ImdbLink title={film.title} year={film.year}/>
         {inWatchlist && <button className="cc-watchlist-icon" aria-label={`Remove film ${film.title} from watchlist`} title="Remove film from watchlist" aria-pressed="true" onClick={() => props.onRemoveFilm(film.id)}><Bookmark size={17} fill="currentColor"/></button>}
         <button className="cc-watchlist-icon" aria-label={`Hide ${film.title} permanently`} title="Hide this film" onClick={() => props.onHide({id:film.id,title:film.title,year:film.year})}><EyeOff size={17}/></button>
       </div>
@@ -25,8 +29,9 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
     {entries.length > 0 && <div className="cc-watchlist-screenings">{entries.map(s => <article className="cc-saved-row" key={s.showtimeId} aria-label={`Saved screening for ${s.movieTitle} at ${screeningTime(s.startDate)}`}>
       <div className="cc-saved-time"><strong>{screeningTime(s.startDate)} <span>–</span> {screeningTime(s.endDate)}</strong><small>{dateLabel(amsterdamDate(s.startDate))}</small></div>
       <div className="cc-saved-venue"><strong>{s.theaterName}</strong><span>{s.theaterCity}</span>{Date.parse(s.startDate) < Date.now() && <small className="cc-saved-marker">Past saved screening</small>}</div>
-      <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/> Tickets</a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
+      <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/><span className="cc-saved-ticket-label">Tickets</span></a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
     </article>)}</div>}
+    <div className="cc-watchlist-showtimes-toggle"><button className="cc-watchlist-showtimes" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button></div>
     <div id={showtimesId} className="cc-watchlist-showtimes-panel" hidden={!expanded}>{expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onHide={movie => props.onHide({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}</div>
   </section>;
 }

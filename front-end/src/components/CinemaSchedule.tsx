@@ -98,6 +98,17 @@ export default function CinemaSchedule() {
   const [view,setView] = useState<View>(() => readStorage('cinecompass_schedule_view','posters' as View,(v): v is View => ['posters','compact'].includes(v as string)));
   const [saved,setSaved] = useState(() => readStorage('cineville_saved_showtimes',[] as SavedShowtime[],validSaved));
   const [films,setFilms] = useState<SavedFilm[]>(() => loadSavedFilms(saved));
+  useEffect(() => {
+    if (!movies.length) return;
+    const byId = new Map(movies.map(movie => [movie.id,movie]));
+    setFilms(previous => {
+      const next = previous.map(film => {
+        const movie = byId.get(film.id);
+        return movie ? {...film,...savedFilm(movie),posterPath:movie.poster_path || film.posterPath} : film;
+      });
+      return JSON.stringify(previous) === JSON.stringify(next) ? previous : next;
+    });
+  }, [movies]);
   const [settingsOpen,setSettingsOpen] = useState(false);
   const [hidden,setHidden] = useState<HiddenMovie[]>(() => readStorage('cinecompass_hidden_movies',[] as HiddenMovie[],(v): v is HiddenMovie[] => Array.isArray(v) && v.every(m => m && typeof m.id === 'string' && typeof m.title === 'string' && (m.year === undefined || typeof m.year === 'number'))));
   const [hiddenError,setHiddenError] = useState('');

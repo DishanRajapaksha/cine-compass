@@ -409,9 +409,30 @@ test('upgrades existing past saved screenings into a deduplicated film watchlist
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
-  expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toEqual([{id:'film',title:'Perfect Days',posterPath:''}]);
+  await waitFor(() => expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'film',title:'Perfect Days',duration:123,spokenLanguages:['ja'],availableSubtitles:['en']}]));
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
   expect(screen.getAllByText('Past saved screening')).toHaveLength(2);
+});
+
+test('enriches older watchlist films with metadata and retains it without current screenings',async () => {
+  localStorage.setItem('cinecompass_saved_films',JSON.stringify([{id:'film',title:'Perfect Days',posterPath:''}]));
+  const view=render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getByText('123 min · Japanese')).toBeInTheDocument();
+  expect(screen.getByText('Subtitles available: English')).toBeInTheDocument();
+  expect(screen.queryByText(/Choose a screening whenever/)).not.toBeInTheDocument();
+  const poster=screen.getByRole('img',{name:'Perfect Days poster'});
+  fireEvent.error(poster);
+  expect(screen.queryByRole('img',{name:'Perfect Days poster'})).not.toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
+  view.unmount();
+  service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:0,results:[]});
+  render(<App/>);
+  await screen.findByText('No screenings in this window.');
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getByText('123 min · Japanese')).toBeInTheDocument();
+  expect(screen.getByText('Subtitles available: English')).toBeInTheDocument();
 });
 
 test('film details can save a film without saving the selected screening',async () => {

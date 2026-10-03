@@ -109,6 +109,9 @@ export interface SavedFilm {
   title: string;
   posterPath: string;
   year?: number;
+  duration?: number;
+  spokenLanguages?: string[];
+  availableSubtitles?: string[];
 }
 
 export interface HiddenMovie {

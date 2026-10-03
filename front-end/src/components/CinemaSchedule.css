@@ -224,7 +224,10 @@
 .cc-watchlist .cc-watchlist-film-info{display:block;min-width:0}
 .cc-watchlist .cc-saved-film-heading h3{font-size:25px;line-height:1.2;letter-spacing:-.5px;max-width:none}
 .cc-watchlist .cc-watchlist-year{font-size:12px;letter-spacing:0;margin-left:9px;white-space:nowrap}
-.cc-watchlist .cc-saved-film-heading .cc-imdb-link{margin-top:9px;font-size:12px}
+.cc-watchlist-metadata,.cc-watchlist-subtitles{font-size:12px;line-height:1.45;color:var(--muted);margin:5px 0 0}
+.cc-watchlist-subtitles{font-size:11px;margin-top:2px}
+.cc-watchlist .cc-saved-film-heading .cc-imdb-link{margin:0;min-height:40px;font-size:12px}
+.cc-watchlist-showtimes-toggle{margin:14px 0 0 84px}
 .cc-watchlist .cc-watchlist-film-actions{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin:0}
 .cc-app .cc-watchlist .cc-saved-film-heading button{margin:0}
 .cc-app .cc-watchlist-showtimes{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:40px;padding:7px 12px;border:1px solid var(--rule);border-radius:3px;color:var(--wine);font-size:13px;white-space:nowrap}
@@ -247,12 +250,15 @@
 @media(max-width:800px){
   .cc-watchlist{margin:28px auto}
   .cc-watchlist .cc-saved-film-heading{grid-template-columns:56px minmax(0,1fr);gap:8px 16px;align-items:start}
-  .cc-watchlist-artwork{grid-column:1;grid-row:1/3;width:56px;height:82px}
+  .cc-watchlist-artwork{grid-column:1;grid-row:1;width:56px;height:82px}
   .cc-watchlist .cc-watchlist-film-info{grid-column:2;grid-row:1}
-  .cc-watchlist .cc-watchlist-film-actions{grid-column:2;grid-row:2;justify-content:flex-start}
-  .cc-watchlist-screenings,.cc-watchlist-showtimes-panel:not([hidden]){margin-left:72px}
-  .cc-watchlist .cc-saved-row{grid-template-columns:140px minmax(0,1fr);gap:7px 12px}
-  .cc-saved-screening-actions{grid-column:1/-1;justify-content:flex-end}
+  .cc-watchlist .cc-watchlist-film-actions{grid-column:1/-1;grid-row:2;justify-content:flex-end}
+  .cc-watchlist-screenings,.cc-watchlist-showtimes-panel:not([hidden]),.cc-watchlist-showtimes-toggle{margin-left:0}
+  .cc-watchlist-showtimes-toggle .cc-watchlist-showtimes{width:100%}
+  .cc-watchlist .cc-saved-row{grid-template-columns:130px minmax(0,1fr) auto;gap:8px}
+  .cc-saved-screening-actions{grid-column:3;grid-row:1;justify-content:flex-end;gap:2px}
+  .cc-watchlist .cc-saved-screening-actions a,.cc-watchlist .cc-saved-screening-actions button{min-width:36px;min-height:40px;justify-content:center}
+  .cc-saved-ticket-label{display:none}
 }
 @media(max-width:480px){
   .cc-watchlist>.cc-results-heading{margin-bottom:20px;gap:8px 14px}
@@ -260,14 +266,15 @@
   .cc-watchlist .cc-saved-film-heading{grid-template-columns:48px minmax(0,1fr);column-gap:12px}
   .cc-watchlist-artwork{width:48px;height:72px}
   .cc-watchlist .cc-saved-film-heading h3{font-size:21px;line-height:1.2}
-  .cc-watchlist .cc-saved-film-heading .cc-imdb-link{margin-top:5px}
+  .cc-watchlist .cc-saved-film-heading .cc-imdb-link{margin:0}
   .cc-watchlist .cc-watchlist-film-actions{gap:4px}
   .cc-app .cc-watchlist-showtimes{min-height:36px;padding:5px 9px;font-size:12px;gap:7px}
   .cc-app .cc-watchlist-icon{min-width:36px;min-height:36px}
-  .cc-watchlist-screenings{margin:14px 0 0 60px}
-  .cc-watchlist .cc-saved-row{grid-template-columns:140px minmax(0,1fr);gap:8px 10px}
-  .cc-watchlist .cc-saved-time strong{font-size:17px}
+  .cc-watchlist-screenings{margin:12px 0 0}
+  .cc-watchlist .cc-saved-row{grid-template-columns:120px minmax(0,1fr) auto;gap:6px}
+  .cc-watchlist .cc-saved-time strong{font-size:16px}
   .cc-saved-venue{grid-column:2;grid-row:1}
-  .cc-saved-screening-actions{grid-column:1/-1;grid-row:2;justify-content:flex-end;gap:12px}
+  .cc-saved-screening-actions{grid-column:3;grid-row:1;justify-content:flex-end;gap:0}
+  .cc-saved-venue{font-size:12px}
   .cc-watchlist-showtimes-panel:not([hidden]){margin-left:0}
 }
