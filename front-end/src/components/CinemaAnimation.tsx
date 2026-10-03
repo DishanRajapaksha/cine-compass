@@ -62,9 +62,8 @@ function TheatreScene() {
 
 function FilmstripScene() {
   const patternId = useId();
-  return <svg fill="none" focusable="false">
-    <defs>
-      <pattern id={patternId} width="252" height="56" patternUnits="userSpaceOnUse">
+  const pattern = (id: string) => <defs>
+      <pattern id={id} width="252" height="56" patternUnits="userSpaceOnUse">
         <g stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M0 5h252M0 51h252" className="cc-filmstrip-rail"/>
           {[0,84,168].map(x => <g key={x} transform={`translate(${x} 0)`}>
@@ -83,11 +82,18 @@ function FilmstripScene() {
           <path className="cc-filmstrip-motif" d="M210 36s-13-7-10-13c2-4 7-4 10 0 3-4 8-4 10 0 3 6-10 13-10 13Z"/>
         </g>
       </pattern>
-    </defs>
+    </defs>;
+  return <><svg className="cc-filmstrip-desktop" fill="none" focusable="false">
+    {pattern(patternId)}
     <g className="cc-filmstrip-track">
       <rect x="-252" width="calc(100% + 504px)" height="56" fill={`url(#${patternId})`}/>
     </g>
-  </svg>;
+  </svg><svg className="cc-filmstrip-mobile" viewBox="0 0 252 56" fill="none" focusable="false">
+    {pattern(`${patternId}-mobile`)}
+    <g className="cc-filmstrip-track">
+      <rect x="-252" width="756" height="56" fill={`url(#${patternId}-mobile)`}/>
+    </g>
+  </svg></>;
 }
 
 function MoonlitScene() {
