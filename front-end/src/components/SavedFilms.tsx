@@ -36,12 +36,27 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
   </section>;
 }
 export default function SavedFilms(props: Props) {
+  const [tab,setTab] = useState<'movies' | 'showtimes'>('movies');
+  const tabsId = useId();
   const grouped=props.saved.reduce<Record<string,SavedShowtime[]>>((map,s) => { (map[s.movieId] ||= []).push(s); return map; },{});
-  const filmIds=new Set(props.films.map(f => f.id));
-  const screeningOnly=Object.entries(grouped).filter(([id]) => !filmIds.has(id));
+  const filmsById=new Map(props.films.map(f => [f.id,f]));
+  function onTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const next=event.key === 'Home' ? 'movies' : event.key === 'End' ? 'showtimes' : tab === 'movies' ? 'showtimes' : 'movies';
+    setTab(next);
+    document.getElementById(`${tabsId}-${next}-tab`)?.focus();
+  }
   return <section className="cc-watchlist">
     <div className="cc-results-heading"><h2>Watchlist</h2><span>{props.films.length} film{props.films.length===1 ? '' : 's'} · {props.saved.length} saved screening{props.saved.length===1 ? '' : 's'}</span></div>
-    {!props.films.length ? <div className="cc-empty"><Bookmark size={30}/><h3>A little room for a good film.</h3><p>Save a film from the programme without choosing a screening.</p><button className="cc-primary" onClick={props.onBrowse}>Browse the programme <ArrowRight size={16}/></button></div> : props.films.map(film => <FilmCard key={film.id} {...props} film={film} entries={grouped[film.id] || []} inWatchlist/>)}
-    {screeningOnly.length > 0 && <section aria-label="Saved screenings outside your watchlist"><h2 className="cc-screening-only-title">Other saved screenings</h2><p className="cc-watchlist-hint">These films have been removed from your watchlist. Your screening times are still saved.</p>{screeningOnly.map(([id,entries]) => <FilmCard key={id} {...props} film={{id,title:entries[0].movieTitle,posterPath:entries[0].posterPath}} entries={entries} inWatchlist={false}/>)}</section>}
+    <div className="cc-watchlist-tabs" role="tablist" aria-label="Watchlist lists">
+      {(['movies','showtimes'] as const).map(value => <button key={value} id={`${tabsId}-${value}-tab`} role="tab" aria-selected={tab === value} aria-controls={`${tabsId}-${value}-panel`} tabIndex={tab === value ? 0 : -1} onClick={() => setTab(value)} onKeyDown={onTabKeyDown}>{value === 'movies' ? 'Movies' : 'Saved showtimes'} <span className="cc-count">{value === 'movies' ? props.films.length : props.saved.length}</span></button>)}
+    </div>
+    <div id={`${tabsId}-movies-panel`} role="tabpanel" aria-labelledby={`${tabsId}-movies-tab`} hidden={tab !== 'movies'} tabIndex={0}>
+      {!props.films.length ? <div className="cc-empty"><Bookmark size={30}/><h3>A little room for a good film.</h3><p>Save a film from the programme without choosing a screening.</p><button className="cc-primary" onClick={props.onBrowse}>Browse the programme <ArrowRight size={16}/></button></div> : props.films.map(film => <FilmCard key={film.id} {...props} film={film} entries={[]} inWatchlist/>)}
+    </div>
+    <div id={`${tabsId}-showtimes-panel`} role="tabpanel" aria-labelledby={`${tabsId}-showtimes-tab`} hidden={tab !== 'showtimes'} tabIndex={0}>
+      {!props.saved.length ? <div className="cc-empty"><Ticket size={30}/><h3>No saved showtimes yet.</h3><p>Save a screening from the programme to keep its time and cinema here.</p><button className="cc-primary" onClick={props.onBrowse}>Browse the programme <ArrowRight size={16}/></button></div> : Object.entries(grouped).map(([id,entries]) => <FilmCard key={id} {...props} film={filmsById.get(id) || {id,title:entries[0].movieTitle,posterPath:entries[0].posterPath}} entries={entries} inWatchlist={false}/>)}
+    </div>
   </section>;
 }

@@ -279,3 +279,7 @@
   .cc-saved-venue{font-size:12px}
   .cc-watchlist-showtimes-panel:not([hidden]){margin-left:0}
 }
+
+.cc-watchlist-tabs{display:flex;gap:24px;border-bottom:1px solid var(--rule);margin-bottom:22px}
+.cc-app .cc-watchlist-tabs button{padding:12px 0;border-bottom:2px solid transparent;font-size:16px;min-height:44px;color:var(--muted)}
+.cc-app .cc-watchlist-tabs button[aria-selected=true]{border-color:var(--wine);color:var(--wine);font-weight:bold}

@@ -101,6 +101,7 @@ test('switches to one compact layout with no posters and preserves saved screeni
   expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
   expect(screen.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 1'}));
   fireEvent.click(screen.getByRole('button',{name:/^Remove Perfect Days at/}));
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
   expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
@@ -380,7 +381,10 @@ test('saves a film without a screening, persists across reload, and finds upcomi
   await screen.findByRole('button',{name:'Perfect Days'});
   expect(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'})).toHaveAttribute('aria-pressed','true');
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 1'}));
   fireEvent.click(screen.getByRole('button',{name:'Remove Perfect Days at 18:00'}));
+  expect(screen.getByText('No saved showtimes yet.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab',{name:'Movies 1'}));
   expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
   expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
 });
@@ -392,7 +396,8 @@ test('removing a film retains screening access and does not resurrect it on relo
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
   fireEvent.click(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'}));
   expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
-  expect(screen.getByRole('region',{name:'Saved screenings outside your watchlist'})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:/^Remove Perfect Days at/})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 1'}));
   expect(screen.getByRole('button',{name:/^Remove Perfect Days at/})).toBeInTheDocument();
   view.unmount();
   render(<App/>);
@@ -411,6 +416,8 @@ test('upgrades existing past saved screenings into a deduplicated film watchlist
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
   await waitFor(() => expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'film',title:'Perfect Days',duration:123,spokenLanguages:['ja'],availableSubtitles:['en']}]));
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  screen.getAllByText('Past saved screening').forEach(marker => expect(marker).not.toBeVisible());
+  fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 2'}));
   expect(screen.getAllByText('Past saved screening')).toHaveLength(2);
 });
 
@@ -485,4 +492,24 @@ test('compact primary actions and More share save state, and More closes after s
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
   fireEvent.click(more);
   expect(within(screen.getByRole('group',{name:'More actions for Perfect Days'})).getByRole('button',{name:'Remove Perfect Days at 23:58'})).toHaveAttribute('aria-pressed','true');
+});
+
+
+test('watchlist tabs separate movies from showtimes and support keyboard switching',async () => {
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(screen.getByRole('button',{name:/^Save Perfect Days at/}));
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  const movies=screen.getByRole('tab',{name:'Movies 1'});
+  expect(movies).toHaveAttribute('aria-selected','true');
+  expect(screen.queryByRole('button',{name:/^Remove Perfect Days at/})).not.toBeInTheDocument();
+  fireEvent.keyDown(movies,{key:'ArrowRight'});
+  const showtimes=screen.getByRole('tab',{name:'Saved showtimes 1'});
+  expect(showtimes).toHaveFocus();
+  expect(showtimes).toHaveAttribute('aria-selected','true');
+  expect(screen.getByRole('button',{name:/^Remove Perfect Days at/})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Remove film Perfect Days from watchlist'})).not.toBeInTheDocument();
+  fireEvent.keyDown(showtimes,{key:'Home'});
+  expect(movies).toHaveFocus();
+  expect(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'})).toBeInTheDocument();
 });
