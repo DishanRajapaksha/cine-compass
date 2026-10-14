@@ -287,3 +287,14 @@
 .cc-expired-showtimes{margin-top:28px;border-top:1px solid var(--rule);padding-top:20px}
 .cc-expired-showtimes-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .cc-expired-showtimes-heading h3{display:flex;align-items:center;gap:10px;margin:0;font-size:21px}
+
+.cc-programme-controls{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:flex-end}
+.cc-grouping-control{position:relative;display:inline-flex;align-items:center;color:var(--wine);white-space:nowrap}
+.cc-grouping-control select{appearance:none;border:0;border-bottom:2px solid var(--wine);border-radius:0;background:transparent;color:inherit;padding:6px 24px 6px 0;font:inherit;font-size:14px;font-weight:bold;cursor:pointer;min-height:36px}
+.cc-grouping-control svg{position:absolute;right:0;pointer-events:none}
+.cc-grouping-control select:hover{color:#542027}
+.cc-grouping-control select:focus-visible{outline:2px solid var(--wine);outline-offset:4px}
+@media(max-width:480px){.cc-grouping-control select{font-size:13px}}
+.cc-day-label .cc-count{font-size:12px;font-weight:normal;letter-spacing:0;white-space:nowrap}
+.cc-film-meta .cc-screening-date{display:inline;color:var(--wine)}
+@media(max-width:800px){.cc-programme-top{flex-wrap:wrap}.cc-programme-controls{width:100%;justify-content:space-between;gap:12px}}

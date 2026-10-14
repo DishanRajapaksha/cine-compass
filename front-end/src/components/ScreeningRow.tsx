@@ -1,14 +1,14 @@
 import React, { useId, useState } from 'react';
 import { Bookmark, Check, ExternalLink, EyeOff, CalendarPlus, Calendar, Ticket, MoreHorizontal } from 'lucide-react';
-import { Screening, languageName, screeningTime } from '../lib/schedule';
+import { Screening, amsterdamDate, dateLabel, languageName, screeningTime } from '../lib/schedule';
 import { hasEnglishSubtitles } from '../lib/utils';
 import ImdbLink from './ImdbLink';
 export const plainDescription = (html: string) => {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
 };
-export default function ScreeningRow({ screening: {movie, showtime}, compact, saved, selected, unavailable, available, onSave, onSelect, onDetails, onHide, onPlan, filmSaved, onToggleFilm }: {
-  filmSaved?: boolean; onToggleFilm?: () => void; screening: Screening; compact: boolean; saved: boolean; selected: boolean; unavailable: boolean; available?: boolean;
+export default function ScreeningRow({ screening: {movie, showtime}, compact, showDate, saved, selected, unavailable, available, onSave, onSelect, onDetails, onHide, onPlan, filmSaved, onToggleFilm }: {
+  showDate?: boolean; filmSaved?: boolean; onToggleFilm?: () => void; screening: Screening; compact: boolean; saved: boolean; selected: boolean; unavailable: boolean; available?: boolean;
   onSave: () => void; onSelect: () => void; onDetails: () => void; onHide?: () => void; onPlan?: () => void;
 }) {
   const [moreOpen,setMoreOpen] = useState(false);
@@ -18,7 +18,7 @@ export default function ScreeningRow({ screening: {movie, showtime}, compact, sa
   return <article className={`cc-screening ${compact ? 'is-compact' : ''} ${selected ? 'is-selected' : ''} ${unavailable ? 'is-unavailable' : ''} ${available ? 'is-available' : ''}`} aria-label={`${movie.title} at ${screeningTime(showtime.startDate)}, ${showtime.theaterName}`}>
     {!compact && <button className="cc-poster-button" onClick={onDetails} aria-label={`Details for ${movie.title}`}>{movie.poster_path ? <img loading="lazy" src={movie.poster_path} alt={movie.title} onError={e => { e.currentTarget.style.display='none'; }}/> : <span className="cc-poster-missing">{movie.title}</span>}</button>}
     <button className="cc-screening-time" onClick={onSelect} aria-pressed={selected} title="Select as the starting point for your evening"><strong>{screeningTime(showtime.startDate)}</strong><strong>{screeningTime(showtime.endDate)}</strong>{selected && <small>Your starting point</small>}{available && <small>Available after your pick</small>}</button>
-    <div className="cc-film"><button className="cc-title" onClick={onDetails}>{movie.title}</button><div className="cc-film-meta">{movie.duration ? `${movie.duration} min` : 'Duration not listed'}{movie.releaseYear ? ` · ${movie.releaseYear}` : ''}<span> · {spoken}</span><span className={`cc-subtitle-meta ${hasEnglishSubtitles(showtime.subtitles) ? 'cc-english' : ''}`}><span className="cc-meta-separator"> · </span>{subtitles}</span>{showtime.languageVersion && <span> · {showtime.languageVersion}</span>}</div>{!compact && <p className="cc-synopsis">{plainDescription(movie.overview)}</p>}{showtime.specials && <span className="cc-special">{showtime.specials}</span>}</div>
+    <div className="cc-film"><button className="cc-title" onClick={onDetails}>{movie.title}</button><div className="cc-film-meta">{showDate && <span className="cc-screening-date">{dateLabel(amsterdamDate(showtime.startDate))} · </span>}{movie.duration ? `${movie.duration} min` : 'Duration not listed'}{movie.releaseYear ? ` · ${movie.releaseYear}` : ''}<span> · {spoken}</span><span className={`cc-subtitle-meta ${hasEnglishSubtitles(showtime.subtitles) ? 'cc-english' : ''}`}><span className="cc-meta-separator"> · </span>{subtitles}</span>{showtime.languageVersion && <span> · {showtime.languageVersion}</span>}</div>{!compact && <p className="cc-synopsis">{plainDescription(movie.overview)}</p>}{showtime.specials && <span className="cc-special">{showtime.specials}</span>}</div>
     <div className="cc-venue"><strong>{showtime.theaterName}</strong><span>{showtime.theaterCity}</span></div>
     <div className="cc-screening-footer">
       <div className="cc-screening-actions">
