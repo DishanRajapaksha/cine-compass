@@ -7,6 +7,7 @@ import * as dateUtils from './lib/utils';
 jest.mock('./services/movieService');
 const service = movieService as jest.Mocked<typeof movieService>;
 beforeEach(() => {
+  jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-01T12:00:00Z'));
   jest.spyOn(dateUtils, 'getCurrentDateInAmsterdam').mockReturnValue('2026-10-01');
   jest.spyOn(dateUtils, 'getCurrentTimeInAmsterdam').mockReturnValue('14:00');
   window.location.hash=''; localStorage.clear();
@@ -416,9 +417,18 @@ test('upgrades existing past saved screenings into a deduplicated film watchlist
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
   await waitFor(() => expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'film',title:'Perfect Days',duration:123,spokenLanguages:['ja'],availableSubtitles:['en']}]));
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
-  screen.getAllByText('Past saved screening').forEach(marker => expect(marker).not.toBeVisible());
+  expect(screen.queryByText('Past saved screening')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 2'}));
+  expect(screen.queryByText('Past saved screening')).not.toBeInTheDocument();
+  expect(screen.getByText('No upcoming saved showtimes.')).toBeInTheDocument();
+  const toggle=screen.getByRole('button',{name:'Show expired showtimes'});
+  expect(toggle).toHaveAttribute('aria-expanded','false');
+  fireEvent.click(toggle);
   expect(screen.getAllByText('Past saved screening')).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole('button',{name:'Remove Perfect Days at 19:00'})[0]);
+  expect(screen.getAllByText('Past saved screening')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button',{name:'Hide expired showtimes'}));
+  expect(screen.queryByText('Past saved screening')).not.toBeInTheDocument();
 });
 
 test('enriches older watchlist films with metadata and retains it without current screenings',async () => {

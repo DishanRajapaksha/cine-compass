@@ -38,7 +38,18 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
 export default function SavedFilms(props: Props) {
   const [tab,setTab] = useState<'movies' | 'showtimes'>('movies');
   const tabsId = useId();
-  const grouped=props.saved.reduce<Record<string,SavedShowtime[]>>((map,s) => { (map[s.movieId] ||= []).push(s); return map; },{});
+  const [showExpired,setShowExpired] = useState(false);
+  const expiredId = useId();
+  const grouped: Record<string,SavedShowtime[]> = {};
+  const expired: Record<string,SavedShowtime[]> = {};
+  const now = Date.now();
+  let expiredCount = 0;
+  for (const screening of props.saved) {
+    const isExpired = Date.parse(screening.startDate) < now;
+    const group = isExpired ? expired : grouped;
+    (group[screening.movieId] ||= []).push(screening);
+    if (isExpired) expiredCount++;
+  }
   const filmsById=new Map(props.films.map(f => [f.id,f]));
   function onTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
     if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
@@ -57,6 +68,14 @@ export default function SavedFilms(props: Props) {
     </div>
     <div id={`${tabsId}-showtimes-panel`} role="tabpanel" aria-labelledby={`${tabsId}-showtimes-tab`} hidden={tab !== 'showtimes'} tabIndex={0}>
       {!props.saved.length ? <div className="cc-empty"><Ticket size={30}/><h3>No saved showtimes yet.</h3><p>Save a screening from the programme to keep its time and cinema here.</p><button className="cc-primary" onClick={props.onBrowse}>Browse the programme <ArrowRight size={16}/></button></div> : Object.entries(grouped).map(([id,entries]) => <FilmCard key={id} {...props} film={filmsById.get(id) || {id,title:entries[0].movieTitle,posterPath:entries[0].posterPath}} entries={entries} inWatchlist={false}/>)}
+      {props.saved.length > 0 && !Object.keys(grouped).length && <p className="cc-watchlist-hint">No upcoming saved showtimes.</p>}
+      {expiredCount > 0 && <section className="cc-expired-showtimes" aria-label="Expired showtimes">
+        <div className="cc-expired-showtimes-heading">
+          <h3>Expired showtimes <span className="cc-count">{expiredCount}</span></h3>
+          <button className="cc-watchlist-showtimes" aria-expanded={showExpired} aria-controls={expiredId} onClick={() => setShowExpired(value => !value)}>{showExpired ? 'Hide expired showtimes' : 'Show expired showtimes'} <ChevronDown size={15}/></button>
+        </div>
+        <div id={expiredId} hidden={!showExpired}>{showExpired && Object.entries(expired).map(([id,entries]) => <FilmCard key={id} {...props} film={filmsById.get(id) || {id,title:entries[0].movieTitle,posterPath:entries[0].posterPath}} entries={entries} inWatchlist={false}/>)}</div>
+      </section>}
     </div>
   </section>;
 }

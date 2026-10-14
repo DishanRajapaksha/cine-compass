@@ -283,3 +283,7 @@
 .cc-watchlist-tabs{display:flex;gap:24px;border-bottom:1px solid var(--rule);margin-bottom:22px}
 .cc-app .cc-watchlist-tabs button{padding:12px 0;border-bottom:2px solid transparent;font-size:16px;min-height:44px;color:var(--muted)}
 .cc-app .cc-watchlist-tabs button[aria-selected=true]{border-color:var(--wine);color:var(--wine);font-weight:bold}
+
+.cc-expired-showtimes{margin-top:28px;border-top:1px solid var(--rule);padding-top:20px}
+.cc-expired-showtimes-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.cc-expired-showtimes-heading h3{display:flex;align-items:center;gap:10px;margin:0;font-size:21px}
