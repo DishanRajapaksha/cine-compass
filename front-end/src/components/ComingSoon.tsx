@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import React, { useEffect, useId, useState } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
 import { Movie } from '../types/Movie';
 import { dateLabel } from '../lib/schedule';
 import { movieService } from '../services/movieService';
@@ -9,6 +9,14 @@ function releaseWeek(date:string) {
   const monday = new Date(`${date}T12:00:00Z`);
   monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay()+6)%7);
   return monday.toISOString().slice(0,10);
+}
+function ReleaseWeekSection({week,movies,...props}:CatalogueProps & {week:string;movies:Movie[]}) {
+  const [expanded,setExpanded] = useState(true);
+  const panelId = useId();
+  return <section className="cc-release-week" aria-label={`Release week of ${dateLabel(week)} ${week.slice(0,4)}`}>
+    <h3 className="cc-release-week-heading"><button aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>Week of {dateLabel(week)} {week.slice(0,4)}<ChevronDown size={17} aria-hidden="true"/></button></h3>
+    <div id={panelId} hidden={!expanded}>{movies.map(movie => <CatalogueFilm key={movie.id} {...props} movie={movie} label="Upcoming" releaseLabel={`Expected ${dateLabel(movie.release_date)} ${movie.release_date.slice(0,4)}`}/>)}</div>
+  </section>;
 }
 export default function ComingSoon(props:CatalogueProps) {
   const [movies,setMovies] = useState<Movie[]>([]);
@@ -33,7 +41,7 @@ export default function ComingSoon(props:CatalogueProps) {
     <div className="cc-results-heading"><h2>Coming soon</h2><span aria-live="polite">{loading ? 'Finding upcoming films…' : `${visible.length} upcoming film${visible.length === 1 ? '' : 's'}`}</span></div>
     <label className="cc-search cc-upcoming-search"><Search size={16} aria-hidden="true"/><input aria-label="Search upcoming films" placeholder="Search upcoming films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
     <div aria-busy={loading}>
-      {loading ? <div className="cc-loading" role="status"><div/><p>Gathering upcoming films…</p></div> : error ? <div className="cc-empty" role="alert"><p>{error}</p><button className="cc-primary" onClick={() => setRetry(value => value+1)}>Try again</button></div> : !visible.length ? <div className="cc-empty"><h3>{query ? 'No upcoming films match your search.' : 'No upcoming films to show yet.'}</h3>{query && <button className="cc-text-button" onClick={() => setQuery('')}>Clear search</button>}</div> : Array.from(weeks).map(([week,films]) => <section key={week} className="cc-release-week" aria-label={`Release week of ${dateLabel(week)} ${week.slice(0,4)}`}><h3 className="cc-release-week-heading">Week of {dateLabel(week)} {week.slice(0,4)}</h3>{films.map(movie => <CatalogueFilm key={movie.id} {...props} movie={movie} label="Upcoming" releaseLabel={`Expected ${dateLabel(movie.release_date)} ${movie.release_date.slice(0,4)}`}/>)}</section>)}
+      {loading ? <div className="cc-loading" role="status"><div/><p>Gathering upcoming films…</p></div> : error ? <div className="cc-empty" role="alert"><p>{error}</p><button className="cc-primary" onClick={() => setRetry(value => value+1)}>Try again</button></div> : !visible.length ? <div className="cc-empty"><h3>{query ? 'No upcoming films match your search.' : 'No upcoming films to show yet.'}</h3>{query && <button className="cc-text-button" onClick={() => setQuery('')}>Clear search</button>}</div> : Array.from(weeks).map(([week,films]) => <ReleaseWeekSection key={week} {...props} week={week} movies={films}/>)}
     </div>
   </section>;
 }

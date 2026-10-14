@@ -344,3 +344,7 @@
 @media(max-width:480px){.cc-app .cc-header nav[aria-label]{flex-wrap:nowrap;gap:16px}.cc-app .cc-header nav[aria-label] .cc-header-menu{margin-left:auto}.cc-header-menu-panel{top:calc(100% + 6px)}}
 
 .cc-upcoming-film .cc-detail-synopsis{font-size:14px;line-height:1.6;margin:10px 0;display:block;overflow:visible;-webkit-line-clamp:unset}
+
+.cc-app .cc-release-week-heading button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:44px;text-align:left;font:inherit;color:var(--wine)}
+.cc-release-week-heading button svg{flex-shrink:0;transition:transform .15s}
+.cc-release-week-heading button[aria-expanded=true] svg{transform:rotate(180deg)}
