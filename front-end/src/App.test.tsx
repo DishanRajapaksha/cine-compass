@@ -78,7 +78,8 @@ test('hides all screenings across views and reloads, then restores from Settings
   render(<App/>);
   await screen.findByText('No screenings in this window.');
   expect(screen.queryByRole('textbox',{name:'OMDb API key'})).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'Settings'}));
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Settings'}));
   const dialog=screen.getByRole('dialog',{name:'Settings'});
   expect(within(dialog).getByLabelText('OMDb API key')).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button',{name:'Restore Perfect Days'}));
@@ -529,7 +530,8 @@ test('coming soon groups release weeks and saves a film without creating a scree
   service.getUpcomingMovies.mockResolvedValue([{...base,id:'upcoming',title:'Future Film',release_date:'2099-10-22',showtimes:[]},{...base,id:'later',title:'Later Film',release_date:'2099-11-05',showtimes:[]}]);
   service.getMovieShowtimes.mockResolvedValue(null);
   render(<App/>);
-  fireEvent.click(screen.getByRole('button',{name:'Coming soon'}));
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Coming soon'}));
   await screen.findByRole('button',{name:'Future Film'});
   expect(screen.getAllByRole('region',{name:/Release week of/})).toHaveLength(2);
   const film=within(screen.getByRole('article',{name:'Upcoming Future Film'}));
@@ -549,8 +551,32 @@ test('coming soon groups release weeks and saves a film without creating a scree
 test('coming soon can retry a failed catalogue request',async () => {
   service.getUpcomingMovies.mockRejectedValueOnce(new Error('Unavailable')).mockResolvedValueOnce([]);
   render(<App/>);
-  fireEvent.click(screen.getByRole('button',{name:'Coming soon'}));
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Coming soon'}));
   await screen.findByText('Upcoming films could not be loaded. Please try again.');
   fireEvent.click(screen.getByRole('button',{name:'Try again'}));
   await screen.findByText('No upcoming films to show yet.');
+});
+
+test('now showing filters by city and shares film and screening actions',async () => {
+  const base=(await service.getPopularMovies()).results[0];
+  service.getNowShowingMovies.mockImplementation(async city=>city ? [base] : [base,{...base,id:'another',title:'Another Film'}]);
+  service.getMovieShowtimes.mockResolvedValue(null);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Now showing'}));
+  await screen.findByRole('article',{name:'Now showing Perfect Days'});
+  expect(service.getNowShowingMovies).toHaveBeenCalledWith('Amsterdam');
+  fireEvent.change(screen.getByRole('combobox',{name:'Now showing city'}),{target:{value:''}});
+  await screen.findByRole('article',{name:'Now showing Another Film'});
+  expect(service.getNowShowingMovies).toHaveBeenLastCalledWith(null);
+  fireEvent.change(screen.getByRole('textbox',{name:'Search now showing films'}),{target:{value:'Perfect'}});
+  expect(screen.queryByRole('article',{name:'Now showing Another Film'})).not.toBeInTheDocument();
+  const card=within(screen.getByRole('article',{name:'Now showing Perfect Days'}));
+  fireEvent.click(card.getByRole('button',{name:'Save film Perfect Days to watchlist'}));
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
+  fireEvent.click(card.getByRole('button',{name:'Find showtimes'}));
+  await card.findByText('No upcoming showtimes match these filters. Try another city, date, or language.');
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
 });

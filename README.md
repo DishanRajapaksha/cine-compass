@@ -35,6 +35,10 @@ Open **http://localhost:3000**. React proxies `/api` to port 5080. Development p
 
 Open Settings to create an account with a username/passkey or sign in with a discoverable passkey without entering a username. An account is created only after its first passkey is verified and stored. Add a second passkey after signing in.
 
+## Now showing
+
+The **Now showing** tab lists films with published, non-hidden screenings in the next seven days. Its city filter is independent of the schedule; title search filters the loaded catalogue. It queries Cineville's `POST /productions/search` with screening dates and city venue IDs, follows pagination, and shares the movie cards, watchlist, hidden-film settings, synopsis translation, and showtime lookup with Coming soon. Saving a movie does not save a screening. **Find showtimes** starts with the catalogue's selected city and supports its own date and language filters.
+
 ## Coming soon
 
 The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, expand a synopsis, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.

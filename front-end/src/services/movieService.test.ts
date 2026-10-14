@@ -33,7 +33,7 @@ test('upcoming catalogue follows pagination, normalizes films without screenings
   const upcoming={...event('one')._embedded.production,id:'upcoming',assets:{poster:{url:'https://example.com/poster.jpg'}},attributes:{premiereDate:'2099-10-22',duration:90,spokenLanguages:['en']},localizableAttributes:{'en-GB':{description:'An upcoming film.'}}};
   const earlier={...upcoming,id:'earlier',attributes:{...upcoming.attributes,premiereDate:'2099-10-15'}};
   const past={...upcoming,id:'past',attributes:{...upcoming.attributes,premiereDate:'2020-01-01'}};
-  const unknown={...upcoming,id:'unknown',attributes:{duration:90,spokenLanguages:['en']}};
+  const unknown={...upcoming,id:'unknown',attributes:{duration:90,releaseYear:2099,spokenLanguages:['en']}};
   const fetchMock=jest.fn().mockResolvedValueOnce({ok:true,json:async()=>({_links:{next:{href:'/productions/search?page[after]=cursor'}},_embedded:{productions:[upcoming,past,unknown]}})}).mockResolvedValueOnce({ok:true,json:async()=>({_links:{},_embedded:{productions:[upcoming,earlier]}})});
   const original=global.fetch;global.fetch=fetchMock;
   try {
@@ -45,5 +45,26 @@ test('upcoming catalogue follows pagination, normalizes films without screenings
     expect(body).toMatchObject({premiereDate:{isNull:false,gt:expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)},sort:{premiereDate:'asc'}});
     expect(fetchMock.mock.calls[1][0]).toContain('page[after]=cursor');
     expect(fetchMock.mock.calls[1][1].body).toBe(fetchMock.mock.calls[0][1].body);
+  } finally {global.fetch=original;}
+});
+
+test('now showing scopes films to city venues and the next seven days',async () => {
+  const venue=event('venue')._embedded.venue;
+  const film=event('screening')._embedded.production;
+  const fetchMock=jest.fn().mockImplementation(async (url:string) => ({ok:true,json:async()=>url.endsWith('/venues') ? {_links:{},_embedded:{venues:[venue]}} : {_links:{},_embedded:{productions:[film]}}}));
+  const original=global.fetch;global.fetch=fetchMock;
+  try {
+    const before=Date.now();
+    const result=await movieService.getNowShowingMovies('Amsterdam');
+    expect(result).toHaveLength(1);
+    expect(result[0].showtimes).toEqual([]);
+    const call=fetchMock.mock.calls.find(([url])=>url.includes('/productions/search'))!;
+    const body=JSON.parse((call as unknown as [string,RequestInit])[1].body as string);
+    expect(body.event).toMatchObject({isHidden:{eq:false},venueId:{in:['eye']}});
+    expect(Date.parse(body.event.startDate.gte)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(body.event.startDate.lt)-Date.parse(body.event.startDate.gte)).toBe(7*24*60*60*1000);
+    await movieService.getNowShowingMovies(null);
+    const allBody=JSON.parse((fetchMock.mock.calls[fetchMock.mock.calls.length-1] as unknown as [string,RequestInit])[1].body as string);
+    expect(allBody.event.venueId).toBeUndefined();
   } finally {global.fetch=original;}
 });

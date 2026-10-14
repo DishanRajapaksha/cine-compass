@@ -369,29 +369,45 @@ const asMovieResponse = (movies: Movie[]): MovieResponse => ({
   total_results: movies.length
 });
 
+const searchProductions = async (body: Record<string,unknown>): Promise<Movie[]> => {
+  type ProductionPage = {_embedded:{productions:CinevilleFilm[]};_links:{next?:{href:string}}};
+  const movies = new Map<string,Movie>();
+  const visited = new Set<string>();
+  let nextUrl: string | undefined = `${CINEVILLE_API_URL}/productions/search`;
+  while (nextUrl) {
+    if (visited.has(nextUrl)) throw new Error('Repeated film catalogue page');
+    visited.add(nextUrl);
+    const response: ProductionPage = await fetchJson<ProductionPage>(nextUrl, {
+      method:'POST',headers:{'Content-Type':'application/json; charset=utf-8',locale:API_LOCALE},body:JSON.stringify(body)
+    });
+    for (const production of response._embedded.productions) {
+      const film = normalizeFilm(production);
+      movies.set(film.id,{...convertCinevilleFilmToMovie(film,[]),release_date:film.premiereDate || ''});
+    }
+    const href: string | undefined = response._links.next?.href;
+    nextUrl = href ? new URL(href,CINEVILLE_API_URL).href : undefined;
+    if (nextUrl && (new URL(nextUrl).origin !== CINEVILLE_API_URL || new URL(nextUrl).pathname !== '/productions/search')) throw new Error('Invalid film catalogue page');
+  }
+  return Array.from(movies.values());
+};
+
 export const movieService = {
+  getNowShowingMovies: async (city: string | null): Promise<Movie[]> => {
+    const now = new Date();
+    const until = new Date(now.getTime()+7*24*60*60*1000);
+    const venueIds = city ? await getTheaterIdsByCity(city) : undefined;
+    if (venueIds && !venueIds.length) return [];
+    const films = await searchProductions({
+      event:{isHidden:{eq:false},startDate:{gte:now.toISOString(),lt:until.toISOString()},...(venueIds ? {venueId:{in:venueIds}} : {})},
+      sort:{title:'asc'},page:{limit:100}
+    });
+    return films.sort((a,b) => a.title.localeCompare(b.title));
+  },
   getUpcomingMovies: async (): Promise<Movie[]> => {
     const today = getCurrentDateInAmsterdam();
     const body = {premiereDate:{isNull:false,gt:today},sort:{premiereDate:'asc'},page:{limit:100}};
-    type ProductionPage = {_embedded:{productions:CinevilleFilm[]};_links:{next?:{href:string}}};
-    const movies = new Map<string,Movie>();
-    const visited = new Set<string>();
-    let nextUrl: string | undefined = `${CINEVILLE_API_URL}/productions/search`;
-    while (nextUrl) {
-      if (visited.has(nextUrl)) throw new Error('Repeated upcoming film page');
-      visited.add(nextUrl);
-      const response: ProductionPage = await fetchJson<ProductionPage>(nextUrl, {
-        method:'POST',headers:{'Content-Type':'application/json; charset=utf-8',locale:API_LOCALE},body:JSON.stringify(body)
-      });
-      for (const production of response._embedded.productions) {
-        const film = normalizeFilm(production);
-        if (film.premiereDate && /^\d{4}-\d{2}-\d{2}$/.test(film.premiereDate) && film.premiereDate > today) movies.set(film.id,convertCinevilleFilmToMovie(film,[]));
-      }
-      const href: string | undefined = response._links.next?.href;
-      nextUrl = href ? new URL(href,CINEVILLE_API_URL).href : undefined;
-      if (nextUrl && (new URL(nextUrl).origin !== CINEVILLE_API_URL || new URL(nextUrl).pathname !== '/productions/search')) throw new Error('Invalid upcoming film page');
-    }
-    return Array.from(movies.values()).sort((a,b) => a.release_date.localeCompare(b.release_date) || a.title.localeCompare(b.title));
+    const movies = (await searchProductions(body)).filter(movie => /^\d{4}-\d{2}-\d{2}$/.test(movie.release_date) && movie.release_date > today);
+    return movies.sort((a,b) => a.release_date.localeCompare(b.release_date) || a.title.localeCompare(b.title));
   },
   getAvailableLanguages: async (): Promise<{ subtitleLanguages: string[] }> => ({
     subtitleLanguages: ['en']
