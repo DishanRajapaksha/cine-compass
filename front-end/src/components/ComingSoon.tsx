@@ -56,7 +56,7 @@ export default function ComingSoon(props:CatalogueProps) {
     <div className="cc-catalogue-filters"><label className="cc-search"><Search size={16} aria-hidden="true"/><input aria-label="Search upcoming films" placeholder="Search upcoming films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label className="cc-field">Sort by<select aria-label="Sort upcoming films" value={sort} onChange={event => setSort(event.target.value as CatalogueSort)}>{catalogueSortOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
     </div>
-    <CatalogueRangeFilters ranges={ranges} onChange={setRanges} onClear={clearFilters}/>
+    <CatalogueRangeFilters movies={movies} ranges={ranges} onChange={setRanges} onClear={clearFilters}/>
     <div aria-busy={loading}>
       {invalidRanges ? <div className="cc-empty" role="alert"><p>Minimum values must not exceed maximum values. Years and runtimes must be positive.</p></div> : loading ? <div className="cc-loading" role="status"><div/><p>Gathering upcoming films…</p></div> : error ? <div className="cc-empty" role="alert"><p>{error}</p><button className="cc-primary" onClick={() => setRetry(value => value+1)}>Try again</button></div> : !visible.length ? <div className="cc-empty"><h3>{filtered ? 'No upcoming films match these filters.' : 'No upcoming films to show yet.'}</h3>{filtered && <button className="cc-text-button" onClick={clearFilters}>Clear filters</button>}</div> : Array.from(weeks).sort(([a],[b]) => a.localeCompare(b)*(sort === 'release-desc' ? -1 : 1)).map(([week,films]) => <ReleaseWeekSection key={week} {...props} week={week} movies={films} view={view} onOpen={setDetails}/>)}
     </div>

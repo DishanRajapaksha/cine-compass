@@ -630,9 +630,10 @@ test('coming soon sorts within weeks, reverses release weeks, and filters runtim
   expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-label','Upcoming Later Film');
   expect(localStorage.getItem('cinecompass_upcoming_sort')).toBe('"release-desc"');
   fireEvent.click(screen.getByText('Filters'));
-  fireEvent.change(screen.getByRole('spinbutton',{name:'Maximum runtime'}),{target:{value:'90'}});
+  fireEvent.change(screen.getByRole('combobox',{name:'Maximum runtime'}),{target:{value:'90'}});
   expect(screen.queryByRole('article',{name:'Upcoming Long Film'})).not.toBeInTheDocument();
   expect(screen.getAllByRole('article')).toHaveLength(2);
+  expect(within(screen.getByRole('combobox',{name:'Maximum runtime'})).getByRole('option',{name:'150 min'})).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
   expect(screen.getAllByRole('article')).toHaveLength(3);
 });
