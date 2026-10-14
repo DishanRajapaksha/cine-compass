@@ -10,7 +10,7 @@ import {
   MovieResponse,
   Theater
 } from '../types/Movie';
-import { normalizeLanguageCode } from '../lib/utils';
+import { getCurrentDateInAmsterdam, normalizeLanguageCode } from '../lib/utils';
 
 const CINEVILLE_API_URL = 'https://api.cineville.nl';
 const EVENTS_SEARCH_URL = `${CINEVILLE_API_URL}/events/search`;
@@ -370,6 +370,29 @@ const asMovieResponse = (movies: Movie[]): MovieResponse => ({
 });
 
 export const movieService = {
+  getUpcomingMovies: async (): Promise<Movie[]> => {
+    const today = getCurrentDateInAmsterdam();
+    const body = {premiereDate:{isNull:false,gt:today},sort:{premiereDate:'asc'},page:{limit:100}};
+    type ProductionPage = {_embedded:{productions:CinevilleFilm[]};_links:{next?:{href:string}}};
+    const movies = new Map<string,Movie>();
+    const visited = new Set<string>();
+    let nextUrl: string | undefined = `${CINEVILLE_API_URL}/productions/search`;
+    while (nextUrl) {
+      if (visited.has(nextUrl)) throw new Error('Repeated upcoming film page');
+      visited.add(nextUrl);
+      const response: ProductionPage = await fetchJson<ProductionPage>(nextUrl, {
+        method:'POST',headers:{'Content-Type':'application/json; charset=utf-8',locale:API_LOCALE},body:JSON.stringify(body)
+      });
+      for (const production of response._embedded.productions) {
+        const film = normalizeFilm(production);
+        if (film.premiereDate && /^\d{4}-\d{2}-\d{2}$/.test(film.premiereDate) && film.premiereDate > today) movies.set(film.id,convertCinevilleFilmToMovie(film,[]));
+      }
+      const href: string | undefined = response._links.next?.href;
+      nextUrl = href ? new URL(href,CINEVILLE_API_URL).href : undefined;
+      if (nextUrl && (new URL(nextUrl).origin !== CINEVILLE_API_URL || new URL(nextUrl).pathname !== '/productions/search')) throw new Error('Invalid upcoming film page');
+    }
+    return Array.from(movies.values()).sort((a,b) => a.release_date.localeCompare(b.release_date) || a.title.localeCompare(b.title));
+  },
   getAvailableLanguages: async (): Promise<{ subtitleLanguages: string[] }> => ({
     subtitleLanguages: ['en']
   }),

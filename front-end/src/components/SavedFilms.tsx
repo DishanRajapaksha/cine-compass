@@ -1,7 +1,7 @@
 import React, { useId, useState } from 'react';
 import { ArrowRight, Bookmark, ChevronDown, EyeOff, Film as FilmIcon, Ticket, X } from 'lucide-react';
 import { City, HiddenMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
-import { amsterdamDate, dateLabel, languageName, Screening, screeningTime } from '../lib/schedule';
+import { formatDuration, amsterdamDate, dateLabel, languageName, Screening, screeningTime } from '../lib/schedule';
 import { normalizeLanguageCode } from '../lib/utils';
 import FilmShowtimes from './FilmShowtimes';
 import ImdbLink from './ImdbLink';
@@ -13,7 +13,7 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
   const showtimesId = useId();
   const languages = Array.from(new Set((film.spokenLanguages || []).map(normalizeLanguageCode))).map(languageName);
   const subtitles = Array.from(new Set((film.availableSubtitles || []).map(normalizeLanguageCode))).map(languageName);
-  const metadata = [film.duration ? `${film.duration} min` : null,languages.length ? languages.join(', ') : null].filter(Boolean);
+  const metadata = [film.duration ? formatDuration(film.duration) : null,languages.length ? languages.join(', ') : null].filter(Boolean);
   return <section className="cc-saved-film" aria-label={`Saved ${film.title}`}>
     <div className="cc-saved-film-heading">
       <div className="cc-watchlist-artwork">

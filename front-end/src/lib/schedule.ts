@@ -11,6 +11,11 @@ export const screeningTime = (value: string) => new Intl.DateTimeFormat('en-GB',
 export const dateLabel = (value: string) => new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Amsterdam', weekday: 'long', day: 'numeric', month: 'long'
 }).format(new Date(`${value}T12:00:00+02:00`));
+export const formatDuration = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return [hours ? `${hours}h` : '', remainder ? `${remainder}m` : ''].filter(Boolean).join(' ') || '0m';
+};
 export const languageName = (code: string) => {
   try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(normalizeLanguageCode(code)) || code; }
   catch { return code; }

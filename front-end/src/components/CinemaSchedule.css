@@ -315,3 +315,20 @@
 .cc-group-screening-date{font-size:13px;font-weight:normal;color:var(--wine)}
 @media(max-width:800px){.cc-movie-summary{grid-template-columns:64px minmax(0,1fr);gap:14px}.cc-app .cc-movie-summary-poster{width:64px;height:94px}.cc-movie-summary h3{font-size:23px}.cc-movie-summary-description{font-size:12px}.cc-app .cc-movie-group .cc-screening.is-compact{grid-template-columns:minmax(0,1fr) 28px 85px}.cc-movie-group .cc-compact-primary{display:none}.cc-movie-group .cc-compact-menu-primary{display:contents}}
 @media(max-width:480px){.cc-app .cc-movie-group .cc-screening.is-compact{grid-template-columns:minmax(0,1fr) 28px 65px}.cc-movie-summary-actions{gap:12px}.cc-group-screening-date{font-size:12px}}
+
+.cc-coming-soon{max-width:1040px;margin:40px auto;min-height:65vh}
+.cc-coming-soon>.cc-results-heading{gap:12px 20px}
+.cc-upcoming-search{max-width:380px;margin:24px 0 32px}
+.cc-release-week{margin-top:32px}
+.cc-release-week-heading{font-size:18px;font-weight:normal;color:var(--wine);margin:0 0 14px}
+.cc-upcoming-film{border-top:1px solid var(--rule);padding:22px 0}
+.cc-upcoming-film .cc-movie-summary{margin-bottom:10px}
+.cc-upcoming-actions{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-left:110px}
+.cc-app .cc-upcoming-actions button{display:inline-flex;align-items:center;gap:7px;min-height:40px}
+.cc-upcoming-actions button[aria-expanded=true] svg{transform:rotate(180deg)}
+.cc-upcoming-film.description-open .cc-movie-summary-description{display:none}
+.cc-upcoming-synopsis:not([hidden]){margin:16px 0 0 110px;font-size:14px;line-height:1.6}
+.cc-upcoming-film>.cc-film-showtimes,.cc-upcoming-film>div:not([hidden]) .cc-film-showtimes{margin-top:16px}
+@media(max-width:800px){.cc-coming-soon{margin:28px auto}.cc-upcoming-actions,.cc-upcoming-synopsis:not([hidden]){margin-left:78px}.cc-header nav{gap:18px}}
+@media(max-width:480px){.cc-upcoming-actions,.cc-upcoming-synopsis:not([hidden]){margin-left:0}.cc-app .cc-header nav{gap:12px;flex-wrap:wrap}.cc-coming-soon>.cc-results-heading h2{font-size:32px}}
+@media(max-width:480px){.cc-app .cc-header nav{grid-column:1/-1;flex-wrap:nowrap;gap:16px}.cc-header .cc-cinema-animation{grid-row:1;height:38px}.cc-app .cc-header nav button{font-size:12px}}

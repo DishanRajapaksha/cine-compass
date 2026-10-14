@@ -28,3 +28,22 @@ test('single-film search scopes by production and follows POST pagination withou
     expect(fetchMock.mock.calls[1][1].method).toBe('POST');expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual(body);
   } finally {global.fetch=original;}
 });
+
+test('upcoming catalogue follows pagination, normalizes films without screenings, and removes duplicates and past releases',async () => {
+  const upcoming={...event('one')._embedded.production,id:'upcoming',assets:{poster:{url:'https://example.com/poster.jpg'}},attributes:{premiereDate:'2099-10-22',duration:90,spokenLanguages:['en']},localizableAttributes:{'en-GB':{description:'An upcoming film.'}}};
+  const earlier={...upcoming,id:'earlier',attributes:{...upcoming.attributes,premiereDate:'2099-10-15'}};
+  const past={...upcoming,id:'past',attributes:{...upcoming.attributes,premiereDate:'2020-01-01'}};
+  const unknown={...upcoming,id:'unknown',attributes:{duration:90,spokenLanguages:['en']}};
+  const fetchMock=jest.fn().mockResolvedValueOnce({ok:true,json:async()=>({_links:{next:{href:'/productions/search?page[after]=cursor'}},_embedded:{productions:[upcoming,past,unknown]}})}).mockResolvedValueOnce({ok:true,json:async()=>({_links:{},_embedded:{productions:[upcoming,earlier]}})});
+  const original=global.fetch;global.fetch=fetchMock;
+  try {
+    const result=await movieService.getUpcomingMovies();
+    expect(result.map(movie=>movie.id)).toEqual(['earlier','upcoming']);
+    expect(result[1]).toMatchObject({release_date:'2099-10-22',poster_path:'https://example.com/poster.jpg',overview:'An upcoming film.',overviewLanguage:'en',showtimes:[]});
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.cineville.nl/productions/search');
+    const body=JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toMatchObject({premiereDate:{isNull:false,gt:expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)},sort:{premiereDate:'asc'}});
+    expect(fetchMock.mock.calls[1][0]).toContain('page[after]=cursor');
+    expect(fetchMock.mock.calls[1][1].body).toBe(fetchMock.mock.calls[0][1].body);
+  } finally {global.fetch=original;}
+});

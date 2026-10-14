@@ -35,6 +35,12 @@ Open **http://localhost:3000**. React proxies `/api` to port 5080. Development p
 
 Open Settings to create an account with a username/passkey or sign in with a discoverable passkey without entering a username. An account is created only after its first passkey is verified and stored. Add a second passkey after signing in.
 
+## Coming soon
+
+The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, expand a synopsis, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.
+
+Save an upcoming film to the existing Movies watchlist before any screenings are published. This saves the film only; individual screenings remain separate in Saved showtimes. Hidden films also stay hidden in Coming soon. Upcoming catalogue data loads live and uses the same English-first, Dutch-fallback metadata normalization as the programme.
+
 ## Sync behavior
 
 Guest settings remain separately saved on this device and are restored on sign-out. Signing in loads account settings. Settings → Settings on this device → Import guest settings replaces account settings with that guest snapshot. Changes save after a short delay.

@@ -113,7 +113,7 @@ test('film details shows artwork, readable language, screening actions, and a mi
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
   const dialog=screen.getByRole('dialog',{name:'Perfect Days'});
-  expect(within(dialog).getByText('2023 · 123 min · Japanese')).toBeInTheDocument();
+  expect(within(dialog).getByText('2023 · 2h 3m · Japanese')).toBeInTheDocument();
   const poster=within(dialog).getByRole('img',{name:'Perfect Days poster'});
   expect(poster).toHaveAttribute('src','https://example.com/poster.jpg');
   fireEvent.click(within(dialog).getByRole('button',{name:'Save screening'}));
@@ -436,7 +436,7 @@ test('enriches older watchlist films with metadata and retains it without curren
   const view=render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
-  expect(screen.getByText('123 min · Japanese')).toBeInTheDocument();
+  expect(screen.getByText('2h 3m · Japanese')).toBeInTheDocument();
   expect(screen.getByText('Subtitles available: English')).toBeInTheDocument();
   expect(screen.queryByText(/Choose a screening whenever/)).not.toBeInTheDocument();
   const poster=screen.getByRole('img',{name:'Perfect Days poster'});
@@ -448,7 +448,7 @@ test('enriches older watchlist films with metadata and retains it without curren
   render(<App/>);
   await screen.findByText('No screenings in this window.');
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
-  expect(screen.getByText('123 min · Japanese')).toBeInTheDocument();
+  expect(screen.getByText('2h 3m · Japanese')).toBeInTheDocument();
   expect(screen.getByText('Subtitles available: English')).toBeInTheDocument();
 });
 
@@ -522,4 +522,35 @@ test('watchlist tabs separate movies from showtimes and support keyboard switchi
   fireEvent.keyDown(showtimes,{key:'Home'});
   expect(movies).toHaveFocus();
   expect(screen.getByRole('button',{name:'Remove film Perfect Days from watchlist'})).toBeInTheDocument();
+});
+
+test('coming soon groups release weeks and saves a film without creating a screening',async () => {
+  const base=(await service.getPopularMovies()).results[0];
+  service.getUpcomingMovies.mockResolvedValue([{...base,id:'upcoming',title:'Future Film',release_date:'2099-10-22',showtimes:[]},{...base,id:'later',title:'Later Film',release_date:'2099-11-05',showtimes:[]}]);
+  service.getMovieShowtimes.mockResolvedValue(null);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'Coming soon'}));
+  await screen.findByRole('button',{name:'Future Film'});
+  expect(screen.getAllByRole('region',{name:/Release week of/})).toHaveLength(2);
+  const film=within(screen.getByRole('article',{name:'Upcoming Future Film'}));
+  expect(film.getByText(/Expected Thursday 22 October/)).toBeInTheDocument();
+  fireEvent.click(film.getByRole('button',{name:'Save film Future Film to watchlist'}));
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
+  expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'upcoming',title:'Future Film'}]);
+  fireEvent.change(screen.getByRole('textbox',{name:'Search upcoming films'}),{target:{value:'Future'}});
+  expect(screen.queryByRole('button',{name:'Later Film'})).not.toBeInTheDocument();
+  fireEvent.click(film.getByRole('button',{name:'Find showtimes'}));
+  await film.findByText('No upcoming showtimes match these filters. Try another city, date, or language.');
+  fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
+  expect(screen.getByRole('heading',{name:'Future Film 2023'})).toBeInTheDocument();
+  expect(screen.getByRole('tab',{name:'Saved showtimes 0'})).toBeInTheDocument();
+});
+
+test('coming soon can retry a failed catalogue request',async () => {
+  service.getUpcomingMovies.mockRejectedValueOnce(new Error('Unavailable')).mockResolvedValueOnce([]);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'Coming soon'}));
+  await screen.findByText('Upcoming films could not be loaded. Please try again.');
+  fireEvent.click(screen.getByRole('button',{name:'Try again'}));
+  await screen.findByText('No upcoming films to show yet.');
 });

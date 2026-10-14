@@ -4,13 +4,14 @@ import { ArrowLeft, ArrowRight, ChevronDown, SlidersHorizontal, Sparkle, X } fro
 import { City, HiddenMovie, Movie, MovieFilters, SavedFilm, SavedShowtime } from '../types/Movie';
 import { movieService } from '../services/movieService';
 import { getCurrentDateInAmsterdam, getCurrentTimeInAmsterdam, normalizeLanguageCode } from '../lib/utils';
-import { amsterdamDate, dateLabel, filterScreenings, languageName, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
+import { formatDuration, amsterdamDate, dateLabel, filterScreenings, languageName, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
 import ScheduleFilters from './ScheduleFilters';
 import SavedFilms from './SavedFilms';
 import { loadSavedFilms, savedFilm, savedFilmsKey } from '../lib/watchlist';
 import FilmShowtimes from './FilmShowtimes';
 import ScreeningRow from './ScreeningRow';
 import MovieGroupSummary from './MovieGroupSummary';
+import ComingSoon from './ComingSoon';
 import FilmDescription from './FilmDescription';
 import './CinemaSchedule.css';
 import ImdbLink from './ImdbLink';
@@ -55,7 +56,7 @@ function FilmDetails({ screening, cities, city, saved, onSave, onPlan, onClose, 
       <div className="cc-detail-intro">
         <span className="cc-detail-eyebrow">In the programme{showtime.specials ? ` · ${showtime.specials}` : ''}</span>
         <h2 id="cc-detail-title">{movie.title}</h2>
-        <p className="cc-detail-meta">{[movie.releaseYear || null,movie.duration ? `${movie.duration} min` : 'Duration not listed',movie.spokenLanguages.map(languageName).join(', ') || 'Language not listed'].filter(Boolean).join(' · ')}</p>
+        <p className="cc-detail-meta">{[movie.releaseYear || null,movie.duration ? formatDuration(movie.duration) : 'Duration not listed',movie.spokenLanguages.map(languageName).join(', ') || 'Language not listed'].filter(Boolean).join(' · ')}</p>
         <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-hide-movie" onClick={onHide}>Hide this movie</button></div>
       </div>
       <div className="cc-detail-story">
@@ -129,7 +130,7 @@ export default function CinemaSchedule() {
       setDetails(s => s?.movie.id === movie.id ? null : s);
     }
   };
-  const [page,setPage] = useState<'schedule'|'watchlist'>('schedule');
+  const [page,setPage] = useState<'schedule'|'watchlist'|'upcoming'>('schedule');
   const [filtersOpen,setFiltersOpen] = useState(false);
   const [selected,setSelected] = useState<Screening|null>(null);
   const [details,setDetails] = useState<Screening|null>(null);
@@ -185,10 +186,10 @@ export default function CinemaSchedule() {
     setFilters(f => ({...f,startDate:date,endDate:date,startTime:null,endTime:'23:59'}));
   };
   return <div className="cc-app">
-    <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleFilms.length}</span></button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
+    <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><nav aria-label="Main navigation"><button className={page==='schedule'?'active':''} onClick={() => setPage('schedule')}>Schedule</button><button className={page==='watchlist'?'active':''} onClick={() => setPage('watchlist')}>Watchlist <span className="cc-count">{visibleFilms.length}</span></button><button className={page==='upcoming'?'active':''} onClick={() => setPage('upcoming')}>Coming soon</button><button onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">Settings</button></nav></header>
     <main className="cc-main">
     {hiddenError && <p className="cc-error" role="alert">{hiddenError}</p>}
-    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => setFilms(prev => prev.filter(f => f.id !== id))} saved={visibleSaved} onHide={hideMovie} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : <>
+    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => setFilms(prev => prev.filter(f => f.id !== id))} saved={visibleSaved} onHide={hideMovie} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : page === 'upcoming' ? <ComingSoon films={visibleFilms} hiddenIds={hiddenIds} cities={cities} city={filters.selectedCity} saved={visibleSaved} onToggleFilm={toggleFilm} onHide={movie => hideMovie({id:movie.id,title:movie.title,year:movie.releaseYear})} onSave={toggleSave} onPlan={planScreening}/> : <>
       <button className="cc-mobile-filters" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(v => !v)}><SlidersHorizontal size={17}/> {filtersOpen ? 'Hide filters' : 'Filters & search'}</button>
       <div className="cc-layout"><div className={filtersOpen ? 'cc-filter-rail is-open' : 'cc-filter-rail'}><ScheduleFilters showWatchlistFilter filters={filters} cities={cities} query={query} languages={languages} specials={specials} loading={citiesLoading} onQuery={setQuery} onChange={setFilters} onReset={reset}/>{cityError && <p className="cc-error">{cityError} <button onClick={() => setRetry(v => v+1)}>Retry</button></p>}</div>
       <section className="cc-programme" aria-label="Programme"><div className="cc-programme-top"><div className="cc-results-heading"><h2>{grouping === 'movie' ? 'By movie' : 'By start time'}</h2><span aria-live="polite">{loading ? 'Finding screenings…' : `${visible.length} screening${visible.length===1 ? "" : "s"} · ${new Set(visible.map(s => s.movie.id)).size} film${new Set(visible.map(s => s.movie.id)).size===1 ? "" : "s"}`}</span></div><div className="cc-programme-controls"><div className="cc-grouping-control"><select aria-label="Group screenings by" value={grouping} onChange={event => setGrouping(event.target.value as Grouping)}><option value="time">By start time</option><option value="movie">By movie</option></select><ChevronDown size={14} aria-hidden="true"/></div><div className="cc-view-switch" aria-label="Display mode">{(['posters','compact'] as View[]).map(v => <button key={v} aria-pressed={view===v} className={view===v?'active':''} onClick={() => setView(v)}>{v[0].toUpperCase()+v.slice(1)}</button>)}</div></div></div>
