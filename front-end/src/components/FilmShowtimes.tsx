@@ -29,7 +29,6 @@ export default function FilmShowtimes({movieId,movieTitle,cities,initialCity,sav
   const groups = screenings.reduce<Record<string,Screening[]>>((map,s) => {(map[amsterdamDate(s.showtime.startDate)] ||= []).push(s); return map;},{});
   return <section className="cc-film-showtimes" aria-label={`All showtimes for ${movieTitle}`}>
     <div className="cc-showtimes-heading"><h3>All showtimes</h3><button className="cc-text-button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(v => !v)}>{filtersOpen ? 'Hide showtime filters' : 'Filter showtimes'}</button></div>
-    <p className="cc-showtime-scope">All published upcoming screenings for this film. These filters are independent of the main schedule.</p>
     <div className={`cc-film-showtime-layout ${filtersOpen ? 'with-filters' : ''}`}>
       {filtersOpen && <ScheduleFilters filters={filters} cities={cities} query="" showSearch={false} languages={languages} specials={specials} loading={false} onQuery={() => {}} onChange={setFilters} onReset={() => setFilters(defaults())}/>}
       <div className="cc-film-showtime-results" aria-busy={loading}>

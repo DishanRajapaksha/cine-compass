@@ -326,11 +326,9 @@
 .cc-upcoming-actions{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-left:110px}
 .cc-app .cc-upcoming-actions button{display:inline-flex;align-items:center;gap:7px;min-height:40px}
 .cc-upcoming-actions button[aria-expanded=true] svg{transform:rotate(180deg)}
-.cc-upcoming-film.description-open .cc-movie-summary-description{display:none}
-.cc-upcoming-synopsis:not([hidden]){margin:16px 0 0 110px;font-size:14px;line-height:1.6}
 .cc-upcoming-film>.cc-film-showtimes,.cc-upcoming-film>div:not([hidden]) .cc-film-showtimes{margin-top:16px}
-@media(max-width:800px){.cc-coming-soon{margin:28px auto}.cc-upcoming-actions,.cc-upcoming-synopsis:not([hidden]){margin-left:78px}.cc-header nav{gap:18px}}
-@media(max-width:480px){.cc-upcoming-actions,.cc-upcoming-synopsis:not([hidden]){margin-left:0}.cc-app .cc-header nav{gap:12px;flex-wrap:wrap}.cc-coming-soon>.cc-results-heading h2{font-size:32px}}
+@media(max-width:800px){.cc-coming-soon{margin:28px auto}.cc-upcoming-actions{margin-left:78px}.cc-header nav{gap:18px}}
+@media(max-width:480px){.cc-upcoming-actions{margin-left:0}.cc-app .cc-header nav{gap:12px;flex-wrap:wrap}.cc-coming-soon>.cc-results-heading h2{font-size:32px}}
 @media(max-width:480px){.cc-app .cc-header nav{grid-column:1/-1;flex-wrap:nowrap;gap:16px}.cc-header .cc-cinema-animation{grid-row:1;height:38px}.cc-app .cc-header nav button{font-size:12px}}
 
 .cc-catalogue-filters{display:grid;grid-template-columns:minmax(0,380px) minmax(160px,220px);align-items:end;gap:24px;margin:24px 0 32px}
@@ -344,3 +342,5 @@
 .cc-app .cc-header-menu-panel button:hover,.cc-app .cc-header-menu-panel button:focus-visible{background:#ece4d8}
 .cc-header-menu-panel button[aria-current=page]{font-weight:bold;color:var(--wine)}
 @media(max-width:480px){.cc-app .cc-header nav[aria-label]{flex-wrap:nowrap;gap:16px}.cc-app .cc-header nav[aria-label] .cc-header-menu{margin-left:auto}.cc-header-menu-panel{top:calc(100% + 6px)}}
+
+.cc-upcoming-film .cc-detail-synopsis{font-size:14px;line-height:1.6;margin:10px 0;display:block;overflow:visible;-webkit-line-clamp:unset}

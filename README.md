@@ -41,7 +41,7 @@ The **Now showing** tab lists films with published, non-hidden screenings in the
 
 ## Coming soon
 
-The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, expand a synopsis, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.
+The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, read the full synopsis directly on each card, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.
 
 Save an upcoming film to the existing Movies watchlist before any screenings are published. This saves the film only; individual screenings remain separate in Saved showtimes. Hidden films also stay hidden in Coming soon. Upcoming catalogue data loads live and uses the same English-first, Dutch-fallback metadata normalization as the programme.
 

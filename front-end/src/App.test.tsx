@@ -532,7 +532,7 @@ test('coming soon groups release weeks and saves a film without creating a scree
   render(<App/>);
   fireEvent.click(screen.getByRole('button',{name:'More pages'}));
   fireEvent.click(screen.getByRole('menuitem',{name:'Coming soon'}));
-  await screen.findByRole('button',{name:'Future Film'});
+  await screen.findByRole('heading',{name:'Future Film'});
   expect(screen.getAllByRole('region',{name:/Release week of/})).toHaveLength(2);
   const film=within(screen.getByRole('article',{name:'Upcoming Future Film'}));
   expect(film.getByText(/Expected Thursday 22 October/)).toBeInTheDocument();
@@ -540,7 +540,7 @@ test('coming soon groups release weeks and saves a film without creating a scree
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
   expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'upcoming',title:'Future Film'}]);
   fireEvent.change(screen.getByRole('textbox',{name:'Search upcoming films'}),{target:{value:'Future'}});
-  expect(screen.queryByRole('button',{name:'Later Film'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading',{name:'Later Film'})).not.toBeInTheDocument();
   fireEvent.click(film.getByRole('button',{name:'Find showtimes'}));
   await film.findByText('No upcoming showtimes match these filters. Try another city, date, or language.');
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));

@@ -30,7 +30,11 @@ export default function HeaderNavigation({page,count,onPage,onSettings}:Props) {
   return <nav aria-label="Main navigation">
     <button className={page === 'schedule' ? 'active' : ''} onClick={() => {setOpen(false);onPage('schedule');}}>Schedule</button>
     <button className={page === 'watchlist' ? 'active' : ''} onClick={() => {setOpen(false);onPage('watchlist');}}>Watchlist <span className="cc-count">{count}</span></button>
-    <div className="cc-header-menu" ref={container} onBlur={event => {if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);}}>
+    <div className="cc-header-menu" ref={container} onBlur={event => {
+      // A touch tap may blur without a new focus target before its click arrives.
+      // Outside taps are handled by pointerdown; keyboard focus has a target.
+      if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
+    }}>
       <button ref={trigger} className={`cc-menu-trigger${page === 'upcoming' || page === 'now-showing' ? ' active' : ''}`} aria-label="More pages" title="More pages" aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(value => !value)} onKeyDown={event => {if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {event.preventDefault();setOpen(true);}}}><Menu size={21}/></button>
       {open && <div id={menuId} ref={menu} className="cc-header-menu-panel" role="menu" aria-label="More pages" onKeyDown={menuKeyDown}>
         <button role="menuitem" aria-current={page === 'now-showing' ? 'page' : undefined} onClick={() => choose('now-showing')}>Now showing</button>

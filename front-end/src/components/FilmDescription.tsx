@@ -39,7 +39,6 @@ export default function FilmDescription({ movie }: { movie: Movie }) {
       <button disabled={loading} onClick={showEnglish ? () => setShowEnglish(false) : translate}>
         <Languages size={15} aria-hidden="true"/>{loading ? 'Translating…' : showEnglish ? 'Show original' : 'Translate to English'}
       </button>
-      <small>{showEnglish ? 'Machine translation · MyMemory' : 'Sends this description to MyMemory when you translate.'}</small>
       {loading && <span className="cc-translation-status" role="status">Translating description to English…</span>}
       {error && <span className="cc-translation-error" role="alert">{error}</span>}
     </div>}

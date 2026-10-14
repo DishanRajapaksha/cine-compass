@@ -78,10 +78,10 @@ const normalizeFilm = (film: CinevilleFilm): NormalizedFilm => {
   const english = localized[PRIMARY_LOCALE] as Record<string, unknown> | undefined;
   const dutch = localized[FALLBACK_LOCALE] as Record<string, unknown> | undefined;
   const description = [
-    {value: english?.shortDescription, language: 'en' as const},
     {value: english?.description, language: 'en' as const},
-    {value: dutch?.shortDescription, language: 'nl' as const},
+    {value: english?.shortDescription, language: 'en' as const},
     {value: dutch?.description, language: 'nl' as const},
+    {value: dutch?.shortDescription, language: 'nl' as const},
     // Unlocalized descriptions from the Dutch API are Dutch by default.
     {value: localized.shortDescription, language: 'nl' as const},
     {value: localized.description, language: 'nl' as const}
