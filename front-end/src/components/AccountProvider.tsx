@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Account, api, ApiError, passkey, resetCsrf, Settings } from '../services/accountService';
+import OpeningScreen from './OpeningScreen';
 import { applySettings, settingsEvent, snapshot } from '../lib/accountStorage';
 
 type AccountState = {user:Account|null;status:string;error:string;busy:boolean;register:(name:string)=>Promise<void>;login:()=>Promise<void>;logout:()=>Promise<void>;addPasskey:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
@@ -74,5 +75,5 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
     addPasskey:()=>run(async()=>{await passkey('passkeys');setStatus('Another passkey added.');}),
     reload:()=>run(async()=>{if(current.current) await load(current.current);}),
     importGuest:()=>run(async()=>{applySettings(guest.current);setWorkspace(n=>n+1);window.dispatchEvent(new Event(settingsEvent));})};
-  return <AccountContext.Provider value={state}>{ready ? <React.Fragment key={workspace}>{children}</React.Fragment> : <p role="status">Opening CineCompass…</p>}</AccountContext.Provider>;
+  return <AccountContext.Provider value={state}>{ready ? <React.Fragment key={workspace}>{children}</React.Fragment> : <OpeningScreen/>}</AccountContext.Provider>;
 }
