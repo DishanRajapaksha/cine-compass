@@ -1,22 +1,20 @@
 import { setPreference } from '../lib/accountStorage';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, SlidersHorizontal, Sparkle, X } from 'lucide-react';
 import { City, HiddenMovie, Movie, MovieFilters, SavedFilm, SavedShowtime } from '../types/Movie';
 import { movieService } from '../services/movieService';
 import { getCurrentDateInAmsterdam, getCurrentTimeInAmsterdam, normalizeLanguageCode } from '../lib/utils';
-import { formatDuration, amsterdamDate, dateLabel, filterScreenings, languageName, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
+import { amsterdamDate, dateLabel, filterScreenings, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
 import ScheduleFilters from './ScheduleFilters';
 import SavedFilms from './SavedFilms';
 import { loadSavedFilms, savedFilm, savedFilmsKey } from '../lib/watchlist';
-import FilmShowtimes from './FilmShowtimes';
 import ScreeningRow from './ScreeningRow';
 import MovieGroupSummary from './MovieGroupSummary';
 import ComingSoon from './ComingSoon';
 import NowShowing from './NowShowing';
 import HeaderNavigation from './HeaderNavigation';
-import FilmDescription from './FilmDescription';
+import FilmDetails from './FilmDetails';
 import './CinemaSchedule.css';
-import ImdbLink from './ImdbLink';
 import CinemaAnimation from './CinemaAnimation';
 import SettingsModal from './SettingsModal';
 
@@ -42,41 +40,6 @@ const loadFilters = () => {
 };
 const validSaved = (value: unknown): value is SavedShowtime[] => Array.isArray(value) && value.every(s => s && typeof s.showtimeId === 'string' && typeof s.movieId === 'string' && typeof s.startDate === 'string' && typeof s.endDate === 'string' && typeof s.movieTitle === 'string');
 const shiftDate = (date: string, amount: number) => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate()+amount); return d.toISOString().slice(0,10); };
-
-function FilmDetails({ screening, cities, city, saved, onSave, onPlan, onClose, onHide, filmSaved, onToggleFilm }: { filmSaved: boolean; onToggleFilm: () => void; onHide: () => void; screening: Screening; cities: City[]; city: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onClose: () => void }) {
-  const movie = screening.movie;
-  const showtime = screening.showtime;
-  const [showtimesOpen, setShowtimesOpen] = useState(false);
-  const [posterFailed, setPosterFailed] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
-  const isSaved = saved.some(s => s.showtimeId === showtime.id);
-  useEffect(() => { const el = dialog.current; el?.showModal(); return () => el?.close(); }, []);
-  return <dialog ref={dialog} className={`cc-dialog cc-film-dialog ${showtimesOpen ? "cc-dialog-showtimes" : ""}`} onCancel={onClose} onClick={e => { if(e.target === e.currentTarget) onClose(); }} aria-labelledby="cc-detail-title">
-    <button className="cc-dialog-close" aria-label="Close film details" onClick={onClose}><X size={22}/></button>
-    <div className={`cc-detail-hero ${!movie.poster_path || posterFailed ? 'without-poster' : ''}`}>
-      {movie.poster_path && !posterFailed && <div className="cc-detail-poster"><img src={movie.poster_path} alt={`${movie.title} poster`} onError={() => setPosterFailed(true)}/></div>}
-      <div className="cc-detail-intro">
-        <span className="cc-detail-eyebrow">In the programme{showtime.specials ? ` · ${showtime.specials}` : ''}</span>
-        <h2 id="cc-detail-title">{movie.title}</h2>
-        <p className="cc-detail-meta">{[movie.releaseYear || null,movie.duration ? formatDuration(movie.duration) : 'Duration not listed',movie.spokenLanguages.map(languageName).join(', ') || 'Language not listed'].filter(Boolean).join(' · ')}</p>
-        <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-hide-movie" onClick={onHide}>Hide this movie</button></div>
-      </div>
-      <div className="cc-detail-story">
-        <FilmDescription key={`${movie.id}:${movie.overview}`} movie={movie}/>
-        {(movie.directors.length > 0 || movie.cast.length > 0) && <dl className="cc-detail-credits">
-          {movie.directors.length > 0 && <div><dt>Directed by</dt><dd>{movie.directors.join(', ')}</dd></div>}
-          {movie.cast.length > 0 && <div><dt>Cast</dt><dd>{movie.cast.join(', ')}</dd></div>}
-        </dl>}
-      </div>
-    </div>
-    <section className="cc-detail-screening" aria-label="Selected screening">
-      <div className="cc-detail-screening-info"><span className="cc-detail-eyebrow">Your screening · {dateLabel(amsterdamDate(showtime.startDate))}</span><div className="cc-detail-screening-line"><strong>{screeningTime(showtime.startDate)} – {screeningTime(showtime.endDate)}</strong><span>{showtime.theaterName} <small>{showtime.theaterCity}</small></span></div></div>
-      <div className="cc-detail-actions"><button className="cc-primary" onClick={() => onPlan(screening)}>Plan my evening <ArrowRight size={16}/></button><button className="cc-text-button" aria-pressed={isSaved} onClick={() => onSave(screening)}>{isSaved ? 'Remove saved screening' : 'Save screening'}</button>{showtime.ticketingUrl && <a className="cc-text-button" href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer">Tickets ↗</a>}</div>
-    </section>
-    <div className="cc-detail-showtimes-toggle"><button className="cc-text-button" aria-expanded={showtimesOpen} onClick={() => setShowtimesOpen(v => !v)}>{showtimesOpen ? 'Hide all showtimes' : 'All showtimes for this film'} <span aria-hidden="true">{showtimesOpen ? '−' : '+'}</span></button></div>
-    {showtimesOpen && <FilmShowtimes movieId={movie.id} movieTitle={movie.title} cities={cities} initialCity={city} saved={saved} onSave={onSave} onPlan={onPlan}/>}
-  </dialog>;
-}
 
 export default function CinemaSchedule() {
   const [filters,setFilters] = useState<MovieFilters>(loadFilters);
@@ -202,6 +165,6 @@ export default function CinemaSchedule() {
         </div><footer className="cc-programme-footer"><span>Programme from Cineville · All times in Amsterdam</span><span>Pick a time to plan a double bill.</span></footer>
       </section></div></>}
     </main>{settingsOpen && <SettingsModal hidden={hidden} onRestore={id => updateHidden(hidden.filter(m => m.id !== id))} onClose={() => setSettingsOpen(false)}/>}
-    {details && <FilmDetails filmSaved={watchlistMovieIds.has(details.movie.id)} onToggleFilm={() => toggleFilm(details.movie)} screening={details} cities={cities} city={filters.selectedCity} saved={saved} onSave={toggleSave} onPlan={planScreening} onClose={() => setDetails(null)} onHide={() => hideMovie({id:details.movie.id,title:details.movie.title,year:details.movie.releaseYear})}/>}
+    {details && <FilmDetails movie={details.movie} filmSaved={watchlistMovieIds.has(details.movie.id)} onToggleFilm={() => toggleFilm(details.movie)} screening={details} cities={cities} city={filters.selectedCity} saved={saved} onSave={toggleSave} onPlan={planScreening} onClose={() => setDetails(null)} onHide={() => hideMovie({id:details.movie.id,title:details.movie.title,year:details.movie.releaseYear})}/>}
   </div>;
 }

@@ -37,6 +37,9 @@ Open Settings to create an account with a username/passkey or sign in with a dis
 
 ## Now showing
 
+Both film catalogues offer **List** and **Poster grid** views, with the shared choice saved in account preferences. Select a poster to open the same film-details modal used by the schedule, with the full synopsis, credits, watchlist actions, and published showtimes. Screening actions can save a time or open the evening planner. Coming soon keeps its collapsible release-week groups in either view.
+
+
 The **Now showing** tab lists films with published, non-hidden screenings in the next seven days. Its city filter is independent of the schedule; title search filters the loaded catalogue. It queries Cineville's `POST /productions/search` with screening dates and city venue IDs, follows pagination, and shares the movie cards, watchlist, hidden-film settings, synopsis translation, and showtime lookup with Coming soon. Saving a movie does not save a screening. **Find showtimes** starts with the catalogue's selected city and supports its own date and language filters.
 
 ## Coming soon

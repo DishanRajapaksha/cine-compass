@@ -580,3 +580,34 @@ test('now showing filters by city and shares film and screening actions',async (
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
   expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
 });
+
+test.each(['Now showing','Coming soon'])('%s poster grid opens shared film details with live screening actions',async page => {
+  Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
+  Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});
+  const base=(await service.getPopularMovies()).results[0];
+  const film={...base,release_date:'2099-10-22',directors:['A Director'],cast:['An Actor']};
+  service.getUpcomingMovies.mockResolvedValue([film]);
+  service.getNowShowingMovies.mockResolvedValue([film]);
+  service.getMovieShowtimes.mockResolvedValue(film);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:page}));
+  await screen.findByRole('article',{name:`${page === 'Coming soon' ? 'Upcoming' : 'Now showing'} Perfect Days`});
+  fireEvent.click(screen.getByRole('button',{name:'Poster grid'}));
+  expect(screen.getByRole('button',{name:'Poster grid'})).toHaveAttribute('aria-pressed','true');
+  expect(localStorage.getItem('cinecompass_catalogue_view')).toBe('"grid"');
+  fireEvent.click(screen.getByRole('button',{name:'Details for Perfect Days'}));
+  const dialog=within(screen.getByRole('dialog',{name:'Perfect Days'}));
+  expect(dialog.getByText('A Director')).toBeInTheDocument();
+  expect(dialog.getByText('An Actor')).toBeInTheDocument();
+  expect(dialog.queryByRole('region',{name:'Selected screening'})).not.toBeInTheDocument();
+  fireEvent.click(dialog.getByRole('button',{name:'Save film to watchlist'}));
+  expect(dialog.getByRole('button',{name:'Remove film from watchlist'})).toHaveAttribute('aria-pressed','true');
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
+  await dialog.findByText('1 screening');
+  fireEvent.click(dialog.getByRole('button',{name:'More actions for Perfect Days at 23:58'}));
+  fireEvent.click(dialog.getByRole('group',{name:'More actions for Perfect Days'}).querySelector('button[aria-label="Save Perfect Days at 23:58"]')!);
+  expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(1);
+  fireEvent.click(dialog.getByRole('button',{name:'Close film details'}));
+  expect(screen.queryByRole('dialog',{name:'Perfect Days'})).not.toBeInTheDocument();
+});
