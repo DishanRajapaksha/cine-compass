@@ -611,3 +611,28 @@ test.each(['Now showing','Coming soon'])('%s poster grid opens shared film detai
   fireEvent.click(dialog.getByRole('button',{name:'Close film details'}));
   expect(screen.queryByRole('dialog',{name:'Perfect Days'})).not.toBeInTheDocument();
 });
+
+test('coming soon sorts within weeks, reverses release weeks, and filters runtimes',async () => {
+  const base=(await service.getPopularMovies()).results[0];
+  service.getUpcomingMovies.mockResolvedValue([
+    {...base,id:'short',title:'Short Film',release_date:'2099-10-22',duration:60,showtimes:[]},
+    {...base,id:'long',title:'Long Film',release_date:'2099-10-23',duration:150,showtimes:[]},
+    {...base,id:'later',title:'Later Film',release_date:'2099-11-05',duration:90,showtimes:[]}
+  ]);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Coming soon'}));
+  await screen.findByRole('article',{name:'Upcoming Short Film'});
+  const sort=screen.getByRole('combobox',{name:'Sort upcoming films'});
+  fireEvent.change(sort,{target:{value:'duration-desc'}});
+  expect(screen.getAllByRole('article').map(card=>card.getAttribute('aria-label'))).toEqual(['Upcoming Long Film','Upcoming Short Film','Upcoming Later Film']);
+  fireEvent.change(sort,{target:{value:'release-desc'}});
+  expect(screen.getAllByRole('article')[0]).toHaveAttribute('aria-label','Upcoming Later Film');
+  expect(localStorage.getItem('cinecompass_upcoming_sort')).toBe('"release-desc"');
+  fireEvent.click(screen.getByText('Filters'));
+  fireEvent.change(screen.getByRole('spinbutton',{name:'Maximum runtime'}),{target:{value:'90'}});
+  expect(screen.queryByRole('article',{name:'Upcoming Long Film'})).not.toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
+  expect(screen.getAllByRole('article')).toHaveLength(3);
+});

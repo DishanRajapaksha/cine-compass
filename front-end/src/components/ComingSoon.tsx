@@ -1,7 +1,10 @@
 import React, { useEffect, useId, useState } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { Movie } from '../types/Movie';
-import { dateLabel } from '../lib/schedule';
+import { catalogueSortOptions, CatalogueSort, sortCatalogue } from '../lib/catalogueSort';
+import { emptyCatalogueRanges, filterCatalogue, hasCatalogueRanges, invalidCatalogueRanges } from '../lib/catalogueFilters';
+import CatalogueRangeFilters from './CatalogueRangeFilters';
+import { dateLabel, readStorage, writeStorage } from '../lib/schedule';
 import { movieService } from '../services/movieService';
 import CataloguePoster from './CataloguePoster';
 import CatalogueDetails from './CatalogueDetails';
@@ -29,13 +32,19 @@ export default function ComingSoon(props:CatalogueProps) {
   const [error,setError] = useState('');
   const [retry,setRetry] = useState(0);
   const [query,setQuery] = useState('');
+  const [sort,setSort] = useState<CatalogueSort>(() => readStorage('cinecompass_upcoming_sort','release-asc' as CatalogueSort,(value):value is CatalogueSort => catalogueSortOptions.some(option => option.value === value)));
+  useEffect(() => writeStorage('cinecompass_upcoming_sort',sort),[sort]);
+  const [ranges,setRanges] = useState(emptyCatalogueRanges);
+  const clearFilters = () => {setRanges(emptyCatalogueRanges());setQuery('');};
   useEffect(() => {
     let active = true;
     setLoading(true); setError('');
     movieService.getUpcomingMovies().then(result => {if(active) setMovies(result);}).catch(() => {if(active) setError('Upcoming films could not be loaded. Please try again.');}).finally(() => {if(active) setLoading(false);});
     return () => {active=false;};
   },[retry]);
-  const visible = movies.filter(movie => !props.hiddenIds.has(movie.id) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const invalidRanges = invalidCatalogueRanges(ranges);
+  const filtered = Boolean(query || hasCatalogueRanges(ranges));
+  const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.hiddenIds.has(movie.id) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
   const weeks = new Map<string,Movie[]>();
   for (const movie of visible) {
     const week = releaseWeek(movie.release_date);
@@ -44,9 +53,12 @@ export default function ComingSoon(props:CatalogueProps) {
   }
   return <section className="cc-coming-soon" aria-label="Coming soon films">
     <div className="cc-catalogue-heading"><div className="cc-results-heading"><h2>Coming soon</h2><span aria-live="polite">{loading ? 'Finding upcoming films…' : `${visible.length} upcoming film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></div>
-    <label className="cc-search cc-upcoming-search"><Search size={16} aria-hidden="true"/><input aria-label="Search upcoming films" placeholder="Search upcoming films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
+    <div className="cc-catalogue-filters"><label className="cc-search"><Search size={16} aria-hidden="true"/><input aria-label="Search upcoming films" placeholder="Search upcoming films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
+      <label className="cc-field">Sort by<select aria-label="Sort upcoming films" value={sort} onChange={event => setSort(event.target.value as CatalogueSort)}>{catalogueSortOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+    </div>
+    <CatalogueRangeFilters ranges={ranges} onChange={setRanges} onClear={clearFilters}/>
     <div aria-busy={loading}>
-      {loading ? <div className="cc-loading" role="status"><div/><p>Gathering upcoming films…</p></div> : error ? <div className="cc-empty" role="alert"><p>{error}</p><button className="cc-primary" onClick={() => setRetry(value => value+1)}>Try again</button></div> : !visible.length ? <div className="cc-empty"><h3>{query ? 'No upcoming films match your search.' : 'No upcoming films to show yet.'}</h3>{query && <button className="cc-text-button" onClick={() => setQuery('')}>Clear search</button>}</div> : Array.from(weeks).map(([week,films]) => <ReleaseWeekSection key={week} {...props} week={week} movies={films} view={view} onOpen={setDetails}/>)}
+      {invalidRanges ? <div className="cc-empty" role="alert"><p>Minimum values must not exceed maximum values. Years and runtimes must be positive.</p></div> : loading ? <div className="cc-loading" role="status"><div/><p>Gathering upcoming films…</p></div> : error ? <div className="cc-empty" role="alert"><p>{error}</p><button className="cc-primary" onClick={() => setRetry(value => value+1)}>Try again</button></div> : !visible.length ? <div className="cc-empty"><h3>{filtered ? 'No upcoming films match these filters.' : 'No upcoming films to show yet.'}</h3>{filtered && <button className="cc-text-button" onClick={clearFilters}>Clear filters</button>}</div> : Array.from(weeks).sort(([a],[b]) => a.localeCompare(b)*(sort === 'release-desc' ? -1 : 1)).map(([week,films]) => <ReleaseWeekSection key={week} {...props} week={week} movies={films} view={view} onOpen={setDetails}/>)}
     </div>
     {details && <CatalogueDetails {...props} movie={details} releaseLabel={`Expected ${dateLabel(details.release_date)} ${details.release_date.slice(0,4)}`} onClose={() => setDetails(null)}/>}
   </section>;
