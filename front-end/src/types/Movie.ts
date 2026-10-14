@@ -25,6 +25,7 @@ export interface CinevilleTheater {
 }
 
 export interface CinevilleFilm {
+  createdAt?: string;
   id: string;
   slug: string;
   title: string;
@@ -72,6 +73,7 @@ export interface CinevilleTheatersResponse {
 
 // Our app's movie interface (adapted from Cineville data)
 export interface Movie {
+  createdAt?: string;
   id: string;
   title: string;
   poster_path: string;

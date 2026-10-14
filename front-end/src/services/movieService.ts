@@ -382,7 +382,7 @@ const searchProductions = async (body: Record<string,unknown>): Promise<Movie[]>
     });
     for (const production of response._embedded.productions) {
       const film = normalizeFilm(production);
-      movies.set(film.id,{...convertCinevilleFilmToMovie(film,[]),release_date:film.premiereDate || ''});
+      movies.set(film.id,{...convertCinevilleFilmToMovie(film,[]),release_date:film.premiereDate || '',createdAt:production.createdAt});
     }
     const href: string | undefined = response._links.next?.href;
     nextUrl = href ? new URL(href,CINEVILLE_API_URL).href : undefined;

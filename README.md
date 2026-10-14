@@ -42,6 +42,8 @@ Both film catalogues offer **List** and **Poster grid** views, with the shared c
 
 The **Now showing** tab lists films with published, non-hidden screenings in the next seven days. Its city filter is independent of the schedule; title search filters the loaded catalogue. It queries Cineville's `POST /productions/search` with screening dates and city venue IDs, follows pagination, and shares the movie cards, watchlist, hidden-film settings, synopsis translation, and showtime lookup with Coming soon. Saving a movie does not save a screening. **Find showtimes** starts with the catalogue's selected city and supports its own date and language filters.
 
+Now showing supports ascending and descending sorting by title, release date, release year, runtime, and catalogue date added. The sort is saved in account preferences. Open **Filters** to set inclusive From/To ranges for release date, release year, runtime in minutes, and date added. Ranges combine with title search and city selection in both views; unknown metadata is excluded only when its range is active. Date-added filters use Amsterdam dates. **Clear filters** resets the ranges and title search.
+
 ## Coming soon
 
 The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, read the full synopsis directly on each card, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.
