@@ -35,6 +35,8 @@ Open **http://localhost:3000**. React proxies `/api` to port 5080. Development p
 
 Open Settings to create an account with a username/passkey or sign in with a discoverable passkey without entering a username. An account is created only after its first passkey is verified and stored. Add a second passkey after signing in.
 
+Hidden films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring the saved hidden entry in Settings restores its matching catalogue listings.
+
 ## Now showing
 
 Both film catalogues offer **List** and **Poster grid** views, with the shared choice saved in account preferences. Select a poster to open the same film-details modal used by the schedule, with the full synopsis, credits, watchlist actions, and published showtimes. Screening actions can save a time or open the evening planner. Coming soon keeps its collapsible release-week groups in either view.

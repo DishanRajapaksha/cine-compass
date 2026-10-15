@@ -80,6 +80,21 @@ public sealed class AccountTests
         Assert.Equal(HttpStatusCode.Conflict,(await alice.PutAsJsonAsync("/api/settings",body)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest,(await alice.PutAsJsonAsync("/api/settings",new {userId="alice",revision=1,values=new {cinecompass_omdb_key="secret"}})).StatusCode);
     }
+    [Fact] public async Task Catalogue_preferences_do_not_block_hidden_movie_sync()
+    {
+        using var f = new ApiFactory(); await f.Seed(); using var alice = await Client(f,"alice");
+        var values = new Dictionary<string,string> {
+            ["cinecompass_schedule_grouping"]="\"movie\"",
+            ["cinecompass_catalogue_view"]="\"grid\"",
+            ["cinecompass_now_showing_sort"]="\"title-asc\"",
+            ["cinecompass_upcoming_sort"]="\"release-asc\"",
+            ["cinecompass_hidden_movies"]="[{\"id\":\"film\",\"title\":\"Below the Clouds\",\"year\":2025}]"
+        };
+        var response = await alice.PutAsJsonAsync("/api/settings",new {userId="alice",revision=0,values});
+        Assert.Equal(HttpStatusCode.OK,response.StatusCode);
+        var saved = await alice.GetFromJsonAsync<JsonElement>("/api/settings");
+        foreach (var pair in values) Assert.Equal(pair.Value,saved.GetProperty("values").GetProperty(pair.Key).GetString());
+    }
     [Fact] public async Task Mutations_require_csrf_and_exact_origin()
     {
         using var f = new ApiFactory();await f.Seed();using var c = await Client(f,"alice");

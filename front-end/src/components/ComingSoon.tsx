@@ -44,7 +44,7 @@ export default function ComingSoon(props:CatalogueProps) {
   },[retry]);
   const invalidRanges = invalidCatalogueRanges(ranges);
   const filtered = Boolean(query || hasCatalogueRanges(ranges));
-  const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.hiddenIds.has(movie.id) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
+  const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.isHidden(movie) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
   const weeks = new Map<string,Movie[]>();
   for (const movie of visible) {
     const week = releaseWeek(movie.release_date);

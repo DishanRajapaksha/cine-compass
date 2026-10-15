@@ -32,7 +32,7 @@ export default function NowShowing(props:CatalogueProps) {
   },[city,retry]);
   const invalidRanges = invalidCatalogueRanges(ranges);
   const filtered = Boolean(query || hasCatalogueRanges(ranges));
-  const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.hiddenIds.has(movie.id) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
+  const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.isHidden(movie) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
   return <section className="cc-coming-soon cc-now-showing" aria-label="Now showing films">
     <div className="cc-catalogue-heading"><div className="cc-results-heading"><h2>Now showing</h2><span aria-live="polite">{loading ? 'Finding films…' : `${visible.length} film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></div>
     <div className="cc-catalogue-filters cc-now-showing-filters">

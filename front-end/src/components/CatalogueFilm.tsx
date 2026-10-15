@@ -7,7 +7,7 @@ import FilmDescription from './FilmDescription';
 import FilmShowtimes from './FilmShowtimes';
 
 
-export type CatalogueProps = {films:SavedFilm[];hiddenIds:Set<string>;cities:City[];city:string|null;saved:SavedShowtime[];onToggleFilm:(movie:Movie)=>void;onHide:(movie:Movie)=>void;onSave:(screening:Screening)=>void;onPlan:(screening:Screening)=>void};
+export type CatalogueProps = {films:SavedFilm[];isHidden:(movie:Movie)=>boolean;cities:City[];city:string|null;saved:SavedShowtime[];onToggleFilm:(movie:Movie)=>void;onHide:(movie:Movie)=>void;onSave:(screening:Screening)=>void;onPlan:(screening:Screening)=>void};
 export default function CatalogueFilm({movie,label,releaseLabel,...props}:CatalogueProps & {movie:Movie;label:string;releaseLabel?:string}) {
   const [showtimesOpen,setShowtimesOpen] = useState(false);
   const showtimesId = useId();

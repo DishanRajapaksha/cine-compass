@@ -637,3 +637,29 @@ test('coming soon sorts within weeks, reverses release weeks, and filters runtim
   fireEvent.click(screen.getByRole('button',{name:'Clear filters'}));
   expect(screen.getAllByRole('article')).toHaveLength(3);
 });
+
+test.each([
+  ['Now showing','Below the Clouds','Below the Clouds',2025,'678ad4ad-e244-470c-97e4-8405b2f4e548'],
+  ['Now showing','Black Girl (re-release)','Black Girl',1966,'bbc8fbc4-a5c3-4a82-a4d9-e7c4a7a16818'],
+  ['Coming soon','Below the Clouds','Below the Clouds',2025,'678ad4ad-e244-470c-97e4-8405b2f4e548'],
+  ['Coming soon','Black Girl (re-release)','Black Girl',1966,'bbc8fbc4-a5c3-4a82-a4d9-e7c4a7a16818']
+] as const)('%s honors an older hidden entry for %s',async (page,title,oldTitle,year,id) => {
+  const base=(await service.getPopularMovies()).results[0];
+  const movie={...base,id,title,releaseYear:year,release_date:'2099-10-22',showtimes:[]};
+  const other={...movie,id:'visible-film',title:'Visible Film'};
+  localStorage.setItem('cinecompass_hidden_movies',JSON.stringify([{id:'older-catalogue-id',title:oldTitle,year}]));
+  service.getUpcomingMovies.mockResolvedValue([movie,other]);
+  service.getNowShowingMovies.mockResolvedValue([movie,other]);
+  render(<App/>);
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:page}));
+  await screen.findByRole('article',{name:`${page === 'Coming soon' ? 'Upcoming' : 'Now showing'} Visible Film`});
+  expect(screen.queryByRole('article',{name:`${page === 'Coming soon' ? 'Upcoming' : 'Now showing'} ${title}`})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Poster grid'}));
+  expect(screen.queryByRole('button',{name:`Details for ${title}`})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:'Settings'}));
+  fireEvent.click(screen.getByRole('button',{name:`Restore ${oldTitle}`}));
+  fireEvent.click(screen.getByRole('button',{name:'Close settings'}));
+  expect(screen.getByRole('button',{name:`Details for ${title}`})).toBeInTheDocument();
+});
