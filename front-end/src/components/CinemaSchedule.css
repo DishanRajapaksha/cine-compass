@@ -11,7 +11,7 @@
 .cc-app .cc-search input:focus { box-shadow: none; }
 .cc-app .cc-search:focus-within {
   border-bottom-color: var(--wine);
-  box-shadow: 0 1px var(--wine);
+  box-shadow: inset 0 -1px var(--wine);
 }
 @media (forced-colors: active) {
   .cc-app :is(input:not([type=checkbox],[type=radio]),select,textarea):focus {
