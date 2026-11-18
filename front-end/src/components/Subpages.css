@@ -3,18 +3,20 @@
   padding-block: clamp(24px, 3vw, 36px) 36px;
 }
 
-.cc-page-header,
+.cc-page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 12px;
+  margin-bottom: 20px;
+}
+
 .cc-page-title {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   column-gap: 16px;
   row-gap: 6px;
-}
-
-.cc-page-header {
-  justify-content: space-between;
-  margin-bottom: 20px;
 }
 
 .cc-page-header h2 {
@@ -28,10 +30,6 @@
 .cc-page-title > span {
   color: var(--muted);
   font-size: 13px;
-}
-
-.cc-page-header .cc-view-switch {
-  margin-inline-start: auto;
 }
 
 .cc-subpage .cc-watchlist-tabs {

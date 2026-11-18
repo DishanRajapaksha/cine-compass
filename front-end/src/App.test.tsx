@@ -558,6 +558,7 @@ test('coming soon groups release weeks and saves a film without creating a scree
   fireEvent.click(screen.getByRole('button',{name:'More pages'}));
   fireEvent.click(screen.getByRole('menuitem',{name:'Coming soon'}));
   await screen.findByRole('heading',{name:'Future Film'});
+  expect(screen.getByText('2 films')).toBeInTheDocument();
   expect(screen.getAllByRole('region',{name:/Release week of/})).toHaveLength(2);
   const film=within(screen.getByRole('article',{name:'Upcoming Future Film'}));
   expect(film.getByText(/Expected Thursday 22 October/)).toBeInTheDocument();
