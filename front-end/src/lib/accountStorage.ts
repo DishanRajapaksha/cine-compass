@@ -1,6 +1,7 @@
 export const watchedMoviesKey = 'cinecompass_watched_movies';
+export const cinemaListsKey = 'cinecompass_cinema_lists';
 const legacyWatchedMoviesKey = 'cinecompass_hidden_movies';
-export const syncKeys = ['cinecompass_schedule_filters','cinecompass_schedule_view','cinecompass_catalogue_view','cinecompass_now_showing_sort','cinecompass_upcoming_sort','cinecompass_schedule_grouping','cineville_saved_showtimes','cinecompass_saved_films',watchedMoviesKey,'cinecompass_planner_prefs','cineville_filters','cineville_filters_open','cineville_timeline_prefs','cineville_timeline_theater_order'];
+export const syncKeys = ['cinecompass_schedule_filters','cinecompass_schedule_view','cinecompass_catalogue_view','cinecompass_now_showing_sort','cinecompass_upcoming_sort','cinecompass_schedule_grouping','cineville_saved_showtimes','cinecompass_saved_films',watchedMoviesKey,cinemaListsKey,'cinecompass_planner_prefs','cineville_filters','cineville_filters_open','cineville_timeline_prefs','cineville_timeline_theater_order'];
 export const settingsEvent = 'cinecompass-settings-changed';
 
 export function migrateWatchedMovies(): string {

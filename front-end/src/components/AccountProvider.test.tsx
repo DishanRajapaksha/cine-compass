@@ -2,11 +2,33 @@ import React from 'react';
 import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import AccountProvider,{useAccount} from './AccountProvider';
 import {api,ApiError} from '../services/accountService';
-import {setPreference,snapshot} from '../lib/accountStorage';
+import {cinemaListsKey,setPreference,snapshot} from '../lib/accountStorage';
+import CinemaLists from './CinemaLists';
 jest.mock('../services/accountService',()=>({api:jest.fn(),resetCsrf:jest.fn(),ApiError:jest.requireActual('../services/accountService').ApiError}));
 const request=api as jest.Mock;
 function Controls(){const a=useAccount()!;return <><span>{a.user?.name || 'Guest'}</span><span>{a.status}</span><span>{a.error}</span><button onClick={()=>setPreference('cinecompass_schedule_view','"posters"')}>Change view</button><button onClick={a.logout}>Sign out</button></>;}
 beforeEach(()=>{localStorage.clear();jest.clearAllMocks();});
+test('saving selected cinemas syncs a new list alongside existing account lists', async () => {
+  const existing = {name:'Utrecht',theaterIds:['springhaver']};
+  request.mockImplementation(async (path, method) => {
+    if (path === '/auth/me') return {user:{id:'alice',name:'Alice'}};
+    if (path === '/settings' && method !== 'PUT')
+      return {userId:'alice',revision:7,values:{[cinemaListsKey]:JSON.stringify([existing])}};
+    if (path === '/settings') return {revision:8};
+  });
+  render(<AccountProvider><CinemaLists selected={['eye','rialto']} loading={false} onApply={jest.fn()}/></AccountProvider>);
+  await screen.findByRole('option',{name:'Utrecht'});
+  fireEvent.click(screen.getByRole('button',{name:'Save selected cinemas'}));
+  fireEvent.change(screen.getByRole('textbox',{name:'List name'}),{target:{value:'Weekend'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save list'}));
+  expect(screen.getByRole('combobox',{name:'Cinema lists'})).toHaveValue('Weekend');
+  await waitFor(() => expect(request).toHaveBeenCalledWith('/settings','PUT',{
+    userId:'alice',revision:7,values:{
+      [cinemaListsKey]:JSON.stringify([existing,{name:'Weekend',theaterIds:['eye','rialto']}])
+    }
+  }));
+});
+
 test('syncs with the account revision and restores guest preferences on sign-out',async()=>{
   localStorage.setItem('cinecompass_schedule_view','"guest-view"');
   request.mockImplementation(async(path,method)=>{

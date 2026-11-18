@@ -1,0 +1,28 @@
+.cc-cinema-select.with-lists {
+  margin-bottom: 12px;
+}
+
+.cc-cinema-lists {
+  margin-bottom: 22px;
+}
+
+.cc-cinema-lists .cc-field {
+  margin-bottom: 8px;
+}
+
+.cc-cinema-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.cc-app .cc-cinema-lists button:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+@media (min-width: 481px) and (max-width: 800px) {
+  .cc-cinema-lists {
+    margin-bottom: 0;
+  }
+}
