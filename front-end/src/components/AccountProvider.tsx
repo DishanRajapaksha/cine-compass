@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Account, api, ApiError, passkey, resetCsrf, Settings } from '../services/accountService';
+import { Account, api, ApiError, resetCsrf, Settings } from '../services/accountService';
 import OpeningScreen from './OpeningScreen';
 import { applySettings, settingsEvent, snapshot } from '../lib/accountStorage';
 
-type AccountState = {user:Account|null;status:string;error:string;busy:boolean;register:(name:string)=>Promise<void>;login:()=>Promise<void>;logout:()=>Promise<void>;addPasskey:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
+type AccountState = {user:Account|null;status:string;error:string;busy:boolean;login:()=>Promise<void>;logout:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
 const AccountContext = createContext<AccountState | null>(null);
 export const useAccount = () => useContext(AccountContext);
 const guestKey='cinecompass_guest_settings';
@@ -30,6 +30,11 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
         const {user:account}=await api<{user:Account|null}>('/auth/me');
         if (!active) return;
         if (account) await load(account);else localStorage.removeItem(activeKey);
+        const url=new URL(window.location.href);
+        if(url.searchParams.get('signin')==='failed') {
+          url.searchParams.delete('signin');window.history.replaceState(window.history.state,'',url);
+          setError('Heimdall sign-in could not be completed. Try again.');
+        }
       } catch { if(active) setStatus('Account service unavailable. Browsing as a guest.'); }
       finally {if(active) setReady(true);}
     })();return () => {active=false;};
@@ -63,16 +68,13 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
     window.addEventListener(settingsEvent,changed);window.addEventListener('online',online);
     return () => {clearTimeout(timer);window.removeEventListener('storage',accountChanged);window.removeEventListener(settingsEvent,changed);window.removeEventListener('online',online);};
   },[restoreGuest]);
-  const run=async (action:()=>Promise<void>)=>{setBusy(true);setError('');try {await action();}catch(e){setError((e as Error).name==='NotAllowedError'?'Passkey request cancelled or timed out. Try again.':(e as Error).message);}finally{setBusy(false);}};
-  const authenticate=async (operation:'register'|'login',name?:string)=>{
-    guest.current=snapshot();localStorage.setItem(guestKey,JSON.stringify(guest.current));
-    const account=await passkey(operation,name);
-    if(account) await load(account);
-  };
+  const run=async (action:()=>Promise<void>)=>{setBusy(true);setError('');try {await action();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
   const state:AccountState={user,status,error,busy,
-    register:name=>run(()=>authenticate('register',name)),login:()=>run(()=>authenticate('login')),
+    login:()=>run(async()=>{
+      guest.current=snapshot();localStorage.setItem(guestKey,JSON.stringify(guest.current));
+      window.location.assign('/api/auth/login');
+    }),
     logout:()=>run(async()=>{if(writing.current) throw new Error('Wait for settings to finish saving, then sign out.');await api('/auth/logout','POST',{});resetCsrf();restoreGuest();setStatus('');}),
-    addPasskey:()=>run(async()=>{await passkey('passkeys');setStatus('Another passkey added.');}),
     reload:()=>run(async()=>{if(current.current) await load(current.current);}),
     importGuest:()=>run(async()=>{applySettings(guest.current);setWorkspace(n=>n+1);window.dispatchEvent(new Event(settingsEvent));})};
   return <AccountContext.Provider value={state}>{ready ? <React.Fragment key={workspace}>{children}</React.Fragment> : <OpeningScreen/>}</AccountContext.Provider>;

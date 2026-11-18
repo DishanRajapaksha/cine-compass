@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using CineCompass.Api;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -17,18 +18,23 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-public sealed class ApiFactory(bool production = false) : WebApplicationFactory<Program>
+public sealed class ApiFactory(bool production = false, TestHeimdall? heimdall = null) : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection connection = new("Data Source=:memory:");
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         connection.Open();
-        builder.UseEnvironment(production ? "Production" : "Development").UseSetting("ConnectionStrings:Database", "Host=localhost;Database=test;Username=test").UseSetting("Passkeys:Origin", production ? "https://localhost:3000" : "http://localhost:3000").UseSetting("Passkeys:ServerDomain", "localhost").UseSetting("DataProtection:Path", Path.Combine(Path.GetTempPath(), "cinecompass-test-keys"));
+        builder.UseEnvironment(production ? "Production" : "Development").UseSetting("ConnectionStrings:Database", "Host=localhost;Database=test;Username=test").UseSetting("App:Origin", production ? "https://localhost:3000" : "http://localhost:3000").UseSetting("DataProtection:Path", Path.Combine(Path.GetTempPath(), "cinecompass-test-keys"));
+        TestKeycloakSettings.Configure(builder);
         builder.ConfigureServices(services => {
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
             services.AddDbContext<AppDbContext>(o => o.UseSqlite(connection));
-            services.AddAuthentication(o => o.DefaultAuthenticateScheme = "Test").AddScheme<AuthenticationSchemeOptions, TestAuth>("Test", _ => {});
+            if (heimdall is null)
+                services.AddAuthentication(o => o.DefaultAuthenticateScheme = "Test")
+                    .AddScheme<AuthenticationSchemeOptions, TestAuth>("Test", _ => { });
+            else
+                services.Configure<OpenIdConnectOptions>("Heimdall", heimdall.Configure);
         });
     }
     public async Task Seed()
@@ -99,20 +105,9 @@ public sealed class AccountTests
     {
         using var f = new ApiFactory();await f.Seed();using var c = await Client(f,"alice");
         c.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/passkeys/options",new {})).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/logout",new {})).StatusCode);
         c.DefaultRequestHeaders.Remove("Origin");c.DefaultRequestHeaders.Add("Origin","https://evil.example");
-        Assert.Equal(HttpStatusCode.Forbidden,(await c.PostAsJsonAsync("/api/auth/passkeys/options",new {})).StatusCode);
-    }
-    [Fact] public async Task Registration_options_require_discoverable_verified_passkey_and_do_not_create_account()
-    {
-        using var f = new ApiFactory();await f.Seed();using var c = await Client(f);
-        var response = await c.PostAsJsonAsync("/api/auth/register/options",new {name="new-user"});response.EnsureSuccessStatusCode();
-        var json=await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("required",json.GetProperty("authenticatorSelection").GetProperty("residentKey").GetString());
-        Assert.Equal("required",json.GetProperty("authenticatorSelection").GetProperty("userVerification").GetString());
-        using var scope=f.Services.CreateScope();Assert.Null(await scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>().FindByNameAsync("new-user"));
-        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/register/complete",new {credentialJson="{}"})).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest,(await c.PostAsJsonAsync("/api/auth/register/complete",new {credentialJson="{}"})).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,(await c.PostAsJsonAsync("/api/auth/logout",new {})).StatusCode);
     }
     [Fact] public async Task Production_gateway_can_issue_secure_csrf_cookie_over_its_private_http_hop()
     {
@@ -124,15 +119,24 @@ public sealed class AccountTests
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.False(string.IsNullOrEmpty(json.GetProperty("token").GetString()));
     }
-    [Fact] public void Ceremonies_are_browser_bound_mode_bound_and_single_use()
+    [Fact] public async Task Legacy_passkey_endpoints_are_retired()
     {
-        var store = new PasskeyCeremonies();var start=new Microsoft.AspNetCore.Http.DefaultHttpContext();
-        store.Begin(start,"register","server-state","alice","alice");
-        var cookie=start.Response.Headers.SetCookie.Last()!.Split(';')[0];
-        var finish=new Microsoft.AspNetCore.Http.DefaultHttpContext();finish.Request.Headers.Cookie=cookie;
-        Assert.Null(store.Take(new Microsoft.AspNetCore.Http.DefaultHttpContext(),"register"));
-        Assert.Equal("alice",store.Take(finish,"register")!.UserId);Assert.Null(store.Take(finish,"register"));
-        store.Begin(start,"login","state");finish.Request.Headers.Cookie=start.Response.Headers.SetCookie.Last()!.Split(';')[0];
-        Assert.Null(store.Take(finish,"register"));Assert.Null(store.Take(finish,"login"));
+        using var f = new ApiFactory();
+        await f.Seed();
+        using var c = await Client(f);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsJsonAsync("/api/auth/register/options", new { name = "alice" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsJsonAsync("/api/auth/login/complete", new { credentialJson = "{}" })).StatusCode);
+    }
+}
+
+internal static class TestKeycloakSettings
+{
+    public const string Issuer = "https://heimdall.example/realms/test";
+
+    public static void Configure(IWebHostBuilder builder)
+    {
+        builder.UseSetting("Keycloak:Issuer", Issuer);
+        builder.UseSetting("Keycloak:ClientId", "cinecompass-test");
+        builder.UseSetting("Keycloak:ClientSecret", "test-secret");
     }
 }

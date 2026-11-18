@@ -20,10 +20,20 @@ internal static class CinevilleHosting
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<CinevilleClient>();
         builder.Services.AddSingleton<CinevilleProgramme>();
+        builder.Services.AddSingleton<ProgrammePaging>();
         builder.Services.AddMcpServer(options =>
         {
             options.ServerInfo = new Implementation { Name = "cineville", Version = "1.0.0" };
-            options.ServerInstructions = "Read-only public cinema programme. Use Europe/Amsterdam dates. For paged results, pass nextOffset as offset with the same filters.";
+            options.ServerInstructions = """
+                Read-only public cinema programme. Use Europe/Amsterdam dates.
+                search_screenings defaults to both English audio and English subtitles. Each filter defaults independently.
+                Use the language and subtitles arguments to honour the user's preferences. Pass a language code to change a filter or "any" to clear it.
+                Prefer screening audio evidence. If audioSource is film, say the audio is inferred. An unlisted subtitle status means availability is unknown.
+                Use startTime and endTime to constrain screening starts in Amsterdam. An estimated or unknown end time is not a guaranteed finish.
+                If a search is empty, explain details.emptyReason and offer relevant relaxationOptions for the user to choose.
+                Use find_films for title lookup. Disambiguate candidates with the user when needed, then pass the selected ID to get_film_showtimes.
+                Pass nextCursor back to the same tool with only the cursor and optionally limit. The snapshot expires after five minutes.
+                """;
         }).WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
             .WithTools<ProgrammeTools>();
     }

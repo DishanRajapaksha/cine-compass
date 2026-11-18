@@ -44,7 +44,7 @@ test('creates one subscription for all screenings and exposes the Apple Calendar
 test('guests see sign-in instructions without creating a public feed',()=>{
   account.mockReturnValue({user:null,login:jest.fn()});render(<CalendarSubscription/>);
   fireEvent.click(screen.getByRole('button',{name:'Set up calendar subscription'}));
-  expect(screen.getByRole('button',{name:'Sign in with a passkey'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Sign in with Heimdall'})).toBeInTheDocument();
   expect(screen.queryByRole('button',{name:'Enable calendar subscription'})).not.toBeInTheDocument();
   expect(request).not.toHaveBeenCalled();
 });

@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace CineCompass.Api.Cineville;
 
-internal sealed class CinevilleProgramme(CinevilleClient client, TimeProvider clock)
+internal sealed partial class CinevilleProgramme(CinevilleClient client, TimeProvider clock)
 {
     private static readonly StringComparer Names = StringComparer.OrdinalIgnoreCase;
     private static readonly object SearchPage = new { limit = 100 };
@@ -14,14 +14,25 @@ internal sealed class CinevilleProgramme(CinevilleClient client, TimeProvider cl
             .OrderBy(c => c.City, Names).ThenBy(c => c.Name, Names).ThenBy(c => c.Id, StringComparer.Ordinal).ToArray();
 
     public async Task<Screening[]> Screenings(ProgrammeFilter filter, CancellationToken ct,
+        string? filmId = null, bool upcomingOnly = false, bool includeNonFilm = false) =>
+        (await ScreeningCandidates(filter, ct, filmId, upcomingOnly, includeNonFilm)).Screenings
+            .Where(s => ScreeningLanguage.Matches(filter.Languages, s.Film?.SpokenLanguages ?? []) &&
+                ScreeningLanguage.Matches(filter.Subtitles, s.SubtitleLanguages) &&
+                (filter.Specials is not { Length: > 0 } ||
+                    filter.Specials.Any(v => s.Categories.Contains(v.Trim(), Names)))).ToArray();
+
+    public async Task<ScreeningBatch> ScreeningCandidates(ProgrammeFilter filter, CancellationToken ct,
         string? filmId = null, bool upcomingOnly = false, bool includeNonFilm = false)
     {
         var now = clock.GetUtcNow();
         var (start, end) = ProgrammeDates.Range(filter, now, upcomingOnly, openEnded: filmId is not null);
-        if (end <= start) return [];
+        var effectiveStart = upcomingOnly || (filter.StartDate is null && filter.StartTime is null)
+            ? (start > now ? start : now) : start;
 
-        var venues = await VenueIds(filter, ct);
-        if (venues.Length == 0) return [];
+        var (venues, venueIssue) = await ResolveVenues(filter, ct);
+        if (venues.Length == 0 || end <= effectiveStart)
+            return new([], effectiveStart, end, venueIssue ?? "no_screenings");
+
         var dates = new Dictionary<string, DateTime> { ["gte"] = start.UtcDateTime };
         if (end is { } upper) dates["lt"] = upper.UtcDateTime;
         var body = new Dictionary<string, object>
@@ -33,19 +44,19 @@ internal sealed class CinevilleProgramme(CinevilleClient client, TimeProvider cl
         if (filmId is not null) body["productionId"] = new { eq = filmId };
         else if (!includeNonFilm) body["productionId"] = new { isNull = false };
 
-        var effectiveStart = upcomingOnly || (filter.StartDate is null && filter.StartTime is null)
-            ? (start > now ? start : now) : start;
-        return (await client.Events(body, ct)).Select(CinevilleMapping.Screening).OfType<Screening>()
-            .Where(s => s.Showtime.StartDate >= effectiveStart && (end is null || s.Showtime.StartDate < end))
+        var venueSet = venues.ToHashSet(StringComparer.Ordinal);
+        var screenings = (await client.Events(body, ct)).Select(CinevilleMapping.Screening).OfType<Screening>()
+            .Where(s => venueSet.Contains(s.Showtime.TheaterId) &&
+                s.Showtime.StartDate >= effectiveStart && (end is null || s.Showtime.StartDate < end))
             .Where(s => (includeNonFilm || s.Film is not null) && (filmId is null || s.Film?.Id == filmId))
-            .Where(s => Matches(s, filter))
             .OrderBy(s => s.Showtime.StartDate).ThenBy(s => s.Showtime.Id, StringComparer.Ordinal).ToArray();
+        return new(screenings, effectiveStart, end, screenings.Length == 0 ? "no_screenings" : null);
     }
 
     public async Task<Film[]> NowShowing(string? city, CancellationToken ct)
     {
         var start = ProgrammeDates.Minute(clock.GetUtcNow());
-        var venues = await VenueIds(new(City: city), ct);
+        var (venues, _) = await ResolveVenues(new(City: city), ct);
         if (venues.Length == 0) return [];
         var body = new
         {
@@ -75,25 +86,17 @@ internal sealed class CinevilleProgramme(CinevilleClient client, TimeProvider cl
             .ThenBy(f => f.Id, StringComparer.Ordinal).ToArray();
     }
 
-    private async Task<string[]> VenueIds(ProgrammeFilter filter, CancellationToken ct) =>
-        (await Cinemas(filter.City, ct))
-            .Where(c => filter.Cinemas is not { Length: > 0 } ||
-                filter.Cinemas.Any(name => Names.Equals(name?.Trim(), c.Name) || Names.Equals(name?.Trim(), c.Id)))
-            .Select(c => c.Id).Order(StringComparer.Ordinal).ToArray();
-
-    private static bool Matches(Screening s, ProgrammeFilter filter) =>
-        MatchesAny(filter.Languages, s.Film?.SpokenLanguages ?? [], Language) &&
-        MatchesAny(filter.Subtitles, s.SubtitleLanguages, Language) &&
-        MatchesAny(filter.Specials, s.Categories, value => value.Trim());
-
-    private static bool MatchesAny(string[]? values, string[] available, Func<string, string> normalize) =>
-        values is not { Length: > 0 } ||
-        values.Any(value => !string.IsNullOrWhiteSpace(value) && available.Any(x => Names.Equals(normalize(value), normalize(x))));
-
-    private static string Language(string value) => value.Trim().Split('-', '_')[0].ToLowerInvariant() switch
+    private async Task<(string[] Ids, string? EmptyReason)> ResolveVenues(ProgrammeFilter filter, CancellationToken ct)
     {
-        "english" or "engels" or "eng" => "en",
-        "dutch" or "nederlands" or "dut" or "nld" => "nl",
-        var code => code
-    };
+        var all = await Cinemas(null, ct);
+        var local = all.Where(c => string.IsNullOrWhiteSpace(filter.City) || Names.Equals(filter.City.Trim(), c.City)).ToArray();
+        if (local.Length == 0 && !string.IsNullOrWhiteSpace(filter.City)) return ([], "unknown_city");
+        if (filter.Cinemas is { Length: > 0 } cinemas)
+        {
+            bool Selected(Cinema c) => cinemas.Any(name => Names.Equals(name?.Trim(), c.Name) || Names.Equals(name?.Trim(), c.Id));
+            local = local.Where(Selected).ToArray();
+            if (local.Length == 0) return ([], all.Any(Selected) ? "cinema_outside_city" : "unknown_cinema");
+        }
+        return (local.Select(c => c.Id).Order(StringComparer.Ordinal).ToArray(), null);
+    }
 }

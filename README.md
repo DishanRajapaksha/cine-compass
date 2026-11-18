@@ -1,11 +1,11 @@
 # CineCompass
 
-Self-hosted React frontend, ASP.NET Core backend, PostgreSQL, and passkey-only accounts. No external identity provider, passwords, email login, or recovery bypass.
+Self-hosted React frontend, ASP.NET Core backend, PostgreSQL, and Heimdall Keycloak sign-in. CineCompass stores account preferences and saved items in its own database.
 
 ## Repository
 
 - `front-end/`: React app. Run all npm commands here.
-- `back-end/CineCompass.Api/`: .NET 11 API, Identity passkeys, settings, and PostgreSQL migrations.
+- `back-end/CineCompass.Api/`: .NET 11 API, Keycloak sign-in, settings, and PostgreSQL migrations.
 - `back-end/CineCompass.Api.Tests/`: authentication, CSRF, ownership, revision, and challenge tests.
 - `Dockerfile` and `compose.yaml`: frontend/API image, PostgreSQL, and migration job.
 
@@ -14,6 +14,8 @@ Self-hosted React frontend, ASP.NET Core backend, PostgreSQL, and passkey-only a
 ## Local development
 
 Start PostgreSQL with database/user `cinecompass`. Development defaults use port 5432 and password `local-development-only`, for disposable local data. Override `ConnectionStrings__Database` for your database.
+
+Configure a confidential Keycloak client with **Standard flow**, PKCE **S256**, and redirect URI `http://localhost:3000/api/auth/callback`. Set `Keycloak__Issuer`, `Keycloak__ClientId`, and `Keycloak__ClientSecret` via the environment or .NET user secrets. Use a development client separate from the production client.
 
 From the repository root:
 
@@ -31,9 +33,7 @@ npm ci
 npm start
 ```
 
-Open **http://localhost:3000**. React proxies `/api` to port 5080. Development passkeys use origin `http://localhost:3000` and relying party `localhost`. Localhost supports passkeys without HTTPS; remote origins require HTTPS. Origins include the port: set `Passkeys__Origin` if serving the compiled frontend directly on port 5080.
-
-Open Settings to create an account with a username/passkey or sign in with a discoverable passkey without entering a username. An account is created only after its first passkey is verified and stored. Add a second passkey after signing in.
+Open **http://localhost:3000**. React proxies `/api` to port 5080. Open Settings and select **Sign in with Heimdall**. The first sign-in creates a CineCompass profile for that Keycloak identity unless the identity is already linked to a local account. Set `App__Origin` and register its exact callback URI if you serve the frontend on another origin.
 
 Hidden films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring the saved hidden entry in Settings restores its matching catalogue listings.
 
@@ -84,15 +84,46 @@ showtimes. A date without an end date searches that day, except for a film
 lookup, which stays open-ended. REST returns 400 for invalid date ranges and
 502 when the upstream catalogue is unavailable.
 
-The official C# MCP SDK serves Streamable HTTP at `/mcp` on the same backend.
-Connect locally at `http://localhost:5080/mcp`, or use
-`https://leyline.talesfrom.earth/cineville` once the tracked Leyline route has
-been deployed. The read-only tools are `list_cinemas`, `search_screenings`,
-`get_film_showtimes`, `now_showing`, `upcoming_films` and `get_specials`.
-Use a film ID from a catalogue or screening result to look up its showtimes.
-For paged results, pass the returned `nextOffset` as `offset` with the same
-filters. The default page holds 25 entries and the maximum is 100. Results
-reflect the current programme, which can change between pages.
+Connect to `https://leyline.talesfrom.earth/cineville` and sign in with Heimdall through the MCP client's OAuth flow. The official C# MCP SDK serves the internal Streamable HTTP endpoint at `/mcp`, which requires the separate `Cineville__McpGatewaySecret` shared with Leyline and is disabled when that secret is unset. The read-only tools are
+`list_cinemas`, `search_screenings`, `find_films`, `get_film_showtimes`,
+`now_showing`, `upcoming_films` and `get_specials`.
+
+- **Language filters.** `search_screenings` defaults to `language: "en"` and
+  `subtitles: "en"`. Both filters must match. Omit a field to use its default,
+  supply a language code to override it, or pass `"any"` to clear it. For
+  example, `{"language":"fr"}` finds French audio with English subtitles.
+  Use `{"subtitles":"any"}` for English audio regardless of subtitles.
+- **Language evidence.** Use `audioLanguages` to describe screening audio.
+  `audioSource` is `screening` for explicit screening information, `film`
+  for an inference from the film’s spoken languages, or `unknown`. The
+  `subtitleStatus` of `listed` comes with `subtitleLanguages`. A status of
+  `none` means Cineville explicitly marked the screening as unsubtitled.
+  `unlisted` means subtitle availability is unknown.
+- **Time windows.** Both screening tools accept `startTime` and `endTime` in
+  Amsterdam local time, using `HH:mm`. These constrain screening starts in
+  a continuous interval. On a multi-day search they apply to the first and
+  last day respectively. The final minute is inclusive. `endTimeSource`
+  tells whether a screening’s finish is `scheduled`, `estimated`, or
+  `unknown`. When unknown, the end timestamp equals the start.
+- **Empty searches.** Read `details.effectiveFilters` for the applied language
+  filters and local time interval, and `details.emptyReason` for the reason.
+  The tool distinguishes an unknown city, an unknown cinema, a cinema outside
+  the requested city, and no screening, title, or language matches. If
+  `details.relaxationOptions` contains alternatives, present them to the user
+  with their match counts and let the user choose whether to broaden the search.
+- **Film lookup.** Use `find_films` with a title fragment and optionally
+  `releaseYear`. If several titles match, present the candidates and their
+  original release years. Pass the chosen Cineville ID to `get_film_showtimes`.
+- **Pagination.** Send the returned `nextCursor` as `cursor` to the same
+  tool. Omit the initial filters and optionally pass `limit`. For
+  `get_specials`, look for `nextCursor` under `screenings`. Each cursor
+  continues the original snapshot. Snapshots expire after five minutes and
+  are held in a bounded in-process cache. Start a new search if the cursor
+  expires or the server restarts. `offset` and `nextOffset` still work for
+  clients paging against the current programme. The default page size is
+  25 and the maximum is 100.
+
+These conventions are also published in the MCP instructions for agents.
 
 The backend follows Cineville's cursor links on the original HTTPS origin and
 endpoint. The in-process cache coalesces concurrent reads of the same request.
@@ -105,7 +136,7 @@ gateway can set its trusted browser origin with `Cineville__McpOrigin`.
 
 ## Self-hosted deployment
 
-Choose the permanent HTTPS domain before registering production passkeys. A localhost passkey does not transfer to your production domain; unrelated domains need separate passkeys.
+Register the exact public callback URL `https://<your-app-host>/api/auth/callback` for the confidential Keycloak client. Enable authorization code with PKCE S256 and configure the issuer, client ID and client secret in `.env`.
 
 ```sh
 cp .env.example .env
@@ -116,56 +147,17 @@ docker compose up --build -d
 
 Point your HTTPS reverse proxy at `127.0.0.1:5080`. The app serves both React and `/api` on one origin. Only the loopback app port is published; PostgreSQL stays internal. Preserve the browser Origin header. The backend validates it against PUBLIC_ORIGIN and does not trust forwarded headers. Migrations must finish before the app starts.
 
-Back up the database and Data Protection key volumes. Keep the keys/backups private. Losing Data Protection keys invalidates sessions. Passkey private keys stay on the authenticator; only public credentials are stored in PostgreSQL. Pending ceremonies stay in server memory, expire after five minutes, and are consumed once. Restarting the app cancels unfinished ceremonies. This configuration targets one app instance.
+Back up the database and Data Protection key volumes. Keep the keys/backups private. Losing Data Protection keys invalidates sessions. Keycloak manages credentials and recovery. CineCompass keeps an issuer-and-subject link to its local account so that changes to the Keycloak username do not affect saved settings.
 
 GitHub Pages deployment is replaced with build/test CI. Pushing changes does not deploy this self-hosted application.
 
 ## Recovery
 
-No password, email, recovery code, or admin bypass login exists. Add another passkey on another device or security key. Losing every passkey means losing access to the account. Passkey removal and account deletion are not included yet.
+Manage sign-in and recovery in Heimdall. Legacy CineCompass account data can be linked by an operator to a verified Keycloak subject. Matching usernames alone never links an account.
 
 ## Verification
 
-```sh
-dotnet test CineCompass.slnx
-cd front-end
-CI=true npm test -- --watchAll=false --runInBand
-npm run build
-```
-
-Backend HTTP tests use isolated SQLite databases. Also validate PostgreSQL migrations and browser ceremonies against PostgreSQL for deployment acceptance. Docker builds need a running daemon.
-
-## Film watchlist
-
-Save films from the schedule or film details without choosing a screening. The Watchlist counts films and keeps them after screening times pass or are removed. Find showtimes opens upcoming screenings with independent city, language, cinema, and date filters. Saving a screening also adds its film; removing a film keeps its saved screening times under Other saved screenings. Existing saved screenings populate the film watchlist once on upgrade. Hidden films stay saved and return when restored in Settings. Film watchlists remain device-local for guests and sync with a CineCompass account. On phones, each screening shows IMDb, Watchlist, Tickets, Save screening, and More icons; More contains labelled hiding and evening-planning actions.
-
-## Apple Calendar subscription
-
-Open **Settings → Calendar → Set up calendar subscription**, sign in, choose an optional reminder, and enable the subscription. Tap **Open in Apple Calendar** and confirm there. The copy-link action also supports calendar apps that accept an HTTPS subscription URL. On iPhone, manual setup is Calendar → Calendars → Add Calendar → Add Subscription Calendar.
-
-Each saved screening becomes a separate event with its title, cinema/city, exact start/end times, and ticket link when available. Double bills require no separate action. Saved films without a chosen screening time do not create events. The feed includes all saved screenings, including past screenings, hidden films, and screenings kept after removing a film from the watchlist. Removing a saved screening removes it from the feed. Changes arrive after account sync and the calendar client's next refresh; the suggested hourly refresh interval is advisory. Reminders depend on the client's subscription/alert settings.
-
-Subscriptions require a CineCompass account and the publicly reachable HTTPS deployment. Guest screenings remain local until explicitly imported into account settings. The private feed link works without browser cookies, so Calendar can refresh it independently. Keep it private: anyone with the link can read the saved screening events. It exposes no other preferences, account details, or credentials. The server stores a token hash for lookup and an encrypted copy for restoring the link; preserving the Data Protection keys preserves access to that copy. Avoid logging full calendar-feed paths in reverse proxies or sharing them in screenshots.
-
-**Turn off subscription** revokes the current link immediately. Remove the CineCompass calendar in Calendar to clear retained events. Re-enabling creates a new link, which must be subscribed to again. Calendar subscriptions are read-only, and the web app cannot detect whether the subscription was confirmed. This replaces the earlier per-screening `.ics` download/share modal and separate double-bill button.
-
-The `CalendarSubscriptions` database migration is applied by the existing deployment migration service. No additional service or secret configuration is required. A physical iPhone subscription must still be verified against the deployed HTTPS feed; localhost cannot be fetched by an iPhone calendar client.
-
-## Cineville integration
-
-Public listings continue to work. CineCompass accounts do not authenticate with Cineville. Authenticated Cineville watchlist access is a later integration, pending verification of Cineville's login/session flow. Future Cineville tokens must be stored privately on the backend, outside settings sync.
-
-Movie details offer **Translate to English** for Dutch descriptions, followed by **Show original**. Cineville's own English description takes priority when present. Translation uses the [MyMemory public API](https://mymemory.translated.net/doc/spec.php) directly from the browser, only after clicking the control; only the public description is sent, without account cookies or credentials. Successful translations are cached in memory for the current tab and are excluded from account sync and offline storage. Long descriptions are split at word boundaries within the provider's 500-byte request limit. Anonymous service usage has a [5,000-character daily limit](https://mymemory.translated.net/doc/usagelimits.php); quota and network errors leave the original visible and allow retrying. No API key or backend configuration is required.
-
-### Verified in this change
-
-- Release build and five backend tests passed on .NET 11 RC1.
-- Frontend production build and 25 tests passed.
-- Initial migration applied successfully to a temporary PostgreSQL 18 instance.
-- Chrome with virtual authenticators verified passkey registration, session restoration after reload, logout/login, adding a second authenticator, and signing in using that second passkey.
-- A display preference persisted in PostgreSQL and was restored after clearing browser storage and signing in again.
-- Settings dialog inspected at 390 × 844 with no horizontal overflow.
-- Docker image build and remote HTTPS deployment were not verified: the local Docker daemon was unavailable. No physical authenticator ceremony was performed.
+Run `dotnet test`, the frontend tests and the frontend build. Backend tests exercise the OIDC callback, PKCE, account linking and settings isolation. On a deployment, sign in through Heimdall to verify that saved settings load, and connect an MCP client through Leyline to verify OAuth discovery and a tool call.
 
 ## Gont
 
@@ -177,8 +169,8 @@ Deployment builds the shared app/migration image once, then starts the stack wit
 
 ## Install on iPhone or iPad
 
-Open CineCompass over HTTPS in Safari, open the Share menu, choose **Add to Home Screen**, keep **Open as Web App** enabled if shown, and tap **Add**. The home-screen icon opens CineCompass in its own standalone window. Passkeys use the same configured HTTPS hostname.
+Open CineCompass over HTTPS in Safari, open the Share menu, choose **Add to Home Screen**, keep **Open as Web App** enabled if shown, and tap **Add**. The home-screen icon opens CineCompass in its own standalone window. Heimdall handles sign-in when you open the app.
 
-Production builds register a service worker. It caches a public offline reconnect page, content-hashed JavaScript/CSS, and up to 100 movie posters from Cineville's public image CDN. Posters are fetched on demand and reused across views and reloads without another network request; simultaneous requests share one download. The oldest cached posters are removed when the limit is reached. Changed image URLs fetch new artwork, and the poster cache survives app updates. Browser storage eviction or clearing site data can remove cached posters. Account APIs, settings responses, passkey ceremonies, live Cineville data, and OMDb requests are never cached by the worker. An offline launch shows the reconnect page; live screenings and account sync require an internet connection. Updates activate after existing app windows close; reopening online loads the current app.
+Production builds register a service worker. It caches a public offline reconnect page, content-hashed JavaScript/CSS, and up to 100 movie posters from Cineville's public image CDN. Posters are fetched on demand and reused across views and reloads without another network request; simultaneous requests share one download. The oldest cached posters are removed when the limit is reached. Changed image URLs fetch new artwork, and the poster cache survives app updates. Browser storage eviction or clearing site data can remove cached posters. Account APIs, settings responses, sign-in requests, live Cineville data, and OMDb requests are never cached by the worker. An offline launch shows the reconnect page; live screenings and account sync require an internet connection. Updates activate after existing app windows close; reopening online loads the current app.
 
 App icons use the schedule UI's compass sparkle and paper/wine colors. Regenerate the PNGs with `python3 front-end/scripts/generate-pwa-icons.py` (requires Pillow).

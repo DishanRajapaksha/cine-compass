@@ -18,6 +18,8 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
 
     public ConcurrentQueue<(string Path, string? Body, HttpMethod Method)> Requests { get; } = new();
     public string? CursorOverride { get; set; }
+    public bool IncludeEnglishScreenings { get; set; }
+    public bool UseLanguageEvidence { get; init; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -34,6 +36,11 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
             "/events/search" when body!.Contains("\"eq\":\"unknown\"", StringComparison.Ordinal) => Page("events", null),
             "/events/search" when next => SecondEvents(body!),
             "/events/search" => Page("events", CursorOverride ?? "?page%5Bafter%5D=next", Event("early", 18, "nl")),
+            "/productions/search" when body!.Contains("\"contains\"", StringComparison.Ordinal) && next =>
+                Page("productions", null, """{"id":"remake","title":"A Film","attributes":{"releaseYear":2026}}""",
+                    """{"id":"accented","title":"Amélie","attributes":{"releaseYear":2001}}"""),
+            "/productions/search" when body!.Contains("\"contains\"", StringComparison.Ordinal) =>
+                Page("productions", "?page=2", Film),
             "/productions/search" when next => Page("productions", null, """
                 {"id":"second","title":"A Second Film","attributes":{"premiereDate":"2099-12-01"}}
                 """, Film),
@@ -44,26 +51,43 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
         };
     }
 
-    private static HttpResponseMessage SecondEvents(string body)
+    private HttpResponseMessage SecondEvents(string body)
     {
         var early = Event("early", 18, "nl");
         var late = Event("late", 20, "en");
+        if (UseLanguageEvidence)
+            return Page("events", null, early, late,
+                Event("dub", 21, "en", spokenLanguage: "en", version: "nl-NL", publishedEnd: true),
+                Event("explicit-none", 22, null, spokenLanguage: "en", withoutSubtitles: true),
+                Event("unlisted", 23, null, spokenLanguage: "en", version: "dubbed edition"));
+        if (IncludeEnglishScreenings)
+            return Page("events", null, early, late, Event("english", 21, "en", spokenLanguage: "en"),
+                Event("dutch-subs", 22, "nl", spokenLanguage: "en"));
         return body.Contains("\"productionId\"", StringComparison.Ordinal)
             ? Page("events", null, early, late)
             : Page("events", null, early, late, Event("panel", 21, "", film: false));
     }
 
-    private static string Event(string id, int hour, string subtitles, bool film = true) =>
-        JsonSerializer.Serialize(new
+    private static string Event(string id, int hour, string? subtitles, bool film = true,
+        string? spokenLanguage = null, string? version = null, bool withoutSubtitles = false, bool publishedEnd = false)
+    {
+        var production = film ? JsonNode.Parse(Film) : null;
+        if (spokenLanguage is not null)
+            production!["attributes"]!["spokenLanguages"] = new JsonArray(JsonValue.Create(spokenLanguage));
+        return JsonSerializer.Serialize(new
         {
             id, title = film ? null : "Panel", startDate = $"2026-11-19T{hour}:00:00Z",
-            ticketingUrl = $"https://tickets.example/{id}", attributes = new { subtitles = new[] { subtitles } },
+            endDate = publishedEnd ? $"2026-11-19T{hour}:30:00Z" : null,
+            ticketingUrl = $"https://tickets.example/{id}",
+            attributes = new { subtitles = subtitles is null ? [] : new[] { subtitles }, languageVersion = version,
+                tags = withoutSubtitles ? new[] { "noSubtitles" } : [] },
             localizableAttributes = new Dictionary<string, object>
             {
                 ["nl-NL"] = new { customTags = film ? Array.Empty<string>() : new[] { "Discussion" } }
             },
-            _embedded = new { venue = JsonNode.Parse(Eye), production = film ? JsonNode.Parse(Film) : null }
+            _embedded = new { venue = JsonNode.Parse(Eye), production }
         });
+    }
 
     private static HttpResponseMessage Page(string collection, string? href, params string[] items) =>
         new(HttpStatusCode.OK)

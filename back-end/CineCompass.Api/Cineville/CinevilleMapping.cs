@@ -57,12 +57,17 @@ internal static class CinevilleMapping
             .Select(x => Strings(x.Field("customTags"))).FirstOrDefault(x => x.Length > 0) ?? [];
         var categories = Strings(attributes.Field("tags")).Concat(custom).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var subtitles = Strings(attributes.Field("subtitles"));
-        var end = raw.Field("endDate").TryReadTimestamp(out var scheduledEnd) && scheduledEnd >= start
-            ? scheduledEnd : EstimateEnd(start, film?.Duration ?? 0);
+        var hasScheduledEnd = raw.Field("endDate").TryReadTimestamp(out var scheduledEnd) && scheduledEnd > start;
+        var end = hasScheduledEnd ? scheduledEnd : EstimateEnd(start, film?.Duration ?? 0);
+        var endTimeSource = hasScheduledEnd ? "scheduled" : end > start ? "estimated" : "unknown";
+        var version = NonEmpty(attributes.Text("languageVersion"));
+        var (audioLanguages, audioSource) = ScreeningLanguage.Audio(Strings(attributes.Field("spokenLanguages")),
+            version, film?.SpokenLanguages ?? []);
         var showtime = new Showtime(id, start, end, cinema.Id, cinema.Name, cinema.City,
             WebLink(raw.Text("ticketingUrl")), categories.Length == 0 ? null : string.Join(", ", categories),
-            string.Join(", ", subtitles), NonEmpty(attributes.Text("languageVersion")));
-        return new(film, showtime, subtitles, categories, DescriptionTitle(raw, localized));
+            string.Join(", ", subtitles), version);
+        return new(film, showtime, subtitles, categories, DescriptionTitle(raw, localized),
+            audioLanguages, audioSource, ScreeningLanguage.SubtitleStatus(subtitles, categories), endTimeSource);
     }
 
     private static string? DescriptionTitle(JsonElement raw, JsonElement localized) =>

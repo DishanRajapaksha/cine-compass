@@ -13,30 +13,3 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
   return response.status === 204 ? undefined as T : response.json();
 }
 export function resetCsrf() { csrf = undefined; }
-const decode = (value: string): ArrayBuffer => Uint8Array.from(atob(value.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0)).buffer;
-const encode = (value: ArrayBuffer) => btoa(String.fromCharCode(...Array.from(new Uint8Array(value)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-export function creationOptions(json: any): PublicKeyCredentialCreationOptions {
-  return {...json,challenge:decode(json.challenge),user:{...json.user,id:decode(json.user.id)},excludeCredentials:json.excludeCredentials?.map((c:any) => ({...c,id:decode(c.id)}))};
-}
-export function requestOptions(json: any): PublicKeyCredentialRequestOptions {
-  return {...json,challenge:decode(json.challenge),allowCredentials:json.allowCredentials?.map((c:any) => ({...c,id:decode(c.id)}))};
-}
-export function credentialJson(credential: PublicKeyCredential): string {
-  const response = credential.response;
-  const common = {id:credential.id,rawId:encode(credential.rawId),type:credential.type,authenticatorAttachment:credential.authenticatorAttachment,clientExtensionResults:credential.getClientExtensionResults()};
-  if ('attestationObject' in response) {
-    const r = response as AuthenticatorAttestationResponse;
-    return JSON.stringify({...common,response:{clientDataJSON:encode(r.clientDataJSON),attestationObject:encode(r.attestationObject),transports:r.getTransports?.() || []}});
-  }
-  const r = response as AuthenticatorAssertionResponse;
-  return JSON.stringify({...common,response:{clientDataJSON:encode(r.clientDataJSON),authenticatorData:encode(r.authenticatorData),signature:encode(r.signature),userHandle:r.userHandle ? encode(r.userHandle) : null}});
-}
-export async function passkey(operation: 'register'|'login'|'passkeys', name?: string): Promise<Account | undefined> {
-  if (!window.isSecureContext || !window.PublicKeyCredential) throw new Error('Passkeys need a supported browser on HTTPS or localhost.');
-  const options = await api<any>(`/auth/${operation}/options`, 'POST', operation === 'register' ? {name} : {});
-  const credential = (operation === 'login' ? await navigator.credentials.get({publicKey:requestOptions(options)}) : await navigator.credentials.create({publicKey:creationOptions(options)})) as PublicKeyCredential | null;
-  if (!credential) throw new Error('No passkey was selected.');
-  const result = await api<Account | undefined>(`/auth/${operation}/complete`, 'POST', {credentialJson:credentialJson(credential)});
-  resetCsrf();
-  return result;
-}

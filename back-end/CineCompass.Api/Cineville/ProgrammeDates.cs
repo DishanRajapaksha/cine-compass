@@ -6,7 +6,9 @@ internal static class ProgrammeDates
 {
     private static readonly TimeZoneInfo Amsterdam = TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
 
-    public static DateOnly Today(DateTimeOffset now) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Amsterdam).DateTime);
+    public static DateTimeOffset LocalTime(DateTimeOffset time) => TimeZoneInfo.ConvertTime(time, Amsterdam);
+
+    public static DateOnly Today(DateTimeOffset now) => DateOnly.FromDateTime(LocalTime(now).DateTime);
 
     public static DateTimeOffset Minute(DateTimeOffset now) =>
         new(now.Ticks - now.Ticks % TimeSpan.TicksPerMinute, now.Offset);

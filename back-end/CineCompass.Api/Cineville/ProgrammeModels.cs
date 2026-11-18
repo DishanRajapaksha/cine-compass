@@ -14,7 +14,9 @@ internal sealed record Film(
 internal sealed record Showtime(
     string Id, DateTimeOffset StartDate, DateTimeOffset EndDate, string TheaterId, string TheaterName,
     string TheaterCity, string? TicketingUrl, string? Specials, string Subtitles, string? LanguageVersion);
-internal sealed record Screening(Film? Film, Showtime Showtime, string[] SubtitleLanguages, string[] Categories, string? EventTitle);
+internal sealed record Screening(Film? Film, Showtime Showtime, string[] SubtitleLanguages, string[] Categories,
+    string? EventTitle, string[] AudioLanguages, string AudioSource, string SubtitleStatus, string EndTimeSource);
+internal sealed record ScreeningBatch(Screening[] Screenings, DateTimeOffset Start, DateTimeOffset? End, string? EmptyReason);
 internal sealed record Movie(
     string Id, string Title,
     [property: JsonPropertyName("poster_path")] string PosterPath,

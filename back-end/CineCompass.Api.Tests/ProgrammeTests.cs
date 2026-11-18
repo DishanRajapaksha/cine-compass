@@ -7,8 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
-public sealed class ProgrammeTests
+public sealed partial class ProgrammeTests
 {
+    private const string GatewayCredential = "testcinevillegatewaycredential1234";
     [Fact]
     public async Task Rest_and_Mcp_share_complete_cached_pages_and_filter_each_screening()
     {
@@ -42,6 +43,34 @@ public sealed class ProgrammeTests
     }
 
     [Fact]
+    public async Task Mcp_screening_search_defaults_to_both_English_filters_and_allows_independent_overrides()
+    {
+        using var upstream = new ProgrammeUpstream { IncludeEnglishScreenings = true };
+        using var factory = Factory(upstream);
+        using var http = factory.CreateClient();
+        const string date = "2026-11-19";
+
+        using var list = await Rpc(http, "tools/list", new { });
+        var search = list.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray()
+            .Single(tool => tool.GetProperty("name").GetString() == "search_screenings");
+        var parameters = search.GetProperty("inputSchema").GetProperty("properties");
+        Assert.Equal("en", parameters.GetProperty("language").GetProperty("default").GetString());
+        Assert.Equal("en", parameters.GetProperty("subtitles").GetProperty("default").GetString());
+
+        Assert.Equal(new[] { "english" }, await Search(new { startDate = date }));
+        Assert.Equal(new[] { "late" }, await Search(new { startDate = date, language = "fr" }));
+        Assert.Equal(new[] { "dutch-subs" }, await Search(new { startDate = date, subtitles = "nl" }));
+        Assert.Equal(new[] { "late", "english" }, await Search(new { startDate = date, language = "any" }));
+        Assert.Equal(new[] { "english", "dutch-subs" }, await Search(new { startDate = date, subtitles = "any" }));
+        Assert.Equal(new[] { "early", "late", "english", "dutch-subs" },
+            await Search(new { startDate = date, language = "any", subtitles = "any" }));
+
+        async Task<string?[]> Search(object arguments) =>
+            (await Call(http, "search_screenings", arguments)).GetProperty("items").EnumerateArray()
+                .Select(item => item.GetProperty("showtime").GetProperty("id").GetString()).ToArray();
+    }
+
+    [Fact]
     public async Task Tool_inventory_dates_catalogues_and_empty_film_use_the_public_contract()
     {
         using var upstream = new ProgrammeUpstream();
@@ -49,7 +78,7 @@ public sealed class ProgrammeTests
         using var http = factory.CreateClient();
         using var list = await Rpc(http, "tools/list", new { });
         var tools = list.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray().ToArray();
-        Assert.Equal(new[] { "get_film_showtimes", "get_specials", "list_cinemas", "now_showing", "search_screenings", "upcoming_films" },
+        Assert.Equal(new[] { "find_films", "get_film_showtimes", "get_specials", "list_cinemas", "now_showing", "search_screenings", "upcoming_films" },
             tools.Select(t => t.GetProperty("name").GetString()).Order(StringComparer.Ordinal));
         Assert.All(tools, tool => Assert.True(tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean()));
 
@@ -118,6 +147,7 @@ public sealed class ProgrammeTests
         await Call(http, "list_cinemas", new { });
         Assert.Equal(4, upstream.Requests.Count(r => r.Path.StartsWith("/venues", StringComparison.Ordinal)));
 
+        http.DefaultRequestHeaders.Add("Authorization", "Bearer " + GatewayCredential);
         http.DefaultRequestHeaders.Add("Origin", "https://unknown.example");
         using var response = await http.PostAsJsonAsync("/mcp", new { method = "tools/list" });
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -135,16 +165,19 @@ public sealed class ProgrammeTests
         Assert.Equal(4, upstream.Requests.Count);
     }
 
-    private static WebApplicationFactory<Program> Factory(ProgrammeUpstream upstream, string venueCacheSeconds = "900") =>
+    private static WebApplicationFactory<Program> Factory(ProgrammeUpstream upstream, string venueCacheSeconds = "900",
+        string eventCacheSeconds = "60", TimeProvider? clock = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseSetting("Passkeys:Origin", "https://cinecompass.example");
-            builder.UseSetting("Passkeys:ServerDomain", "cinecompass.example");
+            builder.UseSetting("App:Origin", "https://cinecompass.example");
+            TestKeycloakSettings.Configure(builder);
+            builder.UseSetting("Cineville:McpGatewaySecret", GatewayCredential);
             builder.UseSetting("ConnectionStrings:Database", "Host=localhost;Database=test;Username=test");
             builder.UseSetting("Cineville:CacheSeconds:venues", venueCacheSeconds);
+            builder.UseSetting("Cineville:CacheSeconds:events", eventCacheSeconds);
             builder.ConfigureServices(services =>
             {
-                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(new ProgrammeClock()));
+                services.Replace(ServiceDescriptor.Singleton<TimeProvider>(clock ?? new ProgrammeClock()));
                 services.AddHttpClient("Cineville").ConfigurePrimaryHttpMessageHandler(() => upstream);
             });
         });
@@ -167,6 +200,7 @@ public sealed class ProgrammeTests
             ["io.modelcontextprotocol/clientInfo"] = new { name = "ProgrammeTests", version = "1.0" }
         };
         using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp");
+        request.Headers.Authorization = new("Bearer", GatewayCredential);
         request.Headers.Accept.ParseAdd("application/json");
         request.Headers.Accept.ParseAdd("text/event-stream");
         request.Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method, @params = args });
@@ -180,6 +214,7 @@ public sealed class ProgrammeTests
 
     private sealed class ProgrammeClock : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => new(2026, 11, 18, 23, 30, 0, TimeSpan.Zero);
+        public DateTimeOffset Now { get; set; } = new(2026, 11, 18, 23, 30, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 }

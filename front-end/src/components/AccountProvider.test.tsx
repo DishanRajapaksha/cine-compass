@@ -3,7 +3,7 @@ import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import AccountProvider,{useAccount} from './AccountProvider';
 import {api,ApiError} from '../services/accountService';
 import {setPreference,snapshot} from '../lib/accountStorage';
-jest.mock('../services/accountService',()=>({api:jest.fn(),passkey:jest.fn(),resetCsrf:jest.fn(),ApiError:jest.requireActual('../services/accountService').ApiError}));
+jest.mock('../services/accountService',()=>({api:jest.fn(),resetCsrf:jest.fn(),ApiError:jest.requireActual('../services/accountService').ApiError}));
 const request=api as jest.Mock;
 function Controls(){const a=useAccount()!;return <><span>{a.user?.name || 'Guest'}</span><span>{a.status}</span><span>{a.error}</span><button onClick={()=>setPreference('cinecompass_schedule_view','"posters"')}>Change view</button><button onClick={a.logout}>Sign out</button></>;}
 beforeEach(()=>{localStorage.clear();jest.clearAllMocks();});
