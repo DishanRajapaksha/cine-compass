@@ -33,8 +33,8 @@ export default function NowShowing(props:CatalogueProps) {
   const invalidRanges = invalidCatalogueRanges(ranges);
   const filtered = Boolean(query || hasCatalogueRanges(ranges));
   const visible = sortCatalogue(filterCatalogue(movies.filter(movie => !props.isWatched(movie) && movie.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),ranges),sort);
-  return <section className="cc-coming-soon cc-now-showing" aria-label="Now showing films">
-    <div className="cc-catalogue-heading"><div className="cc-results-heading"><h2>Now showing</h2><span aria-live="polite">{loading ? 'Finding films…' : `${visible.length} film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></div>
+  return <section className="cc-subpage" aria-label="Now showing films">
+    <header className="cc-page-header"><div className="cc-page-title"><h2>Now showing</h2><span aria-live="polite">{loading ? 'Finding films…' : `${visible.length} film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></header>
     <div className="cc-catalogue-filters cc-now-showing-filters">
       <label className="cc-search"><Search size={16} aria-hidden="true"/><input aria-label="Search now showing films" placeholder="Search films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label className="cc-field">City<select aria-label="Now showing city" value={city || ''} onChange={event => {setDetails(null);setCity(event.target.value || null);}}><option value="">All cities</option>{props.cities.map(value => <option key={value.name} value={value.name}>{value.name}</option>)}{city && !props.cities.some(value => value.name === city) && <option value={city}>{city}</option>}</select></label>

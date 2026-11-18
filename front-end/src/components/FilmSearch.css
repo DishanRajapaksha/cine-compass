@@ -1,0 +1,31 @@
+.cc-film-search-form {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin: 0 0 16px;
+  max-width: 42rem;
+}
+
+.cc-film-search-form .cc-search {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.cc-film-search-form input {
+  min-width: 0;
+}
+
+.cc-app .cc-film-search-form .cc-primary {
+  margin-top: 0;
+}
+
+.cc-film-search .cc-primary:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.cc-film-search .cc-watched-label {
+  color: var(--wine);
+  font-size: 12px;
+}

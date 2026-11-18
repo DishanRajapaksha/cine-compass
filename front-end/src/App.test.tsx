@@ -18,6 +18,37 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+test('searches the full film catalogue, loads more results and uses the existing film actions', async () => {
+  const base = (await service.getPopularMovies()).results[0];
+  const aftersun = {...base, id:'aftersun', title:'Aftersun', releaseYear:2022, showtimes:[]};
+  const related = {...aftersun, id:'related', title:'Afterschool'};
+  service.searchFilms.mockResolvedValueOnce({results:[aftersun],nextCursor:'page-two'})
+    .mockResolvedValueOnce({results:[aftersun,related],nextCursor:null});
+  service.getMovieShowtimes.mockResolvedValueOnce(null);
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+
+  fireEvent.click(within(screen.getByRole('navigation')).getByRole('button',{name:'Search'}));
+  const search = within(screen.getByRole('search'));
+  fireEvent.change(search.getByRole('searchbox',{name:'Film title'}),{target:{value:' Aftersun '}});
+  fireEvent.submit(screen.getByRole('search'));
+  const result = within(await screen.findByRole('article',{name:'Search result Aftersun'}));
+  expect(service.searchFilms).toHaveBeenLastCalledWith('Aftersun',undefined,expect.any(AbortSignal));
+
+  fireEvent.click(result.getByRole('button',{name:'Find showtimes'}));
+  await result.findByText(/No upcoming showtimes/);
+  expect(service.getMovieShowtimes).toHaveBeenLastCalledWith('aftersun',expect.objectContaining({selectedCity:'Amsterdam'}));
+  fireEvent.click(result.getByRole('button',{name:'Save film Aftersun to watchlist'}));
+  expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Show more results'}));
+  await screen.findByRole('article',{name:'Search result Afterschool'});
+  expect(service.searchFilms).toHaveBeenLastCalledWith('Aftersun','page-two',expect.any(AbortSignal));
+  expect(screen.getAllByRole('article',{name:'Search result Aftersun'})).toHaveLength(1);
+  fireEvent.click(result.getByRole('button',{name:'Watched: Aftersun'}));
+  expect(result.getByText('Watched')).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+});
+
 test('watchlist filter includes every showtime of saved films, persists, and resets',async () => {
   const base = (await service.getPopularMovies()).results[0];
   const other = {...base,id:'other',title:'Another Film',showtimes:[{...base.showtimes[0],id:'other-screening'}]};

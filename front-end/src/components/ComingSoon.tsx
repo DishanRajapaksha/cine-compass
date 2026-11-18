@@ -51,8 +51,8 @@ export default function ComingSoon(props:CatalogueProps) {
     const films = weeks.get(week);
     if (films) films.push(movie); else weeks.set(week,[movie]);
   }
-  return <section className="cc-coming-soon" aria-label="Coming soon films">
-    <div className="cc-catalogue-heading"><div className="cc-results-heading"><h2>Coming soon</h2><span aria-live="polite">{loading ? 'Finding upcoming films…' : `${visible.length} upcoming film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></div>
+  return <section className="cc-subpage" aria-label="Coming soon films">
+    <header className="cc-page-header"><div className="cc-page-title"><h2>Coming soon</h2><span aria-live="polite">{loading ? 'Finding upcoming films…' : `${visible.length} upcoming film${visible.length === 1 ? '' : 's'}`}</span></div><CatalogueViewSwitch view={view} onChange={setView}/></header>
     <div className="cc-catalogue-filters"><label className="cc-search"><Search size={16} aria-hidden="true"/><input aria-label="Search upcoming films" placeholder="Search upcoming films…" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label className="cc-field">Sort by<select aria-label="Sort upcoming films" value={sort} onChange={event => setSort(event.target.value as CatalogueSort)}>{catalogueSortOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
     </div>

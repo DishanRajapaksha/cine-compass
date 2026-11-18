@@ -12,29 +12,35 @@ internal sealed class CinevilleClient(
     private const int MaxSnapshotSize = 64 * 1024 * 1024;
     private readonly SemaphoreSlim upstreamSlots = new(8);
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 32 * 1024 * 1024 });
-    private readonly Dictionary<string, Task<JsonElement[]>> pending = new();
+    private readonly Dictionary<string, Task<CinevillePage>> pending = new();
     private readonly object gate = new();
 
-    public Task<JsonElement[]> Venues(CancellationToken ct) => Read("/venues", "venues", null, 900, ct);
-    public Task<JsonElement[]> Events(object body, CancellationToken ct) => Read("/events/search", "events", body, 60, ct);
-    public Task<JsonElement[]> Productions(object body, CancellationToken ct) =>
-        Read("/productions/search", "productions", body, 120, ct);
+    public async Task<JsonElement[]> Venues(CancellationToken ct) =>
+        (await Read("/venues", "venues", null, 900, ct)).Items;
+    public async Task<JsonElement[]> Events(object body, CancellationToken ct) =>
+        (await Read("/events/search", "events", body, 60, ct)).Items;
+    public async Task<JsonElement[]> Productions(object body, CancellationToken ct) =>
+        (await Read("/productions/search", "productions", body, 120, ct)).Items;
+    public Task<CinevillePage> ProductionsByTitle(string pathAndQuery, CancellationToken ct) =>
+        Read(pathAndQuery, "productions", null, 120, ct, singlePage: true);
 
-    private Task<JsonElement[]> Read(string path, string collection, object? body, int seconds, CancellationToken ct)
+    private Task<CinevillePage> Read(string path, string collection, object? body, int seconds,
+        CancellationToken ct, bool singlePage = false)
     {
         var json = body is null ? null : JsonSerializer.Serialize(body);
         var key = path + json;
         lock (gate)
         {
-            if (cache.TryGetValue(key, out JsonElement[]? cached))
+            if (cache.TryGetValue(key, out CinevillePage? cached))
                 return Task.FromResult(cached!);
             if (!pending.TryGetValue(key, out var task))
-                pending[key] = task = FetchAndCache(key, path, collection, json, seconds);
+                pending[key] = task = FetchAndCache(key, path, collection, json, seconds, singlePage);
             return task.WaitAsync(ct);
         }
     }
 
-    private async Task<JsonElement[]> FetchAndCache(string key, string path, string collection, string? body, int seconds)
+    private async Task<CinevillePage> FetchAndCache(string key, string path, string collection, string? body,
+        int seconds, bool singlePage)
     {
         // Register the shared task before its continuation can remove it.
         await Task.Yield();
@@ -43,16 +49,16 @@ internal sealed class CinevilleClient(
         try
         {
             await upstreamSlots.WaitAsync(timeout.Token);
-            JsonElement[] items;
+            CinevillePage page;
             long size;
-            try { (items, size) = await Fetch(path, collection, body, timeout.Token); }
+            try { (page, size) = await Fetch(path, collection, body, singlePage, timeout.Token); }
             finally { upstreamSlots.Release(); }
             var ttl = configuration.GetValue($"Cineville:CacheSeconds:{collection}", seconds);
             if (ttl > 0)
-                cache.Set(key, items, new MemoryCacheEntryOptions()
+                cache.Set(key, page, new MemoryCacheEntryOptions()
                     .SetSize(Math.Max(1, size + key.Length * 2L))
                     .SetAbsoluteExpiration(TimeSpan.FromSeconds(ttl)));
-            return items;
+            return page;
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException
             or InvalidOperationException or OperationCanceledException)
@@ -66,8 +72,8 @@ internal sealed class CinevilleClient(
         }
     }
 
-    private async Task<(JsonElement[] Items, long Size)> Fetch(
-        string path, string collection, string? body, CancellationToken ct)
+    private async Task<(CinevillePage Page, long Size)> Fetch(
+        string path, string collection, string? body, bool singlePage, CancellationToken ct)
     {
         using var client = clients.CreateClient(ClientName);
         Uri? url = new(client.BaseAddress!, path);
@@ -99,9 +105,10 @@ internal sealed class CinevilleClient(
                 items.Add(id, item.Clone());
             }
             var href = page.Field("_links").Field("next").Text("href");
+            if (singlePage) return (new(items.Values.ToArray(), href), size + (href?.Length ?? 0) * 2L);
             url = href is null ? null : NextPage(url, path, href);
         }
-        return (items.Values.ToArray(), size);
+        return (new(items.Values.ToArray(), null), size);
     }
 
     private static Uri NextPage(Uri current, string path, string href)
@@ -115,6 +122,8 @@ internal sealed class CinevilleClient(
 
     public void Dispose() => cache.Dispose();
 }
+
+internal sealed record CinevillePage(JsonElement[] Items, string? NextHref);
 
 internal sealed class CinevilleUpstreamException(Exception inner)
     : Exception("Cineville programme data is temporarily unavailable.", inner);

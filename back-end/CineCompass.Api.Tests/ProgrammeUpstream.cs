@@ -36,6 +36,10 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
             "/events/search" when body!.Contains("\"eq\":\"unknown\"", StringComparison.Ordinal) => Page("events", null),
             "/events/search" when next => SecondEvents(body!),
             "/events/search" => Page("events", CursorOverride ?? "?page%5Bafter%5D=next", Event("early", 18, "nl")),
+            "/productions/by-title/A%3FFilm" when url.Query.Contains("page%5Bafter%5D=next", StringComparison.Ordinal) =>
+                Page("productions", null, """{"id":"related","title":"Film Club","attributes":{"releaseYear":2022}}"""),
+            "/productions/by-title/A%3FFilm" =>
+                Page("productions", CursorOverride ?? "/productions/by-title/A?Film?page[limit]=24&page[after]=next", Film),
             "/productions/search" when body!.Contains("\"id\":{\"eq\":\"film\"}", StringComparison.Ordinal) =>
                 Page("productions", null, Film),
             "/productions/search" when body!.Contains("\"id\":{\"eq\":", StringComparison.Ordinal) =>

@@ -41,6 +41,12 @@ internal static class ProgrammeRest
             return movie is null ? Results.Text("null", "application/json") : Results.Ok(movie);
         });
 
+        group.MapGet("/films/search", async (string? q, string? cursor, CinevilleProgramme programme, CancellationToken ct) =>
+        {
+            var page = await programme.SearchCatalogue(q, cursor, ct);
+            return new { results = page.Films.Select(f => AsMovie(f, [], catalogue: true)).ToArray(), page.NextCursor };
+        });
+
         group.MapGet("/now-showing", async (string? city, CinevilleProgramme programme, CancellationToken ct) =>
             (await programme.NowShowing(city, ct)).Select(f => AsMovie(f, [], catalogue: true)).ToArray());
 

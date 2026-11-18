@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Menu } from 'lucide-react';
 
-type Page = 'schedule'|'watchlist'|'upcoming'|'now-showing';
+export type Page = 'schedule'|'search'|'watchlist'|'upcoming'|'now-showing';
 type Props = {page:Page;count:number;onPage:(page:Page)=>void;onSettings:()=>void};
 export default function HeaderNavigation({page,count,onPage,onSettings}:Props) {
   const [open,setOpen] = useState(false);
@@ -29,6 +29,7 @@ export default function HeaderNavigation({page,count,onPage,onSettings}:Props) {
   }
   return <nav aria-label="Main navigation">
     <button className={page === 'schedule' ? 'active' : ''} onClick={() => {setOpen(false);onPage('schedule');}}>Schedule</button>
+    <button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => {setOpen(false);onPage('search');}}>Search</button>
     <button className={page === 'watchlist' ? 'active' : ''} onClick={() => {setOpen(false);onPage('watchlist');}}>Watchlist <span className="cc-count">{count}</span></button>
     <div className="cc-header-menu" ref={container} onBlur={event => {
       // A touch tap may blur without a new focus target before its click arrives.

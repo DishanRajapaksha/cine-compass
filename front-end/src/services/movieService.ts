@@ -2,6 +2,8 @@ import { City, Movie, MovieFilters, MovieResponse } from '../types/Movie';
 
 const API = '/api/cineville';
 
+export type FilmSearchPage = { results: Movie[]; nextCursor: string | null };
+
 function screeningParams(filters?: MovieFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (!filters) return params;
@@ -29,9 +31,9 @@ function screeningParams(filters?: MovieFilters): URLSearchParams {
   return params;
 }
 
-async function read<T>(path: string, params = new URLSearchParams()): Promise<T> {
+async function read<T>(path: string, params = new URLSearchParams(), signal?: AbortSignal): Promise<T> {
   const query = params.toString();
-  const response = await fetch(`${API}${path}${query ? `?${query}` : ''}`);
+  const response = await fetch(`${API}${path}${query ? `?${query}` : ''}`, signal ? { signal } : undefined);
   if (!response.ok) throw new Error(`Cineville request failed with ${response.status}`);
   return response.json() as Promise<T>;
 }
@@ -60,9 +62,9 @@ export const movieService = {
   getMovieShowtimes: (movieId: string, filters?: MovieFilters): Promise<Movie | null> =>
     read(`/films/${encodeURIComponent(movieId)}/showtimes`, screeningParams(filters)),
 
-  searchMovies: (query: string, filters?: MovieFilters): Promise<MovieResponse> => {
-    const params = screeningParams(filters);
-    params.set('query', query);
-    return read('/screenings', params);
+  searchFilms: (query: string, cursor?: string, signal?: AbortSignal): Promise<FilmSearchPage> => {
+    const params = new URLSearchParams({ q: query });
+    if (cursor) params.set('cursor', cursor);
+    return read('/films/search', params, signal);
   }
 };

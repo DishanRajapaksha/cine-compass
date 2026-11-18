@@ -5,8 +5,8 @@ import { formatDuration, languageName } from '../lib/schedule';
 import { plainDescription } from './ScreeningRow';
 import ImdbLink from './ImdbLink';
 
-type Props = {movie:Movie;count?:number;releaseLabel?:string;compact:boolean;saved:boolean;description?:React.ReactNode;onDetails?:()=>void;onToggleFilm:()=>void;onMarkWatched:()=>void};
-export default function MovieGroupSummary({movie,count,releaseLabel,description,compact,saved,onDetails,onToggleFilm,onMarkWatched}:Props) {
+type Props = {movie:Movie;count?:number;releaseLabel?:string;compact:boolean;saved:boolean;watched?:boolean;description?:React.ReactNode;onDetails?:()=>void;onToggleFilm:()=>void;onMarkWatched:()=>void};
+export default function MovieGroupSummary({movie,count,releaseLabel,description,compact,saved,watched,onDetails,onToggleFilm,onMarkWatched}:Props) {
   const [posterFailed,setPosterFailed] = useState(false);
   return <div className={`cc-movie-summary${compact ? ' is-compact-summary' : ''}`}>
     {!compact && (onDetails ? <button className="cc-movie-summary-poster" onClick={onDetails} aria-label={`Details for ${movie.title}`} title={`Details for ${movie.title}`}>
@@ -20,8 +20,10 @@ export default function MovieGroupSummary({movie,count,releaseLabel,description,
       {description !== undefined ? description : movie.overview && <p className="cc-movie-summary-description">{plainDescription(movie.overview)}</p>}
       <div className="cc-movie-summary-actions">
         <ImdbLink title={movie.title} year={movie.releaseYear}/>
-        <button aria-label={`${saved ? 'Remove' : 'Save'} film ${movie.title} ${saved ? 'from' : 'to'} watchlist`} aria-pressed={saved} onClick={onToggleFilm}><Bookmark size={14} fill={saved ? 'currentColor' : 'none'}/>{saved ? 'On watchlist' : 'Watchlist'}</button>
-        <button aria-label={`Watched: ${movie.title}`} onClick={onMarkWatched}><EyeClosed size={14}/>Watched</button>
+        {watched ? <span className="cc-watched-label">Watched</span> : <>
+          <button aria-label={`${saved ? 'Remove' : 'Save'} film ${movie.title} ${saved ? 'from' : 'to'} watchlist`} aria-pressed={saved} onClick={onToggleFilm}><Bookmark size={14} fill={saved ? 'currentColor' : 'none'}/>{saved ? 'On watchlist' : 'Watchlist'}</button>
+          <button aria-label={`Watched: ${movie.title}`} onClick={onMarkWatched}><EyeClosed size={14}/>Watched</button>
+        </>}
       </div>
     </div>
   </div>;

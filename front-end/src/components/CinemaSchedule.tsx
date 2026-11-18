@@ -13,9 +13,11 @@ import ScreeningRow from './ScreeningRow';
 import MovieGroupSummary from './MovieGroupSummary';
 import ComingSoon from './ComingSoon';
 import NowShowing from './NowShowing';
-import HeaderNavigation from './HeaderNavigation';
+import HeaderNavigation, { Page } from './HeaderNavigation';
+import FilmSearch from './FilmSearch';
 import FilmDetails from './FilmDetails';
 import './CinemaSchedule.css';
+import './Subpages.css';
 import CinemaAnimation from './CinemaAnimation';
 import SettingsModal from './SettingsModal';
 
@@ -98,7 +100,7 @@ export default function CinemaSchedule() {
       setDetails(s => s?.movie.id === movie.id ? null : s);
     }
   };
-  const [page,setPage] = useState<'schedule'|'watchlist'|'upcoming'|'now-showing'>('schedule');
+  const [page,setPage] = useState<Page>('schedule');
   const [filtersOpen,setFiltersOpen] = useState(false);
   const [selected,setSelected] = useState<Screening|null>(null);
   const [details,setDetails] = useState<Screening|null>(null);
@@ -153,11 +155,14 @@ export default function CinemaSchedule() {
     const date = amsterdamDate(screening.showtime.startDate);
     setFilters(f => ({...f,startDate:date,endDate:date,startTime:null,endTime:'23:59'}));
   };
+  const catalogueProps = {films:visibleFilms,isWatched:isWatchedMovie,cities,city:filters.selectedCity,saved:visibleSaved,
+    onToggleFilm:toggleFilm,onMarkWatched:(movie:Movie) => markWatched({id:movie.id,title:movie.title,year:movie.releaseYear}),
+    onSave:toggleSave,onPlan:planScreening};
   return <div className="cc-app">
     <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><HeaderNavigation page={page} count={visibleFilms.length} onPage={setPage} onSettings={() => setSettingsOpen(true)}/></header>
     <main className="cc-main">
     {watchedError && <p className="cc-error" role="alert">{watchedError}</p>}
-    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => setFilms(prev => prev.filter(f => f.id !== id))} saved={visibleSaved} onMarkWatched={markWatched} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : page === 'now-showing' ? <NowShowing films={visibleFilms} isWatched={isWatchedMovie} cities={cities} city={filters.selectedCity} saved={visibleSaved} onToggleFilm={toggleFilm} onMarkWatched={movie => markWatched({id:movie.id,title:movie.title,year:movie.releaseYear})} onSave={toggleSave} onPlan={planScreening}/> : page === 'upcoming' ? <ComingSoon films={visibleFilms} isWatched={isWatchedMovie} cities={cities} city={filters.selectedCity} saved={visibleSaved} onToggleFilm={toggleFilm} onMarkWatched={movie => markWatched({id:movie.id,title:movie.title,year:movie.releaseYear})} onSave={toggleSave} onPlan={planScreening}/> : <>
+    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => setFilms(prev => prev.filter(f => f.id !== id))} saved={visibleSaved} onMarkWatched={markWatched} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : page === 'search' ? <FilmSearch {...catalogueProps}/> : page === 'now-showing' ? <NowShowing {...catalogueProps}/> : page === 'upcoming' ? <ComingSoon {...catalogueProps}/> : <>
       <button className="cc-mobile-filters" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(v => !v)}><SlidersHorizontal size={17}/> {filtersOpen ? 'Hide filters' : 'Filters & search'}</button>
       <div className="cc-layout"><div className={filtersOpen ? 'cc-filter-rail is-open' : 'cc-filter-rail'}><ScheduleFilters showCinemaLists showWatchlistFilter filters={filters} cities={cities} query={query} languages={languages} specials={specials} loading={citiesLoading} onQuery={setQuery} onChange={setFilters} onReset={reset}/>{cityError && <p className="cc-error">{cityError} <button onClick={() => setRetry(v => v+1)}>Retry</button></p>}</div>
       <section className="cc-programme" aria-label="Programme">

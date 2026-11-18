@@ -62,6 +62,10 @@ Saves include the expected account ID and revision. Conflicting edits are reject
 
 ## Cineville REST and MCP
 
+Use **Search** in the header to look up titles across the Cineville catalogue
+and find showtimes or add a film to your watchlist. Search includes films
+without upcoming screenings and labels watched films.
+
 The backend is the Cineville API client for both the frontend and MCP. The
 frontend reads the following same-origin GET endpoints:
 
@@ -69,6 +73,7 @@ frontend reads the following same-origin GET endpoints:
 | --- | --- |
 | `/api/cineville/cinemas` | Participating cinemas grouped by city |
 | `/api/cineville/screenings` | Screenings grouped by film |
+| `/api/cineville/films/search?q=Aftersun` | Catalogue films ranked by title relevance. Pass the returned `nextCursor` as `cursor` with the same query to fetch more. |
 | `/api/cineville/films/{id}/showtimes` | A film with upcoming screenings, or JSON `null` |
 | `/api/cineville/now-showing` | Films with a screening in the next seven days |
 | `/api/cineville/upcoming-films` | Films with a premiere date after today |
