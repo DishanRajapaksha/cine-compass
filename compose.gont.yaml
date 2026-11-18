@@ -1,6 +1,8 @@
 name: cinecompass
 services:
   app:
+    environment:
+      Cineville__McpOrigin: https://leyline.talesfrom.earth
     ports: !reset []
     networks:
       default: {}

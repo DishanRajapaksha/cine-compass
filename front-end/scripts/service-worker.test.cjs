@@ -23,10 +23,10 @@ function dispatch(handler, pathname, options = {}) {
   return response;
 }
 
-test('account APIs, mutations and third-party data bypass the worker', () => {
-  const fail = () => { throw new Error('Private requests must bypass caching'); };
+test('same-origin APIs, mutations and third-party data bypass the worker', () => {
+  const fail = () => { throw new Error('API requests must bypass caching'); };
   const handlers = worker(fail, { open: fail });
-  for (const pathname of ['/api/auth/me', '/api/auth/csrf', '/api/settings', '/api/passkeys/options']) {
+  for (const pathname of ['/api/auth/me', '/api/auth/csrf', '/api/settings', '/api/passkeys/options', '/api/cineville/screenings']) {
     assert.equal(dispatch(handlers.fetch, pathname), undefined);
   }
   assert.equal(dispatch(handlers.fetch, '/', { method: 'POST' }), undefined);

@@ -7,7 +7,7 @@ COPY front-end/ ./
 RUN --mount=type=cache,id=cinecompass-webpack,target=/src/front-end/node_modules/.cache,sharing=locked \
     GENERATE_SOURCEMAP=false npm run build
 
-FROM mcr.microsoft.com/dotnet/sdk:11.0.100-rc.1 AS backend
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100 AS backend
 WORKDIR /src
 COPY global.json ./
 COPY back-end/CineCompass.Api/CineCompass.Api.csproj back-end/CineCompass.Api/
@@ -17,7 +17,7 @@ COPY back-end/CineCompass.Api/ back-end/CineCompass.Api/
 RUN --mount=type=cache,id=cinecompass-nuget,target=/root/.nuget/packages,sharing=locked \
     dotnet publish back-end/CineCompass.Api -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.1
+FROM mcr.microsoft.com/dotnet/aspnet:11.0.0
 WORKDIR /app
 COPY --from=backend /app ./
 COPY --from=frontend /src/front-end/build ./wwwroot

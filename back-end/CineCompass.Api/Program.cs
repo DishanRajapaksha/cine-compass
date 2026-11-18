@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.RateLimiting;
 using CineCompass.Api;
+using CineCompass.Api.Cineville;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -36,6 +37,7 @@ builder.Services.AddRateLimiter(o => {
     o.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 262144);
+builder.AddCineville();
 var app = builder.Build();
 if (args.Contains("--migrate"))
 {
@@ -141,6 +143,8 @@ app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserM
     return Results.Ok(new { revision = row.Revision });
 }).RequireAuthorization();
 app.MapCalendarFeed(origin);
+app.MapCineville();
+app.MapCinevilleMcp(origin);
 app.Map("/api/{**path}", () => Results.NotFound());
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions {

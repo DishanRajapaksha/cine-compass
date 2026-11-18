@@ -9,7 +9,7 @@ Self-hosted React frontend, ASP.NET Core backend, PostgreSQL, and passkey-only a
 - `back-end/CineCompass.Api.Tests/`: authentication, CSRF, ownership, revision, and challenge tests.
 - `Dockerfile` and `compose.yaml`: frontend/API image, PostgreSQL, and migration job.
 
-`global.json` pins SDK **11.0.100-rc.1.26425.128**, the latest available .NET 11 release when added. Packages and containers use RC1. Install that SDK first. On this development Mac it is installed separately in `~/.local/share/cinecompass-dotnet`; use `export PATH="$HOME/.local/share/cinecompass-dotnet:$PATH"` in your terminal to use it.
+`global.json` pins stable SDK **11.0.100**. Docker uses the corresponding stable .NET 11 SDK and ASP.NET runtime. The PostgreSQL provider's published 11.0 RC3 package currently requires the matching EF Core and Identity EF packages.
 
 ## Local development
 
@@ -59,6 +59,49 @@ Guest settings remain separately saved on this device and are restored on sign-o
 Filters, display mode, cinema order, planner preferences, hidden films, saved films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
 
 Saves include the expected account ID and revision. Conflicting edits are rejected rather than silently overwritten. Reload account settings discards unsynced changes and loads the server version. Concurrent list edits are not merged in this initial implementation. Offline changes retry while the page stays open and when connectivity returns; there is no persistent offline upload queue. A session switch in another tab reloads this tab to prevent mixing accounts.
+
+## Cineville REST and MCP
+
+The backend is the Cineville API client for both the frontend and MCP. The
+frontend reads the following same-origin GET endpoints:
+
+| Path | Data |
+| --- | --- |
+| `/api/cineville/cinemas` | Participating cinemas grouped by city |
+| `/api/cineville/screenings` | Screenings grouped by film |
+| `/api/cineville/films/{id}/showtimes` | A film with upcoming screenings, or JSON `null` |
+| `/api/cineville/now-showing` | Films with a screening in the next seven days |
+| `/api/cineville/upcoming-films` | Films with a premiere date after today |
+| `/api/cineville/specials` | Categories found in the matching programme |
+
+Use `city` to filter by city. Screening endpoints accept repeated `cinema`,
+`language`, `subtitle`, and `special` parameters. Values within each parameter
+match any selection, and different parameters must all match. Use
+`startDate` and `endDate` (inclusive, `YYYY-MM-DD`) and optional `startTime`
+and `endTime` (`HH:mm`) in Europe/Amsterdam. With no dates, the programme
+defaults to the rest of today; a film lookup defaults to all published future
+showtimes. A date without an end date searches that day, except for a film
+lookup, which stays open-ended. REST returns 400 for invalid date ranges and
+502 when the upstream catalogue is unavailable.
+
+The official C# MCP SDK serves Streamable HTTP at `/mcp` on the same backend.
+Connect locally at `http://localhost:5080/mcp`, or use
+`https://leyline.talesfrom.earth/cineville` once the tracked Leyline route has
+been deployed. The read-only tools are `list_cinemas`, `search_screenings`,
+`get_film_showtimes`, `now_showing`, `upcoming_films` and `get_specials`.
+Use a film ID from a catalogue or screening result to look up its showtimes.
+For paged results, pass the returned `nextOffset` as `offset` with the same
+filters. The default page holds 25 entries and the maximum is 100. Results
+reflect the current programme, which can change between pages.
+
+The backend follows Cineville's cursor links on the original HTTPS origin and
+endpoint. The in-process cache coalesces concurrent reads of the same request.
+Default freshness is 60 seconds for screenings, 120 for film catalogues and
+900 for cinemas. Override with `Cineville__CacheSeconds__events`,
+`Cineville__CacheSeconds__productions` or `Cineville__CacheSeconds__venues`.
+Set a value to zero to disable caching that collection. An alternate upstream
+uses `Cineville__BaseUrl` and must be an HTTPS origin. A separately hosted MCP
+gateway can set its trusted browser origin with `Cineville__McpOrigin`.
 
 ## Self-hosted deployment
 

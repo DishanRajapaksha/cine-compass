@@ -2,6 +2,9 @@
 **/build
 **/bin
 **/obj
+# Some .NET tooling emits literal Windows-style directory names on macOS.
+**/bin\\*
+**/obj\\*
 **/.data
 **/wwwroot
 .git
