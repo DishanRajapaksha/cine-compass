@@ -7,7 +7,8 @@ internal sealed record City(string Name, Cinema[] Theaters);
 internal sealed record ProgrammeFilter(
     string? City = null, string[]? Cinemas = null, string[]? Languages = null,
     string[]? Subtitles = null, string[]? Specials = null,
-    string? StartDate = null, string? EndDate = null, string? StartTime = null, string? EndTime = null);
+    string? StartDate = null, string? EndDate = null, string? StartTime = null, string? EndTime = null,
+    bool MatchEitherLanguage = false);
 internal sealed record Film(
     string Id, string Title, string PosterUrl, string? PremiereDate, string Overview, string? OverviewLanguage,
     int Duration, string[] Directors, string[] Cast, int ReleaseYear, string[] SpokenLanguages, string? CreatedAt);

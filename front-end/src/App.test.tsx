@@ -59,7 +59,7 @@ test('watchlist filter keeps films when the last saved screening is removed',asy
   expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
 });
 
-test('hides all screenings across views and reloads, then restores from Settings',async () => {
+test('marks a film watched across views and reloads, then restores from Settings',async () => {
   Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
   Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});
   const response=await service.getPopularMovies();
@@ -68,7 +68,7 @@ test('hides all screenings across views and reloads, then restores from Settings
   const view=render(<App/>);
   await screen.findAllByRole('button',{name:'Perfect Days'});
   fireEvent.click(screen.getAllByRole('button',{name:/^Save Perfect Days/})[0]);
-  fireEvent.click(screen.getAllByRole('button',{name:'Hide Perfect Days permanently'})[0]);
+  fireEvent.click(screen.getAllByRole('button',{name:'Watched: Perfect Days'})[0]);
   expect(screen.queryByRole('button',{name:'Perfect Days'})).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Compact'}));
   fireEvent.click(screen.getByRole('button',{name:'Reset filters'}));
@@ -83,7 +83,7 @@ test('hides all screenings across views and reloads, then restores from Settings
   const dialog=screen.getByRole('dialog',{name:'Settings'});
   expect(within(dialog).getByLabelText('OMDb API key')).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button',{name:'Restore Perfect Days'}));
-  expect(within(dialog).getByText('No hidden movies.')).toBeInTheDocument();
+  expect(within(dialog).getByText('No watched films.')).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button',{name:'Close settings'}));
   expect(screen.getAllByRole('button',{name:'Perfect Days'})).toHaveLength(2);
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
@@ -117,11 +117,11 @@ test('film details shows artwork, readable language, screening actions, and a mi
   expect(within(dialog).getByText('2023 · 2h 3m · Japanese')).toBeInTheDocument();
   const poster=within(dialog).getByRole('img',{name:'Perfect Days poster'});
   expect(poster).toHaveAttribute('src','https://example.com/poster.jpg');
-  fireEvent.click(within(dialog).getByRole('button',{name:'Save screening'}));
+  fireEvent.click(within(dialog).getByRole('button',{name:'Save'}));
   expect(within(dialog).getByRole('button',{name:'Remove saved screening'})).toHaveAttribute('aria-pressed','true');
   fireEvent.error(poster);
   expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button',{name:'Plan my evening'}));
+  fireEvent.click(within(dialog).getByRole('button',{name:'Plan after'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
 });
@@ -248,7 +248,7 @@ test('planning from film details preserves schedule filters and search',async ()
   await screen.findByRole('button',{name:'Perfect Days'});
   fireEvent.change(screen.getByRole('textbox',{name:'Search films'}),{target:{value:'Perfect'}});
   fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan my evening'}));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan after'}));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   const {startDate,endDate,startTime,endTime,...expected}=preferences;
   expect(JSON.parse(localStorage.getItem('cinecompass_schedule_filters') || '{}')).toMatchObject(expected);
@@ -317,7 +317,7 @@ test.each(['Posters','Compact'])('row planning in %s hides unavailable films and
   render(<App/>); await screen.findAllByRole('button',{name:'Next Film'});
   fireEvent.click(screen.getByRole('button',{name:view}));
   if (view==='Compact') fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));
-  fireEvent.click(screen.getByRole('button',{name:'Plan my evening after Perfect Days at 18:00'}));
+  fireEvent.click(screen.getByRole('button',{name:'Plan after Perfect Days at 18:00'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'18:00 20:00 Your starting point'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
@@ -332,7 +332,7 @@ test.each(['cinecompass_planner_prefs','cineville_timeline_prefs'])('starts plan
   localStorage.setItem(storageKey,JSON.stringify({availabilityMode:'highlight',hideSameMovie:false,bufferMinutes:25}));
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
-  fireEvent.click(screen.getByRole('button',{name:/Plan my evening after Perfect Days/}));
+  fireEvent.click(screen.getByRole('button',{name:/Plan after Perfect Days/}));
   expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
   expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
@@ -341,7 +341,7 @@ test.each(['cinecompass_planner_prefs','cineville_timeline_prefs'])('starts plan
   expect(screen.getByRole('button',{name:'Highlight available'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).not.toBeChecked();
   fireEvent.click(screen.getByRole('button',{name:'Clear starting point'}));
-  fireEvent.click(screen.getByRole('button',{name:/Plan my evening after Perfect Days/}));
+  fireEvent.click(screen.getByRole('button',{name:/Plan after Perfect Days/}));
   expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
   expect(screen.getByRole('checkbox',{name:'Hide other showtimes of this movie'})).toBeChecked();
   expect(screen.getByRole('spinbutton',{name:'Travel buffer minutes'})).toHaveValue(25);
@@ -357,7 +357,7 @@ test.each(['time','film details'])('planning from %s resets both hide options',a
     Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
     Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});
     fireEvent.click(screen.getByRole('button',{name:'Perfect Days'}));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan my evening'}));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'Plan after'}));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   }
   expect(screen.getByRole('button',{name:'Hide unavailable'})).toHaveAttribute('aria-pressed','true');
@@ -460,7 +460,7 @@ test('film details can save a film without saving the selected screening',async 
   const dialog=screen.getByRole('dialog',{name:'Perfect Days'});
   fireEvent.click(within(dialog).getByRole('button',{name:'Save film to watchlist'}));
   expect(within(dialog).getByRole('button',{name:'Remove film from watchlist'})).toHaveAttribute('aria-pressed','true');
-  expect(within(dialog).getByRole('button',{name:'Save screening'})).toHaveAttribute('aria-pressed','false');
+  expect(within(dialog).getByRole('button',{name:'Save'})).toHaveAttribute('aria-pressed','false');
   fireEvent.click(within(dialog).getByRole('button',{name:'Remove film from watchlist'}));
   expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
 });
@@ -471,10 +471,10 @@ test('More offers labelled secondary actions and closes after planning',async ()
   const more=screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'});
   fireEvent.click(more);
   const actions=screen.getByRole('group',{name:'More actions for Perfect Days'});
-  expect(within(actions).getByRole('button',{name:'Plan my evening'})).toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'Hide Perfect Days permanently'})).toBeInTheDocument();
-  expect(within(actions).getByRole('button',{name:'Hide this film'})).toBeInTheDocument();
-  fireEvent.click(within(actions).getByRole('button',{name:'Plan my evening'}));
+  expect(within(actions).getByRole('button',{name:'Plan after'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Watched: Perfect Days'})).toBeInTheDocument();
+  expect(within(actions).getByRole('button',{name:'Watched'})).toBeInTheDocument();
+  fireEvent.click(within(actions).getByRole('button',{name:'Plan after'}));
   expect(screen.queryByRole('group',{name:'More actions for Perfect Days'})).not.toBeInTheDocument();
   expect(more).toHaveAttribute('aria-expanded','false');
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(0);
@@ -495,8 +495,8 @@ test('compact primary actions and More share save state, and More closes after s
   expect(actions.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toBeInTheDocument();
   expect(actions.getByRole('link',{name:'Tickets for Perfect Days'})).toHaveAttribute('href','https://example.com/tickets');
   expect(actions.getByRole('button',{name:'Save film Perfect Days to watchlist'})).toBeInTheDocument();
-  expect(actions.getByRole('button',{name:'Hide this film'})).toBeInTheDocument();
-  expect(actions.getByRole('button',{name:'Plan my evening after Perfect Days at 23:58'})).toBeInTheDocument();
+  expect(actions.getByRole('button',{name:'Watched'})).toBeInTheDocument();
+  expect(actions.getByRole('button',{name:'Plan after Perfect Days at 23:58'})).toBeInTheDocument();
   fireEvent.click(actions.getByRole('button',{name:'Save Perfect Days at 23:58'}));
   expect(more).toHaveAttribute('aria-expanded','false');
   expect(screen.queryByRole('group',{name:'More actions for Perfect Days'})).not.toBeInTheDocument();
@@ -643,14 +643,17 @@ test.each([
   ['Now showing','Black Girl (re-release)','Black Girl',1966,'bbc8fbc4-a5c3-4a82-a4d9-e7c4a7a16818'],
   ['Coming soon','Below the Clouds','Below the Clouds',2025,'678ad4ad-e244-470c-97e4-8405b2f4e548'],
   ['Coming soon','Black Girl (re-release)','Black Girl',1966,'bbc8fbc4-a5c3-4a82-a4d9-e7c4a7a16818']
-] as const)('%s honors an older hidden entry for %s',async (page,title,oldTitle,year,id) => {
+] as const)('%s honors a legacy watched-film entry for %s',async (page,title,oldTitle,year,id) => {
   const base=(await service.getPopularMovies()).results[0];
   const movie={...base,id,title,releaseYear:year,release_date:'2099-10-22',showtimes:[]};
   const other={...movie,id:'visible-film',title:'Visible Film'};
-  localStorage.setItem('cinecompass_hidden_movies',JSON.stringify([{id:'older-catalogue-id',title:oldTitle,year}]));
+  const legacy = JSON.stringify([{id:'older-catalogue-id',title:oldTitle,year}]);
+  localStorage.setItem('cinecompass_hidden_movies',legacy);
   service.getUpcomingMovies.mockResolvedValue([movie,other]);
   service.getNowShowingMovies.mockResolvedValue([movie,other]);
   render(<App/>);
+  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(legacy);
+  expect(localStorage.getItem('cinecompass_hidden_movies')).toBeNull();
   fireEvent.click(screen.getByRole('button',{name:'More pages'}));
   fireEvent.click(screen.getByRole('menuitem',{name:page}));
   await screen.findByRole('article',{name:`${page === 'Coming soon' ? 'Upcoming' : 'Now showing'} Visible Film`});

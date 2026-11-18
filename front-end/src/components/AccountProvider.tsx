@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Account, api, ApiError, resetCsrf, Settings } from '../services/accountService';
 import OpeningScreen from './OpeningScreen';
-import { applySettings, settingsEvent, snapshot } from '../lib/accountStorage';
+import { applySettings, normalizeWatchedSettings, settingsEvent, snapshot } from '../lib/accountStorage';
 
 type AccountState = {user:Account|null;status:string;error:string;busy:boolean;login:()=>Promise<void>;logout:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
 const AccountContext = createContext<AccountState | null>(null);
@@ -26,7 +26,11 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
     (async () => {
       try {
         const wasAccount=localStorage.getItem(activeKey);
-        if (wasAccount) {guest.current=JSON.parse(localStorage.getItem(guestKey)||'{}');applySettings(guest.current);} else {guest.current=snapshot();localStorage.setItem(guestKey,JSON.stringify(guest.current));}
+        if (wasAccount) {
+          guest.current=normalizeWatchedSettings(JSON.parse(localStorage.getItem(guestKey)||'{}'));
+          applySettings(guest.current);
+        } else {guest.current=snapshot();}
+        localStorage.setItem(guestKey,JSON.stringify(guest.current));
         const {user:account}=await api<{user:Account|null}>('/auth/me');
         if (!active) return;
         if (account) await load(account);else localStorage.removeItem(activeKey);

@@ -32,9 +32,10 @@ public sealed partial class ProgrammeTests
 
         var results = await Call(http, "search_screenings", new
         {
-            city = "Amsterdam", cinema = "Eye Filmmuseum", startDate = "2026-11-19", language = "fr-FR", subtitles = "English"
+            city = "Amsterdam", cinema = "Eye Filmmuseum", startDate = "2026-11-19", language = "fr-FR",
+            subtitles = "English", languageMatch = "and"
         });
-        Assert.Equal("late", results.GetProperty("items")[0].GetProperty("showtime").GetProperty("id").GetString());
+        Assert.Equal("late", ScreeningId(Assert.Single(results.GetProperty("items").EnumerateArray())));
         var requests = upstream.Requests.Where(r => r.Path.StartsWith("/events/search", StringComparison.Ordinal)).ToArray();
         Assert.Equal(2, requests.Length);
         Assert.Equal("/events/search?page%5Bafter%5D=next", requests[1].Path);
@@ -43,7 +44,7 @@ public sealed partial class ProgrammeTests
     }
 
     [Fact]
-    public async Task Mcp_screening_search_defaults_to_both_English_filters_and_allows_independent_overrides()
+    public async Task Mcp_screening_search_defaults_to_either_English_filter_and_allows_requiring_both()
     {
         using var upstream = new ProgrammeUpstream { IncludeEnglishScreenings = true };
         using var factory = Factory(upstream);
@@ -56,14 +57,24 @@ public sealed partial class ProgrammeTests
         var parameters = search.GetProperty("inputSchema").GetProperty("properties");
         Assert.Equal("en", parameters.GetProperty("language").GetProperty("default").GetString());
         Assert.Equal("en", parameters.GetProperty("subtitles").GetProperty("default").GetString());
+        Assert.Equal("or", parameters.GetProperty("languageMatch").GetProperty("default").GetString());
 
-        Assert.Equal(new[] { "english" }, await Search(new { startDate = date }));
-        Assert.Equal(new[] { "late" }, await Search(new { startDate = date, language = "fr" }));
-        Assert.Equal(new[] { "dutch-subs" }, await Search(new { startDate = date, subtitles = "nl" }));
+        Assert.Equal(new[] { "late", "english", "dutch-subs" }, await Search(new { startDate = date }));
+        Assert.Equal(new[] { "english" }, await Search(new { startDate = date, languageMatch = "and" }));
+        Assert.Equal(new[] { "early", "late", "english" }, await Search(new { startDate = date, language = "fr" }));
+        Assert.Equal(new[] { "early", "english", "dutch-subs" }, await Search(new { startDate = date, subtitles = "nl" }));
         Assert.Equal(new[] { "late", "english" }, await Search(new { startDate = date, language = "any" }));
         Assert.Equal(new[] { "english", "dutch-subs" }, await Search(new { startDate = date, subtitles = "any" }));
-        Assert.Equal(new[] { "early", "late", "english", "dutch-subs" },
-            await Search(new { startDate = date, language = "any", subtitles = "any" }));
+        foreach (var languageMatch in new[] { "or", "and" })
+        {
+            Assert.Equal(new[] { "english", "dutch-subs" }, await Search(new { startDate = date, subtitles = "any", languageMatch }));
+            Assert.Equal(new[] { "early", "late", "english", "dutch-subs" },
+                await Search(new { startDate = date, language = "any", subtitles = "any", languageMatch }));
+        }
+        await AssertToolError(http, "search_screenings", new { startDate = date, languageMatch = "xor" });
+
+        var film = await Call(http, "get_film_showtimes", new { filmId = "film", startDate = date, language = "en", subtitles = "en" });
+        Assert.Equal("english", ScreeningId(Assert.Single(film.GetProperty("items").EnumerateArray())));
 
         async Task<string?[]> Search(object arguments) =>
             (await Call(http, "search_screenings", arguments)).GetProperty("items").EnumerateArray()
@@ -78,9 +89,17 @@ public sealed partial class ProgrammeTests
         using var http = factory.CreateClient();
         using var list = await Rpc(http, "tools/list", new { });
         var tools = list.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray().ToArray();
-        Assert.Equal(new[] { "find_films", "get_film_showtimes", "get_specials", "list_cinemas", "now_showing", "search_screenings", "upcoming_films" },
+        Assert.Equal(new[] { "add_to_watchlist", "find_films", "get_film_showtimes", "get_specials", "list_cinemas",
+            "list_watched_movies", "list_watchlist", "mark_movie_watched", "now_showing", "search_screenings", "upcoming_films" },
             tools.Select(t => t.GetProperty("name").GetString()).Order(StringComparer.Ordinal));
-        Assert.All(tools, tool => Assert.True(tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean()));
+        Assert.All(tools, tool =>
+        {
+            var name = tool.GetProperty("name").GetString();
+            var annotations = tool.GetProperty("annotations");
+            var writes = name is "mark_movie_watched" or "add_to_watchlist";
+            Assert.Equal(!writes, annotations.GetProperty("readOnlyHint").GetBoolean());
+            if (writes) Assert.True(annotations.GetProperty("idempotentHint").GetBoolean());
+        });
 
         var first = await Call(http, "list_cinemas", new { limit = 1 });
         Assert.Equal(1, first.GetProperty("nextOffset").GetInt32());

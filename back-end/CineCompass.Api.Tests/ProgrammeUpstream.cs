@@ -36,6 +36,10 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
             "/events/search" when body!.Contains("\"eq\":\"unknown\"", StringComparison.Ordinal) => Page("events", null),
             "/events/search" when next => SecondEvents(body!),
             "/events/search" => Page("events", CursorOverride ?? "?page%5Bafter%5D=next", Event("early", 18, "nl")),
+            "/productions/search" when body!.Contains("\"id\":{\"eq\":\"film\"}", StringComparison.Ordinal) =>
+                Page("productions", null, Film),
+            "/productions/search" when body!.Contains("\"id\":{\"eq\":", StringComparison.Ordinal) =>
+                Page("productions", null),
             "/productions/search" when body!.Contains("\"contains\"", StringComparison.Ordinal) && next =>
                 Page("productions", null, """{"id":"remake","title":"A Film","attributes":{"releaseYear":2026}}""",
                     """{"id":"accented","title":"Amélie","attributes":{"releaseYear":2001}}"""),

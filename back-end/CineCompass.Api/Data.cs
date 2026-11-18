@@ -7,6 +7,7 @@ namespace CineCompass.Api;
 public sealed class AppUser : IdentityUser;
 public sealed class UserSettings
 {
+    public const int MaxLength = 200000;
     public string UserId { get; set; } = "";
     public string Json { get; set; } = "{}";
     public long Revision { get; set; }

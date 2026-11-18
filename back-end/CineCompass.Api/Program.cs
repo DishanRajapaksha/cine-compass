@@ -56,18 +56,18 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAccountAuthentication();
 app.MapGet("/api/settings", async (HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
     var row = await db.Settings.FindAsync(users.GetUserId(c.User));
-    return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = JsonSerializer.Deserialize<JsonElement>(row?.Json ?? "{}") });
+    return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = AccountMovieLists.ParseSettings(row?.Json) });
 }).RequireAuthorization();
 app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
-    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cinecompass_schedule_grouping", "cinecompass_catalogue_view", "cinecompass_now_showing_sort", "cinecompass_upcoming_sort", "cineville_saved_showtimes", "cinecompass_saved_films", "cinecompass_hidden_movies", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
-    if (request.Values.ValueKind != JsonValueKind.Object || request.Values.EnumerateObject().Any(x => !allowed.Contains(x.Name) || x.Value.ValueKind != JsonValueKind.String) || request.Values.GetRawText().Length > 200000)
+    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cinecompass_schedule_grouping", "cinecompass_catalogue_view", "cinecompass_now_showing_sort", "cinecompass_upcoming_sort", "cineville_saved_showtimes", AccountMovieLists.Watchlist, AccountMovieLists.WatchedMovies, AccountMovieLists.LegacyWatchedMovies, "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
+    if (request.Values.ValueKind != JsonValueKind.Object || request.Values.EnumerateObject().Any(x => !allowed.Contains(x.Name) || x.Value.ValueKind != JsonValueKind.String) || request.Values.GetRawText().Length > UserSettings.MaxLength)
         return Results.BadRequest(new { error = "Invalid settings." });
     var id = users.GetUserId(c.User)!;
     if (request.UserId != id) return Results.Forbid();
     var row = await db.Settings.FindAsync(id);
     if ((row?.Revision ?? 0) != request.Revision) return Results.Conflict(new { error = "Settings changed on another device. Reload account settings before saving." });
     if (row is null) { row = new UserSettings { UserId = id }; db.Settings.Add(row); }
-    row.Json = request.Values.GetRawText(); row.Revision++;
+    row.Json = AccountMovieLists.NormalizeSettings(request.Values); row.Revision++;
     try { await db.SaveChangesAsync(); }
     catch (DbUpdateException) { return Results.Conflict(new { error = "Settings changed on another device. Reload account settings before saving." }); }
     return Results.Ok(new { revision = row.Revision });

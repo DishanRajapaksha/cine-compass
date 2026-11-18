@@ -28,10 +28,11 @@ public sealed partial class ProgrammeTests
         Assert.Equal("unlisted", screenings["unlisted"].GetProperty("subtitleStatus").GetString());
         Assert.Equal("unknown", screenings["unlisted"].GetProperty("audioSource").GetString());
 
-        var result = await Call(http, "search_screenings", new { startDate = ScreeningDate, language = "nld" });
+        var result = await Call(http, "search_screenings", new { startDate = ScreeningDate, language = "nld", subtitles = "any" });
         Assert.Equal("dub", ScreeningId(Assert.Single(result.GetProperty("items").EnumerateArray())));
         var defaultSearch = await Call(http, "search_screenings", new { startDate = ScreeningDate });
-        Assert.Equal(0, defaultSearch.GetProperty("total").GetInt32());
+        Assert.Equal(new[] { "late", "dub", "explicit-none" }, defaultSearch.GetProperty("items").EnumerateArray().Select(ScreeningId));
+        Assert.Equal("or", defaultSearch.GetProperty("details").GetProperty("effectiveFilters").GetProperty("languageMatch").GetString());
     }
 
     [Fact]
@@ -79,17 +80,27 @@ public sealed partial class ProgrammeTests
         using var upstream = new ProgrammeUpstream();
         using var factory = Factory(upstream);
         using var http = factory.CreateClient();
-        var result = await Call(http, "search_screenings", new { startDate = ScreeningDate });
+        var result = await Call(http, "search_screenings", new { startDate = ScreeningDate, languageMatch = "and" });
         Assert.Equal(0, result.GetProperty("total").GetInt32());
         var details = result.GetProperty("details");
         var filters = details.GetProperty("effectiveFilters");
         Assert.Equal("en", filters.GetProperty("language").GetString());
         Assert.Equal("en", filters.GetProperty("subtitles").GetString());
+        Assert.Equal("and", filters.GetProperty("languageMatch").GetString());
         Assert.Equal("no_language_matches", details.GetProperty("emptyReason").GetString());
         var option = Assert.Single(details.GetProperty("relaxationOptions").EnumerateArray());
         Assert.Equal("any", option.GetProperty("language").GetString());
         Assert.Equal("en", option.GetProperty("subtitles").GetString());
         Assert.Equal(1, option.GetProperty("matches").GetInt32());
+
+        var noMatch = await Call(http, "search_screenings", new { startDate = ScreeningDate, language = "de", subtitles = "de" });
+        Assert.Equal(0, noMatch.GetProperty("total").GetInt32());
+        var noMatchDetails = noMatch.GetProperty("details");
+        Assert.Equal("no_language_matches", noMatchDetails.GetProperty("emptyReason").GetString());
+        var clearBoth = Assert.Single(noMatchDetails.GetProperty("relaxationOptions").EnumerateArray());
+        Assert.Equal("any", clearBoth.GetProperty("language").GetString());
+        Assert.Equal("any", clearBoth.GetProperty("subtitles").GetString());
+        Assert.Equal(2, clearBoth.GetProperty("matches").GetInt32());
 
         var unknownTitle = await Call(http, "search_screenings", new { startDate = ScreeningDate, title = "Unknown" });
         Assert.Equal("no_title_matches", unknownTitle.GetProperty("details").GetProperty("emptyReason").GetString());

@@ -6,7 +6,7 @@ import FilmDescription from './FilmDescription';
 import FilmShowtimes from './FilmShowtimes';
 import ImdbLink from './ImdbLink';
 
-export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen = false, screening, cities, city, saved, onSave, onPlan, onClose, onHide, filmSaved, onToggleFilm }: { filmSaved: boolean; onToggleFilm: () => void; onHide: () => void; movie:Movie;releaseLabel?:string;initialShowtimesOpen?:boolean;screening?: Screening; cities: City[]; city: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onClose: () => void }) {
+export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen = false, screening, cities, city, saved, onSave, onPlan, onClose, onMarkWatched, filmSaved, onToggleFilm }: { filmSaved: boolean; onToggleFilm: () => void; onMarkWatched: () => void; movie:Movie;releaseLabel?:string;initialShowtimesOpen?:boolean;screening?: Screening; cities: City[]; city: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onClose: () => void }) {
   const showtime = screening?.showtime;
   const [showtimesOpen, setShowtimesOpen] = useState(initialShowtimesOpen);
   const [posterFailed, setPosterFailed] = useState(false);
@@ -21,7 +21,7 @@ export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen 
         <span className="cc-detail-eyebrow">{releaseLabel || (showtime ? `In the programme${showtime.specials ? ` · ${showtime.specials}` : ''}` : '')}</span>
         <h2 id="cc-detail-title">{movie.title}</h2>
         <p className="cc-detail-meta">{[movie.releaseYear || null,movie.duration ? formatDuration(movie.duration) : 'Duration not listed',movie.spokenLanguages.map(languageName).join(', ') || 'Language not listed'].filter(Boolean).join(' · ')}</p>
-        <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-hide-movie" onClick={onHide}>Hide this movie</button></div>
+        <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-mark-watched" onClick={onMarkWatched}>Watched</button></div>
       </div>
       <div className="cc-detail-story">
         <FilmDescription key={`${movie.id}:${movie.overview}`} movie={movie}/>
@@ -33,7 +33,7 @@ export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen 
     </div>
     {screening && showtime && <section className="cc-detail-screening" aria-label="Selected screening">
       <div className="cc-detail-screening-info"><span className="cc-detail-eyebrow">Your screening · {dateLabel(amsterdamDate(showtime.startDate))}</span><div className="cc-detail-screening-line"><strong>{screeningTime(showtime.startDate)} – {screeningTime(showtime.endDate)}</strong><span>{showtime.theaterName} <small>{showtime.theaterCity}</small></span></div></div>
-      <div className="cc-detail-actions"><button className="cc-primary" onClick={() => onPlan(screening)}>Plan my evening <ArrowRight size={16}/></button><button className="cc-text-button" aria-pressed={isSaved} onClick={() => onSave(screening)}>{isSaved ? 'Remove saved screening' : 'Save screening'}</button>{showtime.ticketingUrl && <a className="cc-text-button" href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer">Tickets ↗</a>}</div>
+      <div className="cc-detail-actions"><button className="cc-primary" onClick={() => onPlan(screening)}>Plan after <ArrowRight size={16}/></button><button className="cc-text-button" aria-pressed={isSaved} onClick={() => onSave(screening)}>{isSaved ? 'Remove saved screening' : 'Save'}</button>{showtime.ticketingUrl && <a className="cc-text-button" href={showtime.ticketingUrl} target="_blank" rel="noopener noreferrer">Tickets ↗</a>}</div>
     </section>}
     <div className="cc-detail-showtimes-toggle"><button className="cc-text-button" aria-expanded={showtimesOpen} onClick={() => setShowtimesOpen(v => !v)}>{showtimesOpen ? 'Hide all showtimes' : 'All showtimes for this film'} <span aria-hidden="true">{showtimesOpen ? '−' : '+'}</span></button></div>
     {showtimesOpen && <FilmShowtimes movieId={movie.id} movieTitle={movie.title} cities={cities} initialCity={city} saved={saved} onSave={onSave} onPlan={onPlan}/>}

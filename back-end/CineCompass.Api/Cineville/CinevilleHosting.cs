@@ -21,21 +21,23 @@ internal static class CinevilleHosting
         builder.Services.AddSingleton<CinevilleClient>();
         builder.Services.AddSingleton<CinevilleProgramme>();
         builder.Services.AddSingleton<ProgrammePaging>();
+        builder.Services.AddHttpContextAccessor();
         builder.Services.AddMcpServer(options =>
         {
             options.ServerInfo = new Implementation { Name = "cineville", Version = "1.0.0" };
             options.ServerInstructions = """
-                Read-only public cinema programme. Use Europe/Amsterdam dates.
-                search_screenings defaults to both English audio and English subtitles. Each filter defaults independently.
-                Use the language and subtitles arguments to honour the user's preferences. Pass a language code to change a filter or "any" to clear it.
+                Public cinema programme and personal CineCompass movie lists. Use Europe/Amsterdam dates.
+                search_screenings defaults to English audio or English subtitles. Set languageMatch to "and" to require both active filters.
+                Use the language and subtitles arguments to honour the user's preferences. Pass a language code to change a filter or "any" to clear it. A single active filter must match in either mode.
                 Prefer screening audio evidence. If audioSource is film, say the audio is inferred. An unlisted subtitle status means availability is unknown.
                 Use startTime and endTime to constrain screening starts in Amsterdam. An estimated or unknown end time is not a guaranteed finish.
                 If a search is empty, explain details.emptyReason and offer relevant relaxationOptions for the user to choose.
                 Use find_films for title lookup. Disambiguate candidates with the user when needed, then pass the selected ID to get_film_showtimes.
+                Use list_watched_movies and list_watchlist for the signed-in account. Use mark_movie_watched and add_to_watchlist with a verified Cineville film ID when the user requests a change.
                 Pass nextCursor back to the same tool with only the cursor and optionally limit. The snapshot expires after five minutes.
                 """;
         }).WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
-            .WithTools<ProgrammeTools>();
+            .WithTools<ProgrammeTools>().WithTools<AccountMovieTools>();
     }
 
     public static void MapCinevilleMcp(this WebApplication app, string appOrigin)

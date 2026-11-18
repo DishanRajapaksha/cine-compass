@@ -1,12 +1,12 @@
 import React, { useId, useState } from 'react';
-import { ArrowRight, Bookmark, ChevronDown, EyeOff, Film as FilmIcon, Ticket, X } from 'lucide-react';
-import { City, HiddenMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
+import { ArrowRight, Bookmark, ChevronDown, Eye, Film as FilmIcon, Ticket, X } from 'lucide-react';
+import { City, WatchedMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
 import { formatDuration, amsterdamDate, dateLabel, languageName, Screening, screeningTime } from '../lib/schedule';
 import { normalizeLanguageCode } from '../lib/utils';
 import FilmShowtimes from './FilmShowtimes';
 import ImdbLink from './ImdbLink';
 
-type Props = {films: Film[]; onRemoveFilm: (id: string) => void; onHide: (movie: HiddenMovie) => void; saved: SavedShowtime[]; cities: City[]; city: string | null; onRemove: (id: string) => void; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onBrowse: () => void};
+type Props = {films: Film[]; onRemoveFilm: (id: string) => void; onMarkWatched: (movie: WatchedMovie) => void; saved: SavedShowtime[]; cities: City[]; city: string | null; onRemove: (id: string) => void; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onBrowse: () => void};
 function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBrowse'> & {film:Film;entries:SavedShowtime[];inWatchlist:boolean}) {
   const [expanded,setExpanded] = useState(false);
   const [posterFailed,setPosterFailed] = useState(false);
@@ -23,7 +23,7 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
       <div className="cc-watchlist-film-actions">
         <ImdbLink title={film.title} year={film.year}/>
         {inWatchlist && <button className="cc-watchlist-icon" aria-label={`Remove film ${film.title} from watchlist`} title="Remove film from watchlist" aria-pressed="true" onClick={() => props.onRemoveFilm(film.id)}><Bookmark size={17} fill="currentColor"/></button>}
-        <button className="cc-watchlist-icon" aria-label={`Hide ${film.title} permanently`} title="Hide this film" onClick={() => props.onHide({id:film.id,title:film.title,year:film.year})}><EyeOff size={17}/></button>
+        <button className="cc-watchlist-icon" aria-label={`Watched: ${film.title}`} title="Watched" onClick={() => props.onMarkWatched({id:film.id,title:film.title,year:film.year})}><Eye size={17}/></button>
       </div>
     </div>
     {entries.length > 0 && <div className="cc-watchlist-screenings">{entries.map(s => <article className="cc-saved-row" key={s.showtimeId} aria-label={`Saved screening for ${s.movieTitle} at ${screeningTime(s.startDate)}`}>
@@ -32,7 +32,7 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
       <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/><span className="cc-saved-ticket-label">Tickets</span></a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
     </article>)}</div>}
     <div className="cc-watchlist-showtimes-toggle"><button className="cc-watchlist-showtimes" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button></div>
-    <div id={showtimesId} className="cc-watchlist-showtimes-panel" hidden={!expanded}>{expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onHide={movie => props.onHide({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}</div>
+    <div id={showtimesId} className="cc-watchlist-showtimes-panel" hidden={!expanded}>{expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onMarkWatched={movie => props.onMarkWatched({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}</div>
   </section>;
 }
 export default function SavedFilms(props: Props) {

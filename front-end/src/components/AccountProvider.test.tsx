@@ -54,3 +54,29 @@ test('film watchlists sync to their owner and guest films return on sign-out',as
   await screen.findByText('Guest');
   expect(localStorage.getItem('cinecompass_saved_films')).toBe(guestFilms);
 });
+
+test('migrates legacy watched films for the account and its separate guest backup', async () => {
+  const guestFilms = JSON.stringify([{id:'guest-film',title:'Guest Film'}]);
+  const accountFilms = JSON.stringify([{id:'account-film',title:'Account Film'}]);
+  localStorage.setItem('cinecompass_active_account','alice');
+  localStorage.setItem('cinecompass_guest_settings',JSON.stringify({cinecompass_hidden_movies:guestFilms}));
+  request.mockImplementation(async (path, method) => {
+    if (path === '/auth/me') return {user:{id:'alice',name:'Alice'}};
+    if (path === '/settings' && method !== 'PUT')
+      return {userId:'alice',revision:7,values:{cinecompass_hidden_movies:accountFilms}};
+    if (path === '/settings') return {revision:8};
+  });
+  render(<AccountProvider><Controls/></AccountProvider>);
+  await screen.findByText('Alice');
+  expect(localStorage.getItem('cinecompass_hidden_movies')).toBeNull();
+  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(accountFilms);
+  expect(JSON.parse(localStorage.getItem('cinecompass_guest_settings')!)).toEqual({cinecompass_watched_movies:guestFilms});
+  fireEvent.click(screen.getByText('Change view'));
+  await waitFor(() => expect(request).toHaveBeenCalledWith('/settings','PUT',{
+    userId:'alice',revision:7,values:{cinecompass_watched_movies:accountFilms,cinecompass_schedule_view:'"posters"'}
+  }));
+  await screen.findByText('Saved');
+  fireEvent.click(screen.getByText('Sign out'));
+  await screen.findByText('Guest');
+  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(guestFilms);
+});

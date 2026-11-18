@@ -35,7 +35,7 @@ npm start
 
 Open **http://localhost:3000**. React proxies `/api` to port 5080. Open Settings and select **Sign in with Heimdall**. The first sign-in creates a CineCompass profile for that Keycloak identity unless the identity is already linked to a local account. Set `App__Origin` and register its exact callback URI if you serve the frontend on another origin.
 
-Hidden films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring the saved hidden entry in Settings restores its matching catalogue listings.
+Watched films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring a film in Settings puts its matching catalogue listings back. The account database migration renames the old hidden-movie setting to watched movies. The web app moves existing browser and guest settings when it loads.
 
 ## Now showing
 
@@ -50,13 +50,13 @@ Both Now showing and Coming soon support ascending and descending sorting by tit
 
 The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /productions/search`, follows pagination, and groups films by release week. Search titles, read the full synopsis directly on each card, or use **Find showtimes** to check actual published screenings with independent city and language filters. Expected release dates are catalogue dates, not confirmation of a screening at a particular cinema.
 
-Save an upcoming film to the existing Movies watchlist before any screenings are published. This saves the film only; individual screenings remain separate in Saved showtimes. Hidden films also stay hidden in Coming soon. Upcoming catalogue data loads live and uses the same English-first, Dutch-fallback metadata normalization as the programme.
+Save an upcoming film to the existing Movies watchlist before any screenings are published. This saves the film only; individual screenings remain separate in Saved showtimes. Films marked watched are excluded from Coming soon. Upcoming catalogue data loads live and uses the same English-first, Dutch-fallback metadata normalization as the programme.
 
 ## Sync behavior
 
 Guest settings remain separately saved on this device and are restored on sign-out. Signing in loads account settings. Settings → Settings on this device → Import guest settings replaces account settings with that guest snapshot. Changes save after a short delay.
 
-Filters, display mode, cinema order, planner preferences, hidden films, saved films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
+Filters, display mode, cinema order, planner preferences, watched films, saved films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
 
 Saves include the expected account ID and revision. Conflicting edits are rejected rather than silently overwritten. Reload account settings discards unsynced changes and loads the server version. Concurrent list edits are not merged in this initial implementation. Offline changes retry while the page stays open and when connectivity returns; there is no persistent offline upload queue. A session switch in another tab reloads this tab to prevent mixing accounts.
 
@@ -84,15 +84,27 @@ showtimes. A date without an end date searches that day, except for a film
 lookup, which stays open-ended. REST returns 400 for invalid date ranges and
 502 when the upstream catalogue is unavailable.
 
-Connect to `https://leyline.talesfrom.earth/cineville` and sign in with Heimdall through the MCP client's OAuth flow. The official C# MCP SDK serves the internal Streamable HTTP endpoint at `/mcp`, which requires the separate `Cineville__McpGatewaySecret` shared with Leyline and is disabled when that secret is unset. The read-only tools are
+Connect to `https://leyline.talesfrom.earth/cineville` and sign in with Heimdall through the MCP client's OAuth flow. The official C# MCP SDK serves the internal Streamable HTTP endpoint at `/mcp`, which requires the separate `Cineville__McpGatewaySecret` shared with Leyline and is disabled when that secret is unset. The programme tools are
 `list_cinemas`, `search_screenings`, `find_films`, `get_film_showtimes`,
 `now_showing`, `upcoming_films` and `get_specials`.
 
+- **Personal movie lists.** `list_watched_movies` and `list_watchlist` show the
+  signed-in account's watched films and visible Movies watchlist. Use a Cineville
+  `filmId` from a programme tool with `mark_movie_watched` or `add_to_watchlist`.
+  Both return the film and whether the list changed. Repeating an addition is
+  safe. Sign in to the web app once with the same Heimdall account to create
+  the account link. Reload the web app to see MCP changes in an open tab.
+- **Gateway identity.** Personal tools require the Leyline adapter that forwards
+  the verified Heimdall issuer and subject over the authenticated internal hop.
+  The issuer must match `Keycloak__Issuer`. Deploy the updated adapter and
+  CineCompass backend together to enable personal tools.
 - **Language filters.** `search_screenings` defaults to `language: "en"` and
-  `subtitles: "en"`. Both filters must match. Omit a field to use its default,
-  supply a language code to override it, or pass `"any"` to clear it. For
-  example, `{"language":"fr"}` finds French audio with English subtitles.
-  Use `{"subtitles":"any"}` for English audio regardless of subtitles.
+  `subtitles: "en"`, with `languageMatch: "or"`. A screening that matches
+  either or both appears once. Set `languageMatch: "and"` to require both
+  active filters. Omit a language field to use its default or supply a language
+  code to override it. Pass `"any"` to clear a filter. For example,
+  `{"subtitles":"any"}` requires English audio in either mode, and setting
+  both fields to `"any"` clears all language filtering.
 - **Language evidence.** Use `audioLanguages` to describe screening audio.
   `audioSource` is `screening` for explicit screening information, `film`
   for an inference from the film’s spoken languages, or `unknown`. The

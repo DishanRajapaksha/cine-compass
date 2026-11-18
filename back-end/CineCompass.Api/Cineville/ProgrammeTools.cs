@@ -16,21 +16,23 @@ internal sealed class ProgrammeTools(CinevilleProgramme programme, ProgrammePagi
         ReadPage(nameof(ListCinemas), cursor, offset, limit, () => programme.Cinemas(city, ct));
 
     [McpServerTool(Name = "search_screenings", ReadOnly = true, Destructive = false, UseStructuredContent = true)]
-    [Description("Search Cineville film screenings by city, cinema, Amsterdam date, spoken language, and subtitle language. Defaults to screenings with both English audio and English subtitles. Use a language code to override either filter or any to clear it. With no dates, searches the rest of today.")]
+    [Description("Search Cineville film screenings by city, cinema, Amsterdam date, spoken language, and subtitle language. Defaults to screenings with English audio or English subtitles. Set languageMatch to and to require both active language filters. With no dates, searches the rest of today.")]
     public Task<ScreeningPage> SearchScreenings(CancellationToken ct,
         string? city = null,
         [Description("Exact cinema name or Cineville cinema ID.")] string? cinema = null,
         [Description("First date in Europe/Amsterdam, YYYY-MM-DD.")] string? startDate = null,
         [Description("Last date in Europe/Amsterdam, inclusive, YYYY-MM-DD. Defaults to the first date.")] string? endDate = null,
-        [Description("Spoken language code. Defaults to en (English). Use any to allow all spoken languages.")] string language = "en",
-        [Description("Subtitle language code. Defaults to en (English). Use any to include screenings regardless of subtitles.")] string subtitles = "en",
+        [Description("Spoken language code. Defaults to en (English). Use any to remove the audio filter.")] string language = "en",
+        [Description("Subtitle language code. Defaults to en (English). Use any to remove the subtitle filter.")] string subtitles = "en",
         [Description("Case-insensitive film title substring.")] string? title = null,
         int offset = 0, int limit = 25,
         [Description("Inclusive lower boundary in Amsterdam local time, HH:mm.")] string? startTime = null,
         [Description("Inclusive final minute for screening starts in Amsterdam local time, HH:mm.")] string? endTime = null,
-        [Description("The nextCursor from this tool. Send only the cursor and optionally limit when paging.")] string? cursor = null) =>
+        [Description("The nextCursor from this tool. Send only the cursor and optionally limit when paging.")] string? cursor = null,
+        [Description("Use or (default) to match either active language filter, or and to require both. A single active filter must match in either mode.")] string languageMatch = "or") =>
         ReadScreenings(nameof(SearchScreenings), cursor, offset, limit,
-            Filter(city, cinema, startDate, endDate, language, subtitles, startTime, endTime), ct, Clean(title));
+            Filter(city, cinema, startDate, endDate, language, subtitles, startTime, endTime) with
+            { MatchEitherLanguage = ParseLanguageMatch(languageMatch) }, ct, Clean(title));
 
     [McpServerTool(Name = "get_film_showtimes", ReadOnly = true, Destructive = false, UseStructuredContent = true)]
     [Description("Get upcoming published showtimes for a Cineville film ID returned by the catalogue or screening tools.")]
@@ -138,6 +140,13 @@ internal sealed class ProgrammeTools(CinevilleProgramme programme, ProgrammePagi
     private static string[]? Languages(string? value) =>
         Clean(value) is { } text && !text.Equals("any", StringComparison.OrdinalIgnoreCase)
             ? [ScreeningLanguage.Normalize(text)] : null;
+
+    private static bool ParseLanguageMatch(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "or" => true,
+        "and" => false,
+        _ => throw new McpException("languageMatch must be 'or' or 'and'.")
+    };
 
     private static bool TitleMatches(string title, string? filter) =>
         string.IsNullOrWhiteSpace(filter) || title.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase);

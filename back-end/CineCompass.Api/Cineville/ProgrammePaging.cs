@@ -12,7 +12,8 @@ internal sealed class ProgrammePaging(TimeProvider clock) : IDisposable
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 2 * MaxSnapshotBytes });
 
     public async Task<(ToolPage<T> Page, TContext Context)> Read<T, TContext>(
-        string tool, string? cursor, int offset, int limit, Func<Task<ProgrammeSnapshot<T, TContext>>> load)
+        string tool, string? cursor, int offset, int limit, Func<Task<ProgrammeSnapshot<T, TContext>>> load,
+        string? owner = null)
     {
         if (offset < 0 || limit is < 1 or > 100)
             throw new McpException("Use a nonnegative offset and a limit between 1 and 100.");
@@ -26,7 +27,7 @@ internal sealed class ProgrammePaging(TimeProvider clock) : IDisposable
         else
         {
             (id, offset) = ParseCursor(cursor);
-            if (!cache.TryGetValue((tool, id), out StoredSnapshot? stored) ||
+            if (!cache.TryGetValue((tool, owner, id), out StoredSnapshot? stored) ||
                 stored is null || clock.GetUtcNow() >= stored.ExpiresAt)
                 throw new McpException("This cursor has expired or belongs to another tool. Start a new search.");
             snapshot = JsonSerializer.Deserialize<ProgrammeSnapshot<T, TContext>>(stored.Data, JsonSerializerOptions.Web)!;
@@ -41,9 +42,9 @@ internal sealed class ProgrammePaging(TimeProvider clock) : IDisposable
                 throw new McpException("This result is too large to page. Narrow the search and try again.");
 
             id = Guid.NewGuid();
-            cache.Set((tool, id), new StoredSnapshot(data, clock.GetUtcNow() + Lifetime),
+            cache.Set((tool, owner, id), new StoredSnapshot(data, clock.GetUtcNow() + Lifetime),
                 new MemoryCacheEntryOptions().SetSize(data.Length).SetAbsoluteExpiration(Lifetime));
-            if (!cache.TryGetValue((tool, id), out _))
+            if (!cache.TryGetValue((tool, owner, id), out _))
                 throw new McpException("The pagination cache is busy. Narrow the search or try again shortly.");
         }
 

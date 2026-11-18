@@ -43,7 +43,7 @@ export interface SavedFilm {
   availableSubtitles?: string[];
 }
 
-export interface HiddenMovie {
+export interface WatchedMovie {
   id: string;
   title: string;
   year?: number;

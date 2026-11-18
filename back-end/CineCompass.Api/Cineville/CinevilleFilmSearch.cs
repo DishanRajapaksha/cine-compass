@@ -4,6 +4,13 @@ namespace CineCompass.Api.Cineville;
 
 internal sealed partial class CinevilleProgramme
 {
+    public async Task<Film?> FindFilmById(string id, CancellationToken ct)
+    {
+        var body = new { id = new { eq = id }, page = SearchPage };
+        return (await client.Productions(body, ct)).Select(CinevilleMapping.Film).OfType<Film>()
+            .FirstOrDefault(film => film.Id == id);
+    }
+
     public async Task<FilmMatch[]> FindFilms(string? title, int? releaseYear, CancellationToken ct)
     {
         title = title?.Trim();

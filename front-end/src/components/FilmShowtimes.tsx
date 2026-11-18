@@ -6,8 +6,8 @@ import { amsterdamDate, dateLabel, filterScreenings, Screening } from '../lib/sc
 import ScreeningRow from './ScreeningRow';
 import ScheduleFilters from './ScheduleFilters';
 
-type Props = { onHide?: (movie: Movie) => void; movieId: string; movieTitle: string; cities: City[]; initialCity: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void };
-export default function FilmShowtimes({movieId,movieTitle,cities,initialCity,saved,onSave,onPlan,onHide}: Props) {
+type Props = { onMarkWatched?: (movie: Movie) => void; movieId: string; movieTitle: string; cities: City[]; initialCity: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void };
+export default function FilmShowtimes({movieId,movieTitle,cities,initialCity,saved,onSave,onPlan,onMarkWatched}: Props) {
   const defaults = (): MovieFilters => ({selectedCity:initialCity,selectedTheaters:[],selectedSubtitleLanguages:['en'],selectedSpokenLanguages:['en'],languageMatchMode:'any',selectedSpecials:[],startDate:getCurrentDateInAmsterdam(),endDate:null,startTime:null,endTime:null});
   const [filters,setFilters] = useState<MovieFilters>(defaults);
   const [filtersOpen,setFiltersOpen] = useState(false);
@@ -32,7 +32,7 @@ export default function FilmShowtimes({movieId,movieTitle,cities,initialCity,sav
     <div className={`cc-film-showtime-layout ${filtersOpen ? 'with-filters' : ''}`}>
       {filtersOpen && <ScheduleFilters filters={filters} cities={cities} query="" showSearch={false} languages={languages} specials={specials} loading={false} onQuery={() => {}} onChange={setFilters} onReset={() => setFilters(defaults())}/>}
       <div className="cc-film-showtime-results" aria-busy={loading}>
-        {invalid ? <p role="alert">The end date and time should come after the start.</p> : loading ? <p role="status">Finding all showtimes…</p> : error ? <p role="alert">{error} <button className="cc-text-button" onClick={() => setRetry(v => v+1)}>Retry</button></p> : !screenings.length ? <p>No upcoming showtimes match these filters. Try another city, date, or language.</p> : <><p className="cc-showtime-count" aria-live="polite">{screenings.length} screening{screenings.length===1 ? '' : 's'}</p><div className="cc-all-showtimes">{Object.entries(groups).map(([date,items]) => <section key={date} aria-label={dateLabel(date)}><h4 className="cc-day-label">{dateLabel(date)}</h4>{items.map(s => <ScreeningRow key={s.showtime.id} screening={s} compact saved={saved.some(savedShowtime => savedShowtime.showtimeId===s.showtime.id)} selected={false} unavailable={false} onSave={() => onSave(s)} onSelect={() => onPlan(s)} onDetails={() => onPlan(s)} onPlan={() => onPlan(s)} onHide={onHide ? () => onHide(s.movie) : undefined}/>)}</section>)}</div></>}
+        {invalid ? <p role="alert">The end date and time should come after the start.</p> : loading ? <p role="status">Finding all showtimes…</p> : error ? <p role="alert">{error} <button className="cc-text-button" onClick={() => setRetry(v => v+1)}>Retry</button></p> : !screenings.length ? <p>No upcoming showtimes match these filters. Try another city, date, or language.</p> : <><p className="cc-showtime-count" aria-live="polite">{screenings.length} screening{screenings.length===1 ? '' : 's'}</p><div className="cc-all-showtimes">{Object.entries(groups).map(([date,items]) => <section key={date} aria-label={dateLabel(date)}><h4 className="cc-day-label">{dateLabel(date)}</h4>{items.map(s => <ScreeningRow key={s.showtime.id} screening={s} compact saved={saved.some(savedShowtime => savedShowtime.showtimeId===s.showtime.id)} selected={false} unavailable={false} onSave={() => onSave(s)} onSelect={() => onPlan(s)} onDetails={() => onPlan(s)} onPlan={() => onPlan(s)} onMarkWatched={onMarkWatched ? () => onMarkWatched(s.movie) : undefined}/>)}</section>)}</div></>}
       </div>
     </div>
   </section>;

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Bookmark, EyeOff, Film } from 'lucide-react';
+import { Bookmark, Eye, Film } from 'lucide-react';
 import { Movie } from '../types/Movie';
 import { formatDuration, languageName } from '../lib/schedule';
 import { plainDescription } from './ScreeningRow';
 import ImdbLink from './ImdbLink';
 
-type Props = {movie:Movie;count?:number;releaseLabel?:string;compact:boolean;saved:boolean;description?:React.ReactNode;onDetails?:()=>void;onToggleFilm:()=>void;onHide:()=>void};
-export default function MovieGroupSummary({movie,count,releaseLabel,description,compact,saved,onDetails,onToggleFilm,onHide}:Props) {
+type Props = {movie:Movie;count?:number;releaseLabel?:string;compact:boolean;saved:boolean;description?:React.ReactNode;onDetails?:()=>void;onToggleFilm:()=>void;onMarkWatched:()=>void};
+export default function MovieGroupSummary({movie,count,releaseLabel,description,compact,saved,onDetails,onToggleFilm,onMarkWatched}:Props) {
   const [posterFailed,setPosterFailed] = useState(false);
   return <div className={`cc-movie-summary${compact ? ' is-compact-summary' : ''}`}>
     {!compact && (onDetails ? <button className="cc-movie-summary-poster" onClick={onDetails} aria-label={`Details for ${movie.title}`}>
@@ -21,7 +21,7 @@ export default function MovieGroupSummary({movie,count,releaseLabel,description,
       <div className="cc-movie-summary-actions">
         <ImdbLink title={movie.title} year={movie.releaseYear}/>
         <button aria-label={`${saved ? 'Remove' : 'Save'} film ${movie.title} ${saved ? 'from' : 'to'} watchlist`} aria-pressed={saved} onClick={onToggleFilm}><Bookmark size={14} fill={saved ? 'currentColor' : 'none'}/>{saved ? 'On watchlist' : 'Watchlist'}</button>
-        <button aria-label={`Hide ${movie.title} permanently`} onClick={onHide}><EyeOff size={14}/>Hide</button>
+        <button aria-label={`Watched: ${movie.title}`} onClick={onMarkWatched}><Eye size={14}/>Watched</button>
       </div>
     </div>
   </div>;
