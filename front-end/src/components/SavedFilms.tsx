@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { ArrowRight, Bookmark, ChevronDown, Eye, Film as FilmIcon, Ticket, X } from 'lucide-react';
+import { ArrowRight, Bookmark, ChevronDown, EyeClosed, Film as FilmIcon, Ticket, X } from 'lucide-react';
 import { City, WatchedMovie, SavedFilm as Film, SavedShowtime } from '../types/Movie';
 import { formatDuration, amsterdamDate, dateLabel, languageName, Screening, screeningTime } from '../lib/schedule';
 import { normalizeLanguageCode } from '../lib/utils';
@@ -23,13 +23,13 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
       <div className="cc-watchlist-film-actions">
         <ImdbLink title={film.title} year={film.year}/>
         {inWatchlist && <button className="cc-watchlist-icon" aria-label={`Remove film ${film.title} from watchlist`} title="Remove film from watchlist" aria-pressed="true" onClick={() => props.onRemoveFilm(film.id)}><Bookmark size={17} fill="currentColor"/></button>}
-        <button className="cc-watchlist-icon" aria-label={`Watched: ${film.title}`} title="Watched" onClick={() => props.onMarkWatched({id:film.id,title:film.title,year:film.year})}><Eye size={17}/></button>
+        <button className="cc-watchlist-icon" aria-label={`Watched: ${film.title}`} title="Watched" onClick={() => props.onMarkWatched({id:film.id,title:film.title,year:film.year})}><EyeClosed size={17}/></button>
       </div>
     </div>
     {entries.length > 0 && <div className="cc-watchlist-screenings">{entries.map(s => <article className="cc-saved-row" key={s.showtimeId} aria-label={`Saved screening for ${s.movieTitle} at ${screeningTime(s.startDate)}`}>
       <div className="cc-saved-time"><strong>{screeningTime(s.startDate)} <span>–</span> {screeningTime(s.endDate)}</strong><small>{dateLabel(amsterdamDate(s.startDate))}</small></div>
       <div className="cc-saved-venue"><strong>{s.theaterName}</strong><span>{s.theaterCity}</span>{Date.parse(s.startDate) < Date.now() && <small className="cc-saved-marker">Past saved screening</small>}</div>
-      <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/><span className="cc-saved-ticket-label">Tickets</span></a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
+      <div className="cc-saved-screening-actions">{s.ticketingUrl && <a target="_blank" rel="noopener noreferrer" href={s.ticketingUrl} title="Tickets (opens in a new tab)" aria-label={`Tickets for ${s.movieTitle}`}><Ticket size={15}/><span className="cc-saved-ticket-label">Tickets</span></a>}<button className="cc-watchlist-icon" aria-label={`Remove ${s.movieTitle} at ${screeningTime(s.startDate)}`} title="Remove saved screening" onClick={() => props.onRemove(s.showtimeId)}><X size={17}/></button></div>
     </article>)}</div>}
     <div className="cc-watchlist-showtimes-toggle"><button className="cc-watchlist-showtimes" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(v => !v)}>{expanded ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={15}/></button></div>
     <div id={showtimesId} className="cc-watchlist-showtimes-panel" hidden={!expanded}>{expanded && <FilmShowtimes movieId={film.id} movieTitle={film.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onMarkWatched={movie => props.onMarkWatched({id:movie.id,title:movie.title,year:movie.releaseYear})}/>}</div>

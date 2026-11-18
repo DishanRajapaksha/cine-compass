@@ -11,14 +11,13 @@ export default function SettingsModal({watched,onRestore,onClose}: {watched:Watc
   return <dialog ref={dialog} className="cc-dialog cc-settings-dialog" aria-labelledby="cc-settings-title" onCancel={onClose} onClick={e => {if(e.target===e.currentTarget) onClose();}}>
     <header className="cc-settings-header">
       <h2 id="cc-settings-title">Settings</h2>
-      <button className="cc-dialog-close" aria-label="Close settings" onClick={onClose}><X size={22}/></button>
+      <button className="cc-dialog-close" aria-label="Close settings" title="Close settings" onClick={onClose}><X size={22}/></button>
     </header>
     <div className="cc-settings-body">
     <AccountSettings/>
     <CalendarSubscription/>
     <section aria-labelledby="cc-imdb-title"><h3 id="cc-imdb-title">IMDb</h3><ImdbSettings/></section>
     <section aria-labelledby="cc-watched-title"><h3 id="cc-watched-title">Watched films <span>({watched.length})</span></h3>
-      <p>Watched films stay out of the schedule and watchlist until you restore them. These choices are saved locally and sync when you sign in. Saved screenings are kept.</p>
       {watched.length ? <ul className="cc-watched-movies">{[...watched].sort((a,b) => a.title.localeCompare(b.title)).map(movie => <li key={movie.id}><span>{movie.title}{movie.year ? <small>{movie.year}</small> : null}</span><button className="cc-text-button" aria-label={`Restore ${movie.title}`} onClick={() => onRestore(movie.id)}>Restore</button></li>)}</ul> : <p>No watched films.</p>}
     </section>
     </div>

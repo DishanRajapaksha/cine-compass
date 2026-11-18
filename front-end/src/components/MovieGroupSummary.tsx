@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, Eye, Film } from 'lucide-react';
+import { Bookmark, EyeClosed, Film } from 'lucide-react';
 import { Movie } from '../types/Movie';
 import { formatDuration, languageName } from '../lib/schedule';
 import { plainDescription } from './ScreeningRow';
@@ -9,7 +9,7 @@ type Props = {movie:Movie;count?:number;releaseLabel?:string;compact:boolean;sav
 export default function MovieGroupSummary({movie,count,releaseLabel,description,compact,saved,onDetails,onToggleFilm,onMarkWatched}:Props) {
   const [posterFailed,setPosterFailed] = useState(false);
   return <div className={`cc-movie-summary${compact ? ' is-compact-summary' : ''}`}>
-    {!compact && (onDetails ? <button className="cc-movie-summary-poster" onClick={onDetails} aria-label={`Details for ${movie.title}`}>
+    {!compact && (onDetails ? <button className="cc-movie-summary-poster" onClick={onDetails} aria-label={`Details for ${movie.title}`} title={`Details for ${movie.title}`}>
       {movie.poster_path && !posterFailed ? <img src={movie.poster_path} alt={`${movie.title} poster`} loading="lazy" onError={() => setPosterFailed(true)}/> : <Film size={28} aria-hidden="true"/>}
     </button> : <div className="cc-movie-summary-poster">
       {movie.poster_path && !posterFailed ? <img src={movie.poster_path} alt={`${movie.title} poster`} loading="lazy" onError={() => setPosterFailed(true)}/> : <Film size={28} aria-hidden="true"/>}
@@ -21,7 +21,7 @@ export default function MovieGroupSummary({movie,count,releaseLabel,description,
       <div className="cc-movie-summary-actions">
         <ImdbLink title={movie.title} year={movie.releaseYear}/>
         <button aria-label={`${saved ? 'Remove' : 'Save'} film ${movie.title} ${saved ? 'from' : 'to'} watchlist`} aria-pressed={saved} onClick={onToggleFilm}><Bookmark size={14} fill={saved ? 'currentColor' : 'none'}/>{saved ? 'On watchlist' : 'Watchlist'}</button>
-        <button aria-label={`Watched: ${movie.title}`} onClick={onMarkWatched}><Eye size={14}/>Watched</button>
+        <button aria-label={`Watched: ${movie.title}`} onClick={onMarkWatched}><EyeClosed size={14}/>Watched</button>
       </div>
     </div>
   </div>;

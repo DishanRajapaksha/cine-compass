@@ -316,7 +316,6 @@ test.each(['Posters','Compact'])('row planning in %s hides unavailable films and
   service.getPopularMovies.mockResolvedValue({page:1,total_pages:1,total_results:2,results:[{...base,showtimes:[anchor,repeat]},{...base,id:'next-film',title:'Next Film',showtimes:[blocked,next]}]});
   render(<App/>); await screen.findAllByRole('button',{name:'Next Film'});
   fireEvent.click(screen.getByRole('button',{name:view}));
-  if (view==='Compact') fireEvent.click(screen.getByRole('button',{name:'More actions for Perfect Days at 18:00'}));
   fireEvent.click(screen.getByRole('button',{name:'Plan after Perfect Days at 18:00'}));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'18:00 20:00 Your starting point'})).toHaveAttribute('aria-pressed','true');
@@ -465,18 +464,13 @@ test('film details can save a film without saving the selected screening',async 
   expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
 });
 
-test('More offers labelled secondary actions and closes after planning',async () => {
+test('poster rows offer Watched and Plan after directly',async () => {
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
-  const more=screen.getByRole('button',{name:'More actions for Perfect Days at 23:58'});
-  fireEvent.click(more);
-  const actions=screen.getByRole('group',{name:'More actions for Perfect Days'});
-  expect(within(actions).getByRole('button',{name:'Plan after'})).toBeInTheDocument();
-  expect(screen.getByRole('button',{name:'Watched: Perfect Days'})).toBeInTheDocument();
-  expect(within(actions).getByRole('button',{name:'Watched'})).toBeInTheDocument();
-  fireEvent.click(within(actions).getByRole('button',{name:'Plan after'}));
-  expect(screen.queryByRole('group',{name:'More actions for Perfect Days'})).not.toBeInTheDocument();
-  expect(more).toHaveAttribute('aria-expanded','false');
+  expect(screen.queryByRole('button',{name:/More actions for Perfect Days/})).not.toBeInTheDocument();
+  const watched=screen.getByRole('button',{name:'Watched: Perfect Days'});
+  expect(watched.querySelector('svg.lucide-eye-closed')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Plan after Perfect Days at 23:58'}));
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toHaveLength(0);
   expect(screen.getByText('After Perfect Days')).toBeInTheDocument();
 });
@@ -495,7 +489,7 @@ test('compact primary actions and More share save state, and More closes after s
   expect(actions.getByRole('link',{name:'Search IMDb for Perfect Days 2023'})).toBeInTheDocument();
   expect(actions.getByRole('link',{name:'Tickets for Perfect Days'})).toHaveAttribute('href','https://example.com/tickets');
   expect(actions.getByRole('button',{name:'Save film Perfect Days to watchlist'})).toBeInTheDocument();
-  expect(actions.getByRole('button',{name:'Watched'})).toBeInTheDocument();
+  expect(actions.getByRole('button',{name:'Watched'}).querySelector('svg.lucide-eye-closed')).toBeInTheDocument();
   expect(actions.getByRole('button',{name:'Plan after Perfect Days at 23:58'})).toBeInTheDocument();
   fireEvent.click(actions.getByRole('button',{name:'Save Perfect Days at 23:58'}));
   expect(more).toHaveAttribute('aria-expanded','false');

@@ -14,7 +14,7 @@ export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen 
   const isSaved = saved.some(s => s.showtimeId === showtime?.id);
   useEffect(() => { const el = dialog.current; el?.showModal(); return () => el?.close(); }, []);
   return <dialog ref={dialog} className={`cc-dialog cc-film-dialog ${showtimesOpen ? "cc-dialog-showtimes" : ""}`} onCancel={onClose} onClick={e => { if(e.target === e.currentTarget) onClose(); }} aria-labelledby="cc-detail-title">
-    <button className="cc-dialog-close" aria-label="Close film details" onClick={onClose}><X size={22}/></button>
+    <button className="cc-dialog-close" aria-label="Close film details" title="Close film details" onClick={onClose}><X size={22}/></button>
     <div className={`cc-detail-hero ${!movie.poster_path || posterFailed ? 'without-poster' : ''}`}>
       {movie.poster_path && !posterFailed && <div className="cc-detail-poster"><img src={movie.poster_path} alt={`${movie.title} poster`} onError={() => setPosterFailed(true)}/></div>}
       <div className="cc-detail-intro">
