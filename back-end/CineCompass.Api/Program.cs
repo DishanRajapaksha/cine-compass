@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.RateLimiting;
 using CineCompass.Api;
 using CineCompass.Api.Cineville;
+using CineCompass.Api.Notifications;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -25,6 +26,8 @@ builder.Services.AddRateLimiter(o => {
 });
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 262144);
 builder.AddCineville();
+builder.Services.AddScoped<ScreeningNotificationScanner>();
+builder.Services.AddHostedService<ScreeningNotificationWorker>();
 var app = builder.Build();
 if (args.Contains("--migrate"))
 {
@@ -56,23 +59,28 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAccountAuthentication();
 app.MapGet("/api/settings", async (HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
     var row = await db.Settings.FindAsync(users.GetUserId(c.User));
-    return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = AccountMovieLists.ParseSettings(row?.Json) });
+    return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = MovieListSettings.Parse(row?.Json) });
 }).RequireAuthorization();
 app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
-    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cinecompass_schedule_grouping", "cinecompass_catalogue_view", "cinecompass_now_showing_sort", "cinecompass_upcoming_sort", "cineville_saved_showtimes", AccountMovieLists.Watchlist, AccountMovieLists.WatchedMovies, AccountMovieLists.LegacyWatchedMovies, "cinecompass_cinema_lists", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
+    var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cinecompass_schedule_grouping", "cinecompass_catalogue_view", "cinecompass_now_showing_sort", "cinecompass_upcoming_sort", "cineville_saved_showtimes", MovieListSettings.Key, ReminderSettings.Key, MovieListSettings.LegacyWatchlist, MovieListSettings.LegacyWatched, MovieListSettings.LegacyHidden, "cinecompass_cinema_lists", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
     if (request.Values.ValueKind != JsonValueKind.Object || request.Values.EnumerateObject().Any(x => !allowed.Contains(x.Name) || x.Value.ValueKind != JsonValueKind.String) || request.Values.GetRawText().Length > UserSettings.MaxLength)
         return Results.BadRequest(new { error = "Invalid settings." });
+    if (request.Values.TryGetProperty(ReminderSettings.Key, out var reminder) && ReminderSettings.Parse(reminder.GetString()) is null)
+        return Results.BadRequest(new { error = "Invalid screening reminder settings." });
     var id = users.GetUserId(c.User)!;
     if (request.UserId != id) return Results.Forbid();
     var row = await db.Settings.FindAsync(id);
     if ((row?.Revision ?? 0) != request.Revision) return Results.Conflict(new { error = "Settings changed on another device. Reload account settings before saving." });
+    var normalized = MovieListSettings.NormalizeRequest(request.Values, row?.Json);
+    if (normalized is null) return Results.BadRequest(new { error = "Invalid settings or settings size limit exceeded." });
     if (row is null) { row = new UserSettings { UserId = id }; db.Settings.Add(row); }
-    row.Json = AccountMovieLists.NormalizeSettings(request.Values); row.Revision++;
+    row.Json = normalized; row.Revision++;
     try { await db.SaveChangesAsync(); }
     catch (DbUpdateException) { return Results.Conflict(new { error = "Settings changed on another device. Reload account settings before saving." }); }
     return Results.Ok(new { revision = row.Revision });
 }).RequireAuthorization();
 app.MapCalendarFeed(origin);
+app.MapScreeningNotifications();
 app.MapCineville();
 app.MapCinevilleMcp(origin);
 app.UseMcpGatewayAccess();

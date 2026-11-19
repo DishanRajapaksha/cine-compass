@@ -17,13 +17,13 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261003212019_CalendarSubscriptions";
+    public override string LastMigrationId => "20261119000301_ScreeningNotifications";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder
-            .HasAnnotation("ProductVersion", "11.0.0-rc.1.26425.128")
+            .HasAnnotation("ProductVersion", "11.0.0-rc.3.26522.148")
             .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
         NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -122,6 +122,75 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                     .IsUnique();
 
                 b.ToTable("CalendarSubscriptions");
+            });
+
+        modelBuilder.Entity("CineCompass.Api.Notifications.ScreeningNotification", b =>
+            {
+                var id = b.Property<long>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("bigint");
+
+                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+
+                b.Property<string>("FilmId")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<string>("FilmTitle")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<DateTimeOffset>("FoundAt")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<bool>("IsRead")
+                    .HasColumnType("boolean");
+
+                b.Property<string>("ScreeningId")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<DateTimeOffset>("StartsAt")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("TheaterCity")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<string>("TheaterName")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<string>("TicketingUrl")
+                    .HasColumnType("text");
+
+                b.Property<string>("UserId")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.HasKey("Id");
+
+                b.HasIndex("UserId", "Id");
+
+                b.HasIndex("UserId", "IsRead");
+
+                b.HasIndex("UserId", "ScreeningId")
+                    .IsUnique();
+
+                b.ToTable("ScreeningNotifications");
+            });
+
+        modelBuilder.Entity("CineCompass.Api.Notifications.ScreeningNotificationScan", b =>
+            {
+                b.Property<int>("Id")
+                    .HasColumnType("integer");
+
+                b.Property<DateOnly>("CompletedDay")
+                    .HasColumnType("date");
+
+                b.HasKey("Id");
+
+                b.ToTable("ScreeningNotificationScans");
             });
 
         modelBuilder.Entity("CineCompass.Api.UserSettings", b =>
@@ -334,6 +403,15 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.HasOne("CineCompass.Api.AppUser", null)
                     .WithOne()
                     .HasForeignKey("CineCompass.Api.CalendarSubscription", "UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
+
+        modelBuilder.Entity("CineCompass.Api.Notifications.ScreeningNotification", b =>
+            {
+                b.HasOne("CineCompass.Api.AppUser", null)
+                    .WithMany()
+                    .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.Cascade)
                     .IsRequired();
             });

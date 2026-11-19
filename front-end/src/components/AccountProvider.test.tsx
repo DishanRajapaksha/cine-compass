@@ -3,6 +3,7 @@ import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import AccountProvider,{useAccount} from './AccountProvider';
 import {api,ApiError} from '../services/accountService';
 import {cinemaListsKey,setPreference,snapshot} from '../lib/accountStorage';
+import { movieListsKey } from '../lib/movieLists';
 import CinemaLists from './CinemaLists';
 jest.mock('../services/accountService',()=>({api:jest.fn(),resetCsrf:jest.fn(),ApiError:jest.requireActual('../services/accountService').ApiError}));
 const request=api as jest.Mock;
@@ -60,26 +61,35 @@ test('snapshots exclude credentials and temporary dates and times',()=>{
 test('film watchlists sync to their owner and guest films return on sign-out',async()=>{
   const guestFilms=JSON.stringify([{id:'guest-film',title:'Guest Film',posterPath:''}]);
   const accountFilms=JSON.stringify([{id:'account-film',title:'Account Film',posterPath:''}]);
+  const accountLists=JSON.stringify([
+    {id:'watchlist',name:'Watchlist',films:JSON.parse(accountFilms)},
+    {id:'watched',name:'Watched',films:[]},
+    {id:'custom',name:'Rewatch',films:JSON.parse(accountFilms),hideWatched:true}
+  ]);
   localStorage.setItem('cinecompass_saved_films',guestFilms);
   request.mockImplementation(async(path,method)=>{
     if(path==='/auth/me')return {user:{id:'alice',name:'Alice'}};
-    if(path==='/settings' && method!=='PUT')return {userId:'alice',revision:7,values:{cinecompass_saved_films:accountFilms}};
+    if(path==='/settings' && method!=='PUT')return {userId:'alice',revision:7,values:{[movieListsKey]:accountLists}};
     if(path==='/settings')return {revision:8};
   });
   render(<AccountProvider><Controls/></AccountProvider>);
   await screen.findByText('Alice');
-  expect(localStorage.getItem('cinecompass_saved_films')).toBe(accountFilms);
+  expect(localStorage.getItem(movieListsKey)).toBe(accountLists);
   fireEvent.click(screen.getByText('Change view'));
-  await waitFor(()=>expect(request).toHaveBeenCalledWith('/settings','PUT',{userId:'alice',revision:7,values:{cinecompass_saved_films:accountFilms,cinecompass_schedule_view:'"posters"'}}));
+  await waitFor(()=>expect(request).toHaveBeenCalledWith('/settings','PUT',{userId:'alice',revision:7,values:{[movieListsKey]:accountLists,cinecompass_schedule_view:'"posters"'}}));
   await screen.findByText('Saved');
   fireEvent.click(screen.getByText('Sign out'));
   await screen.findByText('Guest');
-  expect(localStorage.getItem('cinecompass_saved_films')).toBe(guestFilms);
+  expect(JSON.parse(localStorage.getItem(movieListsKey)!)[0].films).toEqual(JSON.parse(guestFilms));
 });
 
 test('migrates legacy watched films for the account and its separate guest backup', async () => {
   const guestFilms = JSON.stringify([{id:'guest-film',title:'Guest Film'}]);
   const accountFilms = JSON.stringify([{id:'account-film',title:'Account Film'}]);
+  const migrated = (films: string) => JSON.stringify([
+    {id:'watchlist',name:'Watchlist',films:[]},
+    {id:'watched',name:'Watched',films:JSON.parse(films).map((film: object) => ({...film,posterPath:''}))}
+  ]);
   localStorage.setItem('cinecompass_active_account','alice');
   localStorage.setItem('cinecompass_guest_settings',JSON.stringify({cinecompass_hidden_movies:guestFilms}));
   request.mockImplementation(async (path, method) => {
@@ -91,14 +101,14 @@ test('migrates legacy watched films for the account and its separate guest backu
   render(<AccountProvider><Controls/></AccountProvider>);
   await screen.findByText('Alice');
   expect(localStorage.getItem('cinecompass_hidden_movies')).toBeNull();
-  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(accountFilms);
-  expect(JSON.parse(localStorage.getItem('cinecompass_guest_settings')!)).toEqual({cinecompass_watched_movies:guestFilms});
+  expect(localStorage.getItem(movieListsKey)).toBe(migrated(accountFilms));
+  expect(JSON.parse(localStorage.getItem('cinecompass_guest_settings')!)).toEqual({[movieListsKey]:migrated(guestFilms)});
   fireEvent.click(screen.getByText('Change view'));
   await waitFor(() => expect(request).toHaveBeenCalledWith('/settings','PUT',{
-    userId:'alice',revision:7,values:{cinecompass_watched_movies:accountFilms,cinecompass_schedule_view:'"posters"'}
+    userId:'alice',revision:7,values:{[movieListsKey]:migrated(accountFilms),cinecompass_schedule_view:'"posters"'}
   }));
   await screen.findByText('Saved');
   fireEvent.click(screen.getByText('Sign out'));
   await screen.findByText('Guest');
-  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(guestFilms);
+  expect(localStorage.getItem(movieListsKey)).toBe(migrated(guestFilms));
 });

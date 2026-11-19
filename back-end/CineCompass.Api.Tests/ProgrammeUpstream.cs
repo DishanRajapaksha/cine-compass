@@ -18,6 +18,7 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
 
     public ConcurrentQueue<(string Path, string? Body, HttpMethod Method)> Requests { get; } = new();
     public string? CursorOverride { get; set; }
+    public string? FarScreeningDate { get; init; }
     public bool IncludeEnglishScreenings { get; set; }
     public bool UseLanguageEvidence { get; init; }
 
@@ -63,6 +64,9 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
     {
         var early = Event("early", 18, "nl");
         var late = Event("late", 20, "en");
+        if (FarScreeningDate is { } date)
+            return Page("events", null, early, late,
+                Event("later-window", 20, "en").Replace("2026-11-19", date, StringComparison.Ordinal));
         if (UseLanguageEvidence)
             return Page("events", null, early, late,
                 Event("dub", 21, "en", spokenLanguage: "en", version: "nl-NL", publishedEnd: true),

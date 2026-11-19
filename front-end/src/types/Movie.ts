@@ -41,6 +41,21 @@ export interface SavedFilm {
   duration?: number;
   spokenLanguages?: string[];
   availableSubtitles?: string[];
+  availableLanguageVersions?: string[];
+  availableSpecials?: string[];
+  releaseDate?: string;
+  overview?: string;
+  overviewLanguage?: 'en' | 'nl';
+  directors?: string[];
+  cast?: string[];
+  createdAt?: string;
+}
+
+export interface MovieList {
+  id: string;
+  name: string;
+  films: SavedFilm[];
+  hideWatched?: boolean;
 }
 
 export interface WatchedMovie {

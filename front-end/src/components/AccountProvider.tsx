@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Account, api, ApiError, resetCsrf, Settings } from '../services/accountService';
+import { movieListsKey, normalizeMovieListSettings, readMovieLists } from '../lib/movieLists';
 import OpeningScreen from './OpeningScreen';
-import { applySettings, normalizeWatchedSettings, settingsEvent, snapshot } from '../lib/accountStorage';
+import { applySettings, settingsEvent, snapshot } from '../lib/accountStorage';
 
 type AccountState = {user:Account|null;status:string;error:string;busy:boolean;login:()=>Promise<void>;logout:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
 const AccountContext = createContext<AccountState | null>(null);
@@ -27,7 +28,7 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
       try {
         const wasAccount=localStorage.getItem(activeKey);
         if (wasAccount) {
-          guest.current=normalizeWatchedSettings(JSON.parse(localStorage.getItem(guestKey)||'{}'));
+          guest.current=normalizeMovieListSettings(JSON.parse(localStorage.getItem(guestKey)||'{}'));
           applySettings(guest.current);
         } else {guest.current=snapshot();}
         localStorage.setItem(guestKey,JSON.stringify(guest.current));
@@ -80,6 +81,9 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
     }),
     logout:()=>run(async()=>{if(writing.current) throw new Error('Wait for settings to finish saving, then sign out.');await api('/auth/logout','POST',{});resetCsrf();restoreGuest();setStatus('');}),
     reload:()=>run(async()=>{if(current.current) await load(current.current);}),
-    importGuest:()=>run(async()=>{applySettings(guest.current);setWorkspace(n=>n+1);window.dispatchEvent(new Event(settingsEvent));})};
+    importGuest:()=>run(async()=>{
+      const values = {...guest.current, [movieListsKey]: JSON.stringify(readMovieLists(guest.current))};
+      applySettings(values);setWorkspace(n=>n+1);window.dispatchEvent(new Event(settingsEvent));
+    })};
   return <AccountContext.Provider value={state}>{ready ? <React.Fragment key={workspace}>{children}</React.Fragment> : <OpeningScreen/>}</AccountContext.Provider>;
 }

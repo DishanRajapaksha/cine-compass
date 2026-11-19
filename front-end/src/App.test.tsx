@@ -3,9 +3,13 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import App from './App';
 import { movieService } from './services/movieService';
 import { getCurrentDateInAmsterdam, getCurrentTimeInAmsterdam } from './lib/utils';
+import { movieListsKey, watchedListId, watchlistId } from './lib/movieLists';
+import { MovieList } from './types/Movie';
 import * as dateUtils from './lib/utils';
 jest.mock('./services/movieService');
 const service = movieService as jest.Mocked<typeof movieService>;
+const storedLists = (): MovieList[] => JSON.parse(localStorage.getItem(movieListsKey) || '[]');
+const storedFilms = (id: string) => storedLists().find(list => list.id === id)?.films;
 beforeEach(() => {
   jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-01T12:00:00Z'));
   jest.spyOn(dateUtils, 'getCurrentDateInAmsterdam').mockReturnValue('2026-10-01');
@@ -446,7 +450,7 @@ test('upgrades existing past saved screenings into a deduplicated film watchlist
   render(<App/>);
   await screen.findByRole('button',{name:'Perfect Days'});
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
-  await waitFor(() => expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'film',title:'Perfect Days',duration:123,spokenLanguages:['ja'],availableSubtitles:['en']}]));
+  await waitFor(() => expect(storedFilms(watchlistId)).toMatchObject([{id:'film',title:'Perfect Days',duration:123,spokenLanguages:['ja'],availableSubtitles:['en']}]));
   fireEvent.click(screen.getByRole('button',{name:'Watchlist 1'}));
   expect(screen.queryByText('Past saved screening')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 2'}));
@@ -564,7 +568,7 @@ test('coming soon groups release weeks and saves a film without creating a scree
   expect(film.getByText(/Expected Thursday 22 October/)).toBeInTheDocument();
   fireEvent.click(film.getByRole('button',{name:'Save film Future Film to watchlist'}));
   expect(JSON.parse(localStorage.getItem('cineville_saved_showtimes') || '[]')).toEqual([]);
-  expect(JSON.parse(localStorage.getItem('cinecompass_saved_films') || '[]')).toMatchObject([{id:'upcoming',title:'Future Film'}]);
+  expect(storedFilms(watchlistId)).toMatchObject([{id:'upcoming',title:'Future Film'}]);
   fireEvent.change(screen.getByRole('textbox',{name:'Search upcoming films'}),{target:{value:'Future'}});
   expect(screen.queryByRole('heading',{name:'Later Film'})).not.toBeInTheDocument();
   fireEvent.click(film.getByRole('button',{name:'Find showtimes'}));
@@ -678,7 +682,7 @@ test.each([
   service.getUpcomingMovies.mockResolvedValue([movie,other]);
   service.getNowShowingMovies.mockResolvedValue([movie,other]);
   render(<App/>);
-  expect(localStorage.getItem('cinecompass_watched_movies')).toBe(legacy);
+  expect(storedFilms(watchedListId)).toEqual([{id:'older-catalogue-id',title:oldTitle,year,posterPath:''}]);
   expect(localStorage.getItem('cinecompass_hidden_movies')).toBeNull();
   fireEvent.click(screen.getByRole('button',{name:'More pages'}));
   fireEvent.click(screen.getByRole('menuitem',{name:page}));
@@ -691,4 +695,102 @@ test.each([
   fireEvent.click(screen.getByRole('button',{name:`Restore ${oldTitle}`}));
   fireEvent.click(screen.getByRole('button',{name:'Close settings'}));
   expect(screen.getByRole('button',{name:`Details for ${title}`})).toBeInTheDocument();
+});
+
+test('manages independent custom list membership for watched catalogue films', async () => {
+  const randomUUID = jest.fn()
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
+    .mockReturnValueOnce('00000000-0000-4000-8000-000000000002');
+  Object.defineProperty(window, 'crypto', {configurable:true, value:{randomUUID}});
+  const base = (await service.getPopularMovies()).results[0];
+  service.searchFilms.mockResolvedValue({results:[{...base, directors:['Wim Wenders'], showtimes:[]}],nextCursor:null});
+  const app = render(<App/>);
+  const openLists = () => fireEvent.click(within(screen.getByRole('navigation',{name:'Main navigation'})).getByRole('button',{name:'Lists'}));
+  const create = (name:string) => {
+    fireEvent.click(screen.getByRole('button',{name:'New list'}));
+    fireEvent.change(screen.getByRole('textbox',{name:'List name'}),{target:{value:name}});
+    fireEvent.click(screen.getByRole('button',{name:'Create list'}));
+  };
+
+  await screen.findByRole('button',{name:'Perfect Days'});
+  openLists();
+  create('Rewatch');
+  create('Film club');
+  fireEvent.click(screen.getByRole('button',{name:'Search for films'}));
+  fireEvent.change(screen.getByRole('searchbox',{name:'Film title'}),{target:{value:'Perfect Days'}});
+  fireEvent.submit(screen.getByRole('search'));
+  const result = within(await screen.findByRole('article',{name:'Search result Perfect Days'}));
+  fireEvent.click(result.getByLabelText('Add to list: Perfect Days'));
+  fireEvent.click(result.getByRole('checkbox',{name:'Rewatch'}));
+  fireEvent.click(result.getByRole('checkbox',{name:'Film club'}));
+  fireEvent.click(result.getByRole('button',{name:'Save film Perfect Days to watchlist'}));
+  fireEvent.click(result.getByRole('button',{name:'Watched: Perfect Days'}));
+  expect(storedFilms(watchlistId)).toHaveLength(1);
+  expect(storedFilms(watchedListId)).toHaveLength(1);
+  expect(screen.getByRole('button',{name:'Watchlist 0'})).toBeInTheDocument();
+  openLists();
+  expect(screen.getByRole('heading',{name:'Film club'})).toBeInTheDocument();
+  expect(screen.getByText('Directed by Wim Wenders')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button',{name:'Rename list'}));
+  fireEvent.change(screen.getByRole('textbox',{name:'List name'}),{target:{value:'Club picks'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save name'}));
+  expect(storedLists().find(list => list.name === 'Club picks')).toMatchObject({
+    id:'00000000-0000-4000-8000-000000000002',
+    films:[{id:base.id,title:base.title,posterPath:base.poster_path,overview:base.overview,directors:['Wim Wenders']}]
+  });
+  fireEvent.click(screen.getByRole('button',{name:'Remove Perfect Days'}));
+  fireEvent.click(screen.getByRole('button',{name:'Delete list'}));
+  fireEvent.click(screen.getByRole('button',{name:'Confirm delete'}));
+  expect(storedLists().some(list => list.name === 'Club picks')).toBe(false);
+
+  app.unmount();
+  render(<App/>);
+  await screen.findByText('No screenings in this window.');
+  openLists();
+  fireEvent.click(screen.getByRole('button',{name:'Rewatch 1'}));
+  expect(screen.getByRole('heading',{name:'Perfect Days'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Watched 1'}));
+  fireEvent.click(screen.getByRole('button',{name:'Restore Perfect Days'}));
+  expect(screen.getAllByRole('button',{name:'Watchlist 1'})).toHaveLength(2);
+});
+
+test('hides watched films per list without removing membership and remembers the filter', async () => {
+  const watchedFilm = {id:'older-catalogue-id',title:'Perfect Days',year:2023,posterPath:''};
+  const film = {...watchedFilm,id:'current-catalogue-id'};
+  localStorage.setItem(movieListsKey, JSON.stringify([
+    {id:watchedListId,name:'Watched',films:[watchedFilm]},
+    {id:'club',name:'Film club',films:[film]},
+    {id:'rewatch',name:'Rewatch',films:[film]},
+  ]));
+  const openLists = () => fireEvent.click(within(screen.getByRole('navigation',{name:'Main navigation'})).getByRole('button',{name:'Lists'}));
+  const choose = (name:string) => fireEvent.click(within(screen.getByRole('navigation',{name:'Movie lists'})).getByRole('button',{name}));
+  const app = render(<App/>);
+  await screen.findByText('No screenings in this window.');
+  openLists();
+  choose('Film club 1');
+  fireEvent.click(screen.getByRole('checkbox',{name:'Hide watched'}));
+  expect(screen.getByText('All films in this list are watched')).toBeInTheDocument();
+  expect(screen.queryByRole('heading',{name:'Perfect Days'})).not.toBeInTheDocument();
+  expect(storedFilms('club')).toEqual([film]);
+
+  choose('Rewatch 1');
+  expect(screen.getByRole('checkbox',{name:'Hide watched'})).not.toBeChecked();
+  expect(screen.getByRole('heading',{name:'Perfect Days'})).toBeInTheDocument();
+  app.unmount();
+
+  render(<App/>);
+  await screen.findByText('No screenings in this window.');
+  openLists();
+  choose('Film club 0');
+  expect(screen.getByRole('checkbox',{name:'Hide watched'})).toBeChecked();
+  fireEvent.click(screen.getByRole('checkbox',{name:'Hide watched'}));
+  expect(screen.getByRole('heading',{name:'Perfect Days'})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('checkbox',{name:'Hide watched'}));
+
+  choose('Watched 1');
+  fireEvent.click(screen.getByRole('button',{name:'Restore Perfect Days'}));
+  choose('Film club 1');
+  expect(screen.getByRole('checkbox',{name:'Hide watched'})).toBeChecked();
+  expect(screen.getByRole('heading',{name:'Perfect Days'})).toBeInTheDocument();
 });

@@ -86,12 +86,14 @@ public sealed partial class ProgrammeTests
         Assert.Equal(9, settings.GetProperty("revision").GetInt64());
         var values = settings.GetProperty("values");
         Assert.False(values.TryGetProperty("cinecompass_hidden_movies", out _));
-        using var watchedFilms = JsonDocument.Parse(values.GetProperty("cinecompass_watched_movies").GetString()!);
-        Assert.Equal(new[] { "legacy", "film" }, watchedFilms.RootElement.EnumerateArray().Select(f => f.GetProperty("id").GetString()));
+        using var lists = JsonDocument.Parse(values.GetProperty("cinecompass_movie_lists").GetString()!);
+        var watchedFilms = lists.RootElement[1].GetProperty("films");
+        Assert.Equal(new[] { "legacy", "film" }, watchedFilms.EnumerateArray().Select(f => f.GetProperty("id").GetString()));
         Assert.Equal("\"posters\"", values.GetProperty("cinecompass_schedule_view").GetString());
-        using var storedFilms = JsonDocument.Parse(values.GetProperty("cinecompass_saved_films").GetString()!);
-        Assert.Equal(new[] { "old", "film" }, storedFilms.RootElement.EnumerateArray().Select(f => f.GetProperty("id").GetString()));
-        Assert.Equal("https://images.example/film.jpg", storedFilms.RootElement[1].GetProperty("posterPath").GetString());
+        var storedFilms = lists.RootElement[0].GetProperty("films");
+        Assert.Equal(new[] { "old", "film" }, storedFilms.EnumerateArray().Select(f => f.GetProperty("id").GetString()));
+        Assert.Equal("https://images.example/film.jpg", storedFilms[1].GetProperty("posterPath").GetString());
+        Assert.Equal("https://images.example/film.jpg", watchedFilms[1].GetProperty("posterPath").GetString());
 
         HttpClient LinkedClient(string subject, string issuer = TestKeycloakSettings.Issuer)
         {

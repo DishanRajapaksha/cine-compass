@@ -1,3 +1,4 @@
+using CineCompass.Api.Notifications;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -24,10 +25,13 @@ public sealed class CalendarSubscription
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser>(options)
 {
     public DbSet<CalendarSubscription> CalendarSubscriptions => Set<CalendarSubscription>();
+    public DbSet<ScreeningNotification> ScreeningNotifications => Set<ScreeningNotification>();
+    public DbSet<ScreeningNotificationScan> ScreeningNotificationScans => Set<ScreeningNotificationScan>();
     public DbSet<UserSettings> Settings => Set<UserSettings>();
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        NotificationData.Configure(builder);
         builder.Entity<CalendarSubscription>().HasKey(x => x.UserId);
         builder.Entity<CalendarSubscription>().HasIndex(x => x.TokenHash).IsUnique();
         builder.Entity<CalendarSubscription>().Property(x => x.Revision).IsConcurrencyToken();

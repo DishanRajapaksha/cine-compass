@@ -52,11 +52,23 @@ The **Coming soon** tab loads Cineville's upcoming catalogue from `POST /product
 
 Save an upcoming film to the existing Movies watchlist before any screenings are published. This saves the film only; individual screenings remain separate in Saved showtimes. Films marked watched are excluded from Coming soon. Upcoming catalogue data loads live and uses the same English-first, Dutch-fallback metadata normalization as the programme.
 
+## Movie lists
+
+Open **Lists → New list** to create a collection. Use **Add to list** on a search result, in film details, or on a saved film to select its lists. You can rename or delete custom lists, and a film can belong to several lists. Each entry keeps the Cineville ID, title, poster and any film metadata available when you add it.
+
+Watchlist and Watched use permanent list IDs. Marking a film watched still hides it from the programme and Watchlist views. Each custom list has its own **Hide watched** option. Restore a watched film from Lists or Settings. Earlier account and browser lists are carried forward automatically.
+
+## Screening notifications
+
+Sign in and choose **Notify me** on a film or **Notify for this list** in Lists. A list reminder includes films added later and follows that list’s watched visibility. Individual reminders follow the selected film independently.
+
+Open **More pages → Notifications** to set your look-ahead window from 1 to 365 days. The backend checks published Cineville screenings across all cities daily at 08:00 Amsterdam time, or after startup if that day’s check is due. Each screening appears once per account, even if multiple reminders match it. The page keeps the history of past screenings and their read status.
+
 ## Sync behavior
 
 Guest settings remain separately saved on this device and are restored on sign-out. Signing in loads account settings. Settings → Settings on this device → Import guest settings replaces account settings with that guest snapshot. Changes save after a short delay.
 
-Filters, display mode, cinema order, planner preferences, watched films, saved films, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
+Filters, display mode, cinema order, planner preferences, movie lists, screening reminders, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
 
 Saves include the expected account ID and revision. Conflicting edits are rejected rather than silently overwritten. Reload account settings discards unsynced changes and loads the server version. Concurrent list edits are not merged in this initial implementation. Offline changes retry while the page stays open and when connectivity returns; there is no persistent offline upload queue. A session switch in another tab reloads this tab to prevent mixing accounts.
 

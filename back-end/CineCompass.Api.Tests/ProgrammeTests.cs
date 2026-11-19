@@ -189,6 +189,7 @@ public sealed partial class ProgrammeTests
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseSetting("App:Origin", "https://cinecompass.example");
+            builder.UseSetting("ScreeningNotifications:Enabled", "false");
             TestKeycloakSettings.Configure(builder);
             builder.UseSetting("Cineville:McpGatewaySecret", GatewayCredential);
             builder.UseSetting("ConnectionStrings:Database", "Host=localhost;Database=test;Username=test");

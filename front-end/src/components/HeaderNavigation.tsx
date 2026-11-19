@@ -1,11 +1,12 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Menu } from 'lucide-react';
 
-export type Page = 'schedule'|'search'|'watchlist'|'upcoming'|'now-showing';
-type Props = {page:Page;count:number;onPage:(page:Page)=>void;onSettings:()=>void};
-export default function HeaderNavigation({page,count,onPage,onSettings}:Props) {
+export type Page = 'schedule'|'search'|'watchlist'|'lists'|'notifications'|'upcoming'|'now-showing';
+type Props = {page:Page;count:number;unreadNotifications?:number;onPage:(page:Page)=>void;onSettings:()=>void};
+export default function HeaderNavigation({page,count,unreadNotifications=0,onPage,onSettings}:Props) {
   const [open,setOpen] = useState(false);
   const menuId = useId();
+  const unreadId = useId();
   const container = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -31,15 +32,18 @@ export default function HeaderNavigation({page,count,onPage,onSettings}:Props) {
     <button className={page === 'schedule' ? 'active' : ''} onClick={() => {setOpen(false);onPage('schedule');}}>Schedule</button>
     <button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => {setOpen(false);onPage('search');}}>Search</button>
     <button className={page === 'watchlist' ? 'active' : ''} onClick={() => {setOpen(false);onPage('watchlist');}}>Watchlist <span className="cc-count">{count}</span></button>
+    <button className={page === 'lists' ? 'active' : ''} aria-current={page === 'lists' ? 'page' : undefined} onClick={() => {setOpen(false);onPage('lists');}}>Lists</button>
     <div className="cc-header-menu" ref={container} onBlur={event => {
       // A touch tap may blur without a new focus target before its click arrives.
       // Outside taps are handled by pointerdown; keyboard focus has a target.
       if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
     }}>
-      <button ref={trigger} className={`cc-menu-trigger${page === 'upcoming' || page === 'now-showing' ? ' active' : ''}`} aria-label="More pages" title="More pages" aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(value => !value)} onKeyDown={event => {if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {event.preventDefault();setOpen(true);}}}><Menu size={21}/></button>
+      <button ref={trigger} className={`cc-menu-trigger${page === 'upcoming' || page === 'now-showing' || page === 'notifications' ? ' active' : ''}`} aria-label="More pages" aria-describedby={unreadNotifications > 0 ? unreadId : undefined} title="More pages" aria-haspopup="menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(value => !value)} onKeyDown={event => {if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {event.preventDefault();setOpen(true);}}}><Menu size={21}/>{unreadNotifications > 0 && <span className="cc-notification-badge" aria-hidden="true">{Math.min(unreadNotifications,99)}{unreadNotifications > 99 ? '+' : ''}</span>}</button>
+      {unreadNotifications > 0 && <span className="sr-only" id={unreadId}>{unreadNotifications} unread notifications</span>}
       {open && <div id={menuId} ref={menu} className="cc-header-menu-panel" role="menu" aria-label="More pages" onKeyDown={menuKeyDown}>
         <button role="menuitem" aria-current={page === 'now-showing' ? 'page' : undefined} onClick={() => choose('now-showing')}>Now showing</button>
         <button role="menuitem" aria-current={page === 'upcoming' ? 'page' : undefined} onClick={() => choose('upcoming')}>Coming soon</button>
+        <button role="menuitem" aria-current={page === 'notifications' ? 'page' : undefined} onClick={() => choose('notifications')}>Notifications{unreadNotifications > 0 && <span className="cc-count"> {unreadNotifications} unread</span>}</button>
         <button role="menuitem" aria-haspopup="dialog" onClick={() => {close();onSettings();}}>Settings</button>
       </div>}
     </div>

@@ -4,6 +4,9 @@ import { City, Movie, SavedShowtime } from '../types/Movie';
 import { formatDuration, amsterdamDate, dateLabel, languageName, screeningTime, Screening } from '../lib/schedule';
 import FilmDescription from './FilmDescription';
 import FilmShowtimes from './FilmShowtimes';
+import { savedFilm } from '../lib/movieLists';
+import MovieListAction from './MovieListAction';
+import ScreeningReminder from './ScreeningReminder';
 import ImdbLink from './ImdbLink';
 
 export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen = false, screening, cities, city, saved, onSave, onPlan, onClose, onMarkWatched, filmSaved, onToggleFilm }: { filmSaved: boolean; onToggleFilm: () => void; onMarkWatched: () => void; movie:Movie;releaseLabel?:string;initialShowtimesOpen?:boolean;screening?: Screening; cities: City[]; city: string | null; saved: SavedShowtime[]; onSave: (screening: Screening) => void; onPlan: (screening: Screening) => void; onClose: () => void }) {
@@ -21,7 +24,7 @@ export default function FilmDetails({ movie, releaseLabel, initialShowtimesOpen 
         <span className="cc-detail-eyebrow">{releaseLabel || (showtime ? `In the programme${showtime.specials ? ` · ${showtime.specials}` : ''}` : '')}</span>
         <h2 id="cc-detail-title">{movie.title}</h2>
         <p className="cc-detail-meta">{[movie.releaseYear || null,movie.duration ? formatDuration(movie.duration) : 'Duration not listed',movie.spokenLanguages.map(languageName).join(', ') || 'Language not listed'].filter(Boolean).join(' · ')}</p>
-        <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-mark-watched" onClick={onMarkWatched}>Watched</button></div>
+        <div className="cc-detail-links"><ImdbLink title={movie.title} year={movie.releaseYear}/><button className="cc-film-watchlist" aria-pressed={filmSaved} onClick={onToggleFilm}>{filmSaved ? 'Remove film from watchlist' : 'Save film to watchlist'}</button><button className="cc-mark-watched" onClick={onMarkWatched}>Watched</button><MovieListAction film={savedFilm(movie)}/><ScreeningReminder id={movie.id} title={movie.title}/></div>
       </div>
       <div className="cc-detail-story">
         <FilmDescription key={`${movie.id}:${movie.overview}`} movie={movie}/>

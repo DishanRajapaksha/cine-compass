@@ -1,0 +1,20 @@
+.cc-app .cc-reminder-toggle{display:inline-flex;align-items:center;gap:5px}
+.cc-app .cc-reminder-toggle[aria-pressed=true]{font-weight:bold}
+.cc-notification-options{padding:14px 0 20px;border-bottom:1px solid var(--rule)}
+.cc-notification-options form{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.cc-notification-options form>div{display:flex;align-items:center;gap:10px}
+.cc-app .cc-notification-options .cc-primary{margin:0}
+.cc-app .cc-notification-options .cc-primary:disabled{background:#e5dbcc;color:var(--muted);cursor:default}
+.cc-notification-options input{width:92px;padding:7px 8px;border:1px solid var(--rule);background:var(--paper);font:inherit}
+.cc-notification-options p,.cc-notification-history p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.cc-notification-history-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin:22px 0 8px}
+.cc-notification-history-heading h3{margin:0;font-size:23px}
+.cc-notification-history-heading>div{display:flex;gap:16px}
+.cc-notification-history{margin:0;padding:0;list-style:none}
+.cc-notification-history li{display:flex;justify-content:space-between;align-items:start;gap:14px;padding:13px 0;border-bottom:1px solid var(--rule)}
+.cc-notification-history li>div{min-width:0;overflow-wrap:anywhere}
+.cc-notification-history li>a{flex-shrink:0}
+.cc-notification-history h4{margin:0;font-size:19px}
+.cc-notification-new{display:inline-block;color:var(--wine);margin-left:6px;font-size:12px;font-weight:bold}
+.cc-notification-history + button{margin-top:16px}
+.cc-notification-badge{position:absolute;right:0;top:3px;min-width:14px;height:14px;padding:0 2px;border-radius:7px;background:var(--wine);color:var(--paper);font:10px/14px Arial,sans-serif;text-align:center}
