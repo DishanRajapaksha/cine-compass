@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useId } from 'react';
 import { Bookmark, Search, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { City, MovieFilters } from '../types/Movie';
-import { languageName } from '../lib/schedule';
 import CinemaLists from './CinemaLists';
+import LanguageFilters from './LanguageFilters';
 
 type Props = {
   filters: MovieFilters; cities: City[]; query: string; languages: string[]; specials: string[];
@@ -57,9 +57,7 @@ export default function ScheduleFilters({ filters, cities, query, languages, spe
         setCinemasOpen(false);
       }}/>}
     </div>
-    <fieldset className="cc-language-match"><legend>Language matching</legend><div className="cc-language-mode" aria-label="Language filter matching"><button aria-pressed={filters.languageMatchMode==='any'} onClick={() => update({languageMatchMode:'any'})}>Any (OR)</button><button aria-pressed={filters.languageMatchMode!=='any'} onClick={() => update({languageMatchMode:'all'})}>All (AND)</button></div><small className="cc-hint">{filters.languageMatchMode==='any' ? 'Match the subtitle or spoken language.' : 'Match both selected language filters.'}</small></fieldset>
-    <label className="cc-field">Subtitles<select value={filters.selectedSubtitleLanguages[0] || ''} onChange={e => update({selectedSubtitleLanguages:e.currentTarget.value ? [e.currentTarget.value] : []})}><option value="">Any subtitles</option><option value="en">English subtitles</option><option value="nl">Dutch subtitles</option></select></label>
-    <label className="cc-field">Spoken language<select value={filters.selectedSpokenLanguages[0] || ''} onChange={e => update({selectedSpokenLanguages:e.currentTarget.value ? [e.currentTarget.value] : []})}><option value="">Any language</option>{languages.map(lang => <option key={lang} value={lang}>{languageName(lang)}</option>)}</select></label>
+    <LanguageFilters filters={filters} languages={languages} onChange={update}/>
     <label className="cc-field">Special screenings<select value={filters.selectedSpecials[0] || ''} onChange={e => update({selectedSpecials:e.currentTarget.value ? [e.currentTarget.value] : []})}><option value="">Any screening type</option>{specials.map(special => <option key={special}>{special}</option>)}</select></label>
   </aside>;
 }

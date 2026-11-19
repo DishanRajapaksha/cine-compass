@@ -21,12 +21,16 @@ internal sealed class WatchedMovieMatcher(IEnumerable<AccountMovie> watched)
 
     public static string Id(string id) => Guid.TryParseExact(id.Trim(), "D", out var guid) ? guid.ToString("D") : id;
 
+    public static string CatalogueTitle(string title) => ReleaseSuffix.Replace(title, "").Trim();
+
     // Mirrors the web app's title-and-year match for films with changed catalogue IDs.
-    private static (string, int)? TitleAndYear(AccountMovie movie)
+    private static (string, int)? TitleAndYear(AccountMovie movie) => TitleAndYear(movie.Title, movie.Year);
+
+    public static (string, int)? TitleAndYear(string name, int? year)
     {
-        if (movie.Year is not > 0) return null;
-        var title = ReleaseSuffix.Replace(movie.Title, "").Normalize(NormalizationForm.FormKD);
+        if (year is not > 0) return null;
+        var title = CatalogueTitle(name).Normalize(NormalizationForm.FormKD);
         title = Punctuation.Replace(Diacritics.Replace(title, "").ToLowerInvariant(), " ").Trim();
-        return title.Length > 0 ? (title, movie.Year.Value) : null;
+        return title.Length > 0 ? (title, year.Value) : null;
     }
 }

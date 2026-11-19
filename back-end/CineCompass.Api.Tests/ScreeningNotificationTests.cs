@@ -18,9 +18,9 @@ public sealed class ScreeningNotificationTests
             [{"id":"watched","name":"Watched","films":[{"id":"older","title":"A Film","year":2025,"posterPath":""}]},{"id":"club","name":"Film club","hideWatched":true,"films":[{"id":"film","title":"A Film","year":2025,"posterPath":""}]}]
             """;
         var settings = MovieListSettings.Parse(JsonSerializer.Serialize(new Dictionary<string, string> { [MovieListSettings.Key] = lists }));
-        Assert.Empty(new ReminderSettings(365, [], ["club"]).IncludedFilms(settings));
-        Assert.Equal("film", Assert.Single(new ReminderSettings(365, ["film"], ["club"]).IncludedFilms(settings)));
-        Assert.Equal("older", Assert.Single(new ReminderSettings(365, [], ["watched"]).IncludedFilms(settings)));
+        Assert.Empty(ReminderSettings.Parse("""{"lookAheadDays":365,"filmIds":[],"listIds":["club"]}""")!.FilmRules(settings));
+        Assert.Equal("film", Assert.Single(ReminderSettings.Parse("""{"lookAheadDays":365,"filmIds":["film"],"listIds":["club"]}""")!.FilmRules(settings)).FilmId);
+        Assert.Equal("older", Assert.Single(ReminderSettings.Parse("""{"lookAheadDays":365,"filmIds":[],"listIds":["watched"]}""")!.FilmRules(settings)).FilmId);
     }
 
     [Fact]
@@ -60,8 +60,14 @@ public sealed class ScreeningNotificationTests
             }
         });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
-        await Save(alice, "alice", 1, lists, ["film"]); // matching both the film and the list
-        await Save(bob, "bob", 30, watchedLists, ["film"]); // the individual reminder survives the list's filter
+        Assert.Null(ReminderSettings.Parse("""{"lookAheadDays":30,"filmIds":[],"listIds":[],"city":" Amsterdam "}"""));
+        Assert.Null(ReminderSettings.Parse("""{"lookAheadDays":30,"filmIds":["film"],"listIds":[],"filmFilters":{"film":{"lookAheadDays":0}}}"""));
+        await Save(alice, "alice", lists, """
+            {"lookAheadDays":45,"city":"Rotterdam","languageMatchMode":"all","filmIds":["film"],"listIds":["club"],
+             "filmFilters":{"film":{"lookAheadDays":1,"city":"amsterdam","selectedSpokenLanguages":["fr"],"selectedSubtitleLanguages":[]}},
+             "listFilters":{"club":{"lookAheadDays":1,"city":"Amsterdam","languageMatchMode":"all","selectedSpokenLanguages":["ja"],"selectedSubtitleLanguages":["en"]}}}
+            """);
+        await Save(bob, "bob", watchedLists, """{"lookAheadDays":30,"filmIds":["film"],"listIds":["club"]}""");
 
         await Scan();
         Assert.Empty(upstream.Requests);
@@ -75,8 +81,13 @@ public sealed class ScreeningNotificationTests
 
         var aliceNotices = await Inbox(alice);
         Assert.Equal(new[] { "early", "late" }, Ids(aliceNotices));
-        Assert.Equal(2, aliceNotices.GetProperty("unread").GetInt32());
-        Assert.Equal(new[] { "early", "late", "later-window" }, Ids(await Inbox(bob)));
+        Assert.Equal(1, aliceNotices.GetProperty("unread").GetInt32());
+        var late = aliceNotices.GetProperty("items").EnumerateArray().Single(item => item.GetProperty("screeningId").GetString() == "late");
+        Assert.Equal("fr", late.GetProperty("audioLanguages")[0].GetString());
+        Assert.Equal("en", late.GetProperty("subtitleLanguages")[0].GetString());
+        Assert.Equal("Amsterdam", late.GetProperty("theaterCity").GetString());
+        Assert.Equal("Eye Filmmuseum", late.GetProperty("theaterName").GetString());
+        Assert.Equal(new[] { "late", "later-window", "rotterdam", "rotterdam-audio" }, Ids(await Inbox(bob)));
         await Scan();
         Assert.Equal(2, upstream.Requests.Count(request => request.Path.StartsWith("/events/search", StringComparison.Ordinal)));
 
@@ -84,31 +95,64 @@ public sealed class ScreeningNotificationTests
         using var read = await alice.PostAsJsonAsync("/api/notifications/read", new { through = head });
         Assert.Equal(HttpStatusCode.NoContent, read.StatusCode);
         Assert.Equal(0, (await Inbox(alice)).GetProperty("unread").GetInt32());
-        Assert.Equal(3, (await Inbox(bob)).GetProperty("unread").GetInt32());
+        Assert.Equal(1, (await Inbox(bob)).GetProperty("unread").GetInt32());
 
-        clock.Now = DateTimeOffset.Parse("2026-11-20T07:05:00Z");
-        await Scan();
-        Assert.Equal(new[] { "early", "late" }, Ids(await Inbox(alice)));
-        Assert.Equal(new[] { "early", "late", "later-window" }, Ids(await Inbox(bob)));
-        Assert.Equal(0, (await Inbox(alice)).GetProperty("unread").GetInt32());
-
-        // The first page is bounded, but the earlier read notifications remain accessible.
+        // A legacy notice can pick up language evidence without changing its alert or read status.
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.ScreeningNotifications.AddRange(Enumerable.Range(1, 25).Select(i => new ScreeningNotification
+            var legacy = db.ScreeningNotifications.Single(row => row.UserId == "bob" && row.ScreeningId == "later-window");
+            legacy.SubtitleLanguages = null;
+            legacy.SubtitleStatus = null;
+            legacy.IsRead = true;
+            await db.SaveChangesAsync();
+        }
+        clock.Now = DateTimeOffset.Parse("2026-11-20T07:05:00Z");
+        await Scan();
+        Assert.Equal(new[] { "early", "late" }, Ids(await Inbox(alice)));
+        var bobNotices = await Inbox(bob);
+        Assert.Equal(new[] { "late", "later-window", "rotterdam", "rotterdam-audio" }, Ids(bobNotices));
+        var refreshed = bobNotices.GetProperty("items").EnumerateArray().Single(item => item.GetProperty("screeningId").GetString() == "later-window");
+        Assert.Equal("en", refreshed.GetProperty("subtitleLanguages")[0].GetString());
+        Assert.Equal(DateTimeOffset.Parse("2026-11-19T07:00:00Z"), refreshed.GetProperty("foundAt").GetDateTimeOffset());
+        Assert.True(refreshed.GetProperty("isRead").GetBoolean());
+        Assert.Equal(0, (await Inbox(alice)).GetProperty("unread").GetInt32());
+
+        await Save(bob, "bob", "[]", """{"lookAheadDays":30,"filmIds":[],"listIds":[]}""", revision: 1);
+        upstream.IncludeNewReminderScreenings = true;
+        clock.Now = DateTimeOffset.Parse("2026-11-21T07:05:00Z");
+        await Scan();
+        using var citySearch = JsonDocument.Parse(upstream.Requests.Last(request => request.Path.StartsWith("/events/search", StringComparison.Ordinal)).Body!);
+        Assert.Equal("eye", citySearch.RootElement.GetProperty("venueId").GetProperty("in").EnumerateArray().Single().GetString());
+        var newNotices = await Inbox(alice);
+        Assert.Equal(new[] { "early", "late", "new-early", "new-late" }, Ids(newNotices));
+        var unread = await alice.GetFromJsonAsync<JsonElement>("/api/notifications/unread");
+        Assert.Equal(1, unread.GetProperty("unread").GetInt32());
+        var discoveries = newNotices.GetProperty("items").EnumerateArray().Where(item => !item.GetProperty("isRead").GetBoolean()).ToArray();
+        Assert.Equal(2, discoveries.Length);
+        Assert.Single(discoveries.Select(item => item.GetProperty("foundAt").GetDateTimeOffset()).Distinct());
+        var newEarly = discoveries.Single(item => item.GetProperty("screeningId").GetString() == "new-early");
+        Assert.Equal("ja", newEarly.GetProperty("audioLanguages")[0].GetString());
+        var newLate = discoveries.Single(item => item.GetProperty("screeningId").GetString() == "new-late");
+        Assert.Equal("none", newLate.GetProperty("subtitleStatus").GetString());
+
+        // A page holds whole alerts, including one with more than 25 showtimes.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.ScreeningNotifications.AddRange(Enumerable.Range(1, 50).Select(i => new ScreeningNotification
             {
-                UserId = "alice", ScreeningId = $"new-{i}", FilmId = "film",
-                FilmTitle = "A Film", StartsAt = clock.Now.AddDays(i), FoundAt = clock.Now
+                UserId = "alice", ScreeningId = $"fixture-{i}", FilmId = "film",
+                FilmTitle = "A Film", StartsAt = clock.Now.AddDays(i), FoundAt = clock.Now.AddMinutes(Math.Min(i, 25))
             }));
             await db.SaveChangesAsync();
         }
         var newestPage = await Inbox(alice);
-        Assert.Equal(25, newestPage.GetProperty("items").GetArrayLength());
+        Assert.Equal(50, newestPage.GetProperty("items").GetArrayLength());
         var cursor = newestPage.GetProperty("nextBefore").GetInt64();
         var olderPage = await alice.GetFromJsonAsync<JsonElement>($"/api/notifications?before={cursor}");
-        Assert.Equal(new[] { "early", "late" }, Ids(olderPage));
-        Assert.All(olderPage.GetProperty("items").EnumerateArray(), item => Assert.True(item.GetProperty("isRead").GetBoolean()));
+        Assert.Equal(new[] { "early", "late", "new-early", "new-late" }, Ids(olderPage));
+        Assert.Equal(2, olderPage.GetProperty("items").EnumerateArray().Count(item => item.GetProperty("isRead").GetBoolean()));
 
         async Task<HttpClient> Account(string user)
         {
@@ -132,14 +176,14 @@ public sealed class ScreeningNotificationTests
     private static string?[] Ids(JsonElement inbox) => inbox.GetProperty("items").EnumerateArray()
         .Select(item => item.GetProperty("screeningId").GetString()).Order(StringComparer.Ordinal).ToArray();
 
-    private static async Task Save(HttpClient client, string userId, int lookAheadDays, string lists, string[] filmIds)
+    private static async Task Save(HttpClient client, string userId, string lists, string reminders, long revision = 0)
     {
         var values = new Dictionary<string, string>
         {
             ["cinecompass_movie_lists"] = lists,
-            [ReminderSettings.Key] = JsonSerializer.Serialize(new { lookAheadDays, filmIds, listIds = new[] { "club" } })
+            [ReminderSettings.Key] = reminders
         };
-        using var response = await client.PutAsJsonAsync("/api/settings", new { userId, revision = 0, values });
+        using var response = await client.PutAsJsonAsync("/api/settings", new { userId, revision, values });
         response.EnsureSuccessStatusCode();
     }
 

@@ -17,7 +17,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261119000301_ScreeningNotifications";
+    public override string LastMigrationId => "20261119093242_ScreeningNotificationLanguages";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -132,6 +132,12 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
 
                 NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
 
+                b.PrimitiveCollection<string[]>("AudioLanguages")
+                    .HasColumnType("text[]");
+
+                b.Property<string>("AudioSource")
+                    .HasColumnType("text");
+
                 b.Property<string>("FilmId")
                     .IsRequired()
                     .HasColumnType("text");
@@ -146,12 +152,21 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.Property<bool>("IsRead")
                     .HasColumnType("boolean");
 
+                b.Property<string>("LanguageVersion")
+                    .HasColumnType("text");
+
                 b.Property<string>("ScreeningId")
                     .IsRequired()
                     .HasColumnType("text");
 
                 b.Property<DateTimeOffset>("StartsAt")
                     .HasColumnType("timestamp with time zone");
+
+                b.PrimitiveCollection<string[]>("SubtitleLanguages")
+                    .HasColumnType("text[]");
+
+                b.Property<string>("SubtitleStatus")
+                    .HasColumnType("text");
 
                 b.Property<string>("TheaterCity")
                     .IsRequired()
@@ -170,6 +185,8 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
 
                 b.HasKey("Id");
 
+                b.HasIndex("UserId", "FoundAt");
+
                 b.HasIndex("UserId", "Id");
 
                 b.HasIndex("UserId", "IsRead");
@@ -186,6 +203,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("integer");
 
                 b.Property<DateOnly>("CompletedDay")
+                    .IsConcurrencyToken()
                     .HasColumnType("date");
 
                 b.HasKey("Id");

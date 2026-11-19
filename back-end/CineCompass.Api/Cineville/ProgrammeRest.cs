@@ -47,6 +47,9 @@ internal static class ProgrammeRest
             return new { results = page.Films.Select(f => AsMovie(f, [], catalogue: true)).ToArray(), page.NextCursor };
         });
 
+        group.MapGet("/films/poster", async (string? id, string? title, int? year, CinevilleProgramme programme, CancellationToken ct) =>
+            new { posterPath = await programme.FindFilmPoster(id, title, year, ct) });
+
         group.MapGet("/now-showing", async (string? city, CinevilleProgramme programme, CancellationToken ct) =>
             (await programme.NowShowing(city, ct)).Select(f => AsMovie(f, [], catalogue: true)).ToArray());
 

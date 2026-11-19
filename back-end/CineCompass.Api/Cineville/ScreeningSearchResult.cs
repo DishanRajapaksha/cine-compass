@@ -33,13 +33,9 @@ internal static class ScreeningSearchResult
 
         var candidates = batch.Screenings.Where(s => string.IsNullOrWhiteSpace(title) ||
             s.Film?.Title.Contains(title, StringComparison.OrdinalIgnoreCase) == true).ToArray();
-        var matchEither = filter.MatchEitherLanguage && filter.Languages is not null && filter.Subtitles is not null;
         var results = candidates.Where(s =>
-        {
-            var audioMatches = ScreeningLanguage.Matches(filter.Languages, s.AudioLanguages);
-            var subtitlesMatch = ScreeningLanguage.Matches(filter.Subtitles, s.SubtitleLanguages);
-            return matchEither ? audioMatches || subtitlesMatch : audioMatches && subtitlesMatch;
-        }).Select(ScreeningResult.From).ToArray();
+            ScreeningLanguage.Matches(s, filter.Languages, filter.Subtitles, filter.MatchEitherLanguage))
+            .Select(ScreeningResult.From).ToArray();
         var reason = results.Length > 0 ? null : batch.EmptyReason ??
             (candidates.Length == 0 ? "no_title_matches" : "no_language_matches");
         var alternatives = reason == "no_language_matches" ? Relax(candidates, filter, effective) : [];

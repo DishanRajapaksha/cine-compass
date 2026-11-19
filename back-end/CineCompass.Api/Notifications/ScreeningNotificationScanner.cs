@@ -8,6 +8,7 @@ internal sealed class ScreeningNotificationScanner(
     AppDbContext db, CinevilleProgramme programme, TimeProvider clock, ILogger<ScreeningNotificationScanner> logger)
 {
     internal const int DailyHour = 8;
+    private static readonly StringComparer CityNames = StringComparer.OrdinalIgnoreCase;
 
     public async Task CheckDue(CancellationToken ct)
     {
@@ -15,19 +16,22 @@ internal sealed class ScreeningNotificationScanner(
         var local = ProgrammeDates.LocalTime(now);
         if (local.Hour < DailyHour) return;
         var today = DateOnly.FromDateTime(local.DateTime);
-        var checkpoint = await db.ScreeningNotificationScans.AsNoTracking()
+        var checkpoint = await db.ScreeningNotificationScans
             .SingleOrDefaultAsync(row => row.Id == ScreeningNotificationScan.DailySchedule, ct);
         if (checkpoint?.CompletedDay >= today) return;
 
-        var audiences = await FilmAudiences(today, ct);
+        var audiences = await FilmAudiences(ct);
         var complete = true;
         foreach (var (filmId, audience) in audiences)
         {
-            var endDate = audience.Max(entry => entry.Value).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var filters = audience.Values.SelectMany(rules => rules).ToArray();
+            var endDate = today.AddDays(filters.Max(rule => rule.LookAheadDays)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var cities = filters.Select(rule => rule.City).Distinct(CityNames).ToArray();
+            var city = cities.Length == 1 ? cities[0] : null;
             Screening[] screenings;
             try
             {
-                screenings = await programme.Screenings(new(EndDate: endDate), ct, filmId, upcomingOnly: true);
+                screenings = await programme.Screenings(new(City: city, EndDate: endDate), ct, filmId, upcomingOnly: true);
             }
             catch (CinevilleUpstreamException error) when (!ct.IsCancellationRequested)
             {
@@ -35,64 +39,74 @@ internal sealed class ScreeningNotificationScanner(
                 complete = false;
                 continue;
             }
-            await StoreNewScreenings(filmId, audience, screenings, now, ct);
+            await StageScreenings(filmId, audience, screenings, today, now, ct);
         }
-        if (!complete) return; // The worker will retry. Already saved screenings are deduplicated.
-        if (checkpoint is not null)
+        // Commit all discoveries from this check together. A retry only alerts for IDs still unseen.
+        if (complete)
         {
-            await db.ScreeningNotificationScans.Where(row => row.Id == ScreeningNotificationScan.DailySchedule && row.CompletedDay < today)
-                .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.CompletedDay, today), ct);
-            return;
+            if (checkpoint is null)
+                db.ScreeningNotificationScans.Add(new() { Id = ScreeningNotificationScan.DailySchedule, CompletedDay = today });
+            else
+                checkpoint.CompletedDay = today;
         }
-        db.ScreeningNotificationScans.Add(new() { Id = ScreeningNotificationScan.DailySchedule, CompletedDay = today });
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task<Dictionary<string, Dictionary<string, DateOnly>>> FilmAudiences(DateOnly today, CancellationToken ct)
+    private async Task<Dictionary<string, Dictionary<string, HashSet<ReminderFilters>>>> FilmAudiences(CancellationToken ct)
     {
-        var audiences = new Dictionary<string, Dictionary<string, DateOnly>>(StringComparer.Ordinal);
+        var audiences = new Dictionary<string, Dictionary<string, HashSet<ReminderFilters>>>(StringComparer.Ordinal);
         await foreach (var row in db.Settings.AsNoTracking().Select(row => new { row.UserId, row.Json }).AsAsyncEnumerable().WithCancellation(ct))
         {
             var settings = MovieListSettings.Parse(row.Json);
             var reminders = ReminderSettings.Parse(MovieListSettings.Text(settings[ReminderSettings.Key]));
             if (reminders is null) continue;
-            foreach (var filmId in reminders.IncludedFilms(settings))
+            foreach (var (filmId, filters) in reminders.FilmRules(settings))
             {
                 if (!audiences.TryGetValue(filmId, out var audience))
                     audiences[filmId] = audience = new(StringComparer.Ordinal);
-                audience[row.UserId] = today.AddDays(reminders.LookAheadDays);
+                if (!audience.TryGetValue(row.UserId, out var rules))
+                    audience[row.UserId] = rules = [];
+                rules.Add(filters);
             }
         }
         return audiences;
     }
 
-    private async Task StoreNewScreenings(string filmId, Dictionary<string, DateOnly> audience,
-        Screening[] screenings, DateTimeOffset foundAt, CancellationToken ct)
+    private async Task StageScreenings(string filmId, Dictionary<string, HashSet<ReminderFilters>> audience,
+        Screening[] screenings, DateOnly today, DateTimeOffset foundAt, CancellationToken ct)
     {
         if (screenings.Length == 0) return;
         var owners = audience.Keys.ToArray();
         var screeningIds = screenings.Select(entry => entry.Showtime.Id).ToArray();
-        var saved = (await db.ScreeningNotifications.AsNoTracking()
+        var saved = (await db.ScreeningNotifications
             .Where(row => owners.Contains(row.UserId) && screeningIds.Contains(row.ScreeningId))
-            .Select(row => new { row.UserId, row.ScreeningId }).ToListAsync(ct))
-            .Select(row => (row.UserId, row.ScreeningId)).ToHashSet();
+            .ToListAsync(ct)).ToDictionary(row => (row.UserId, row.ScreeningId));
         foreach (var screening in screenings)
         {
             var time = screening.Showtime;
             if (time.StartDate <= clock.GetUtcNow()) continue;
             var date = ProgrammeDates.Today(time.StartDate);
-            foreach (var (owner, end) in audience)
+            foreach (var (owner, rules) in audience)
             {
-                if (date > end || !saved.Add((owner, time.Id))) continue;
-                db.ScreeningNotifications.Add(new()
+                if (saved.TryGetValue((owner, time.Id), out var existing))
+                {
+                    if (existing.SubtitleStatus is null) existing.RecordLanguages(screening);
+                    continue;
+                }
+                if (!rules.Any(rule => date <= today.AddDays(rule.LookAheadDays) &&
+                    (rule.City is null || CityNames.Equals(rule.City, time.TheaterCity)) &&
+                    ScreeningLanguage.Matches(screening, rule.SpokenLanguages, rule.SubtitleLanguages, rule.MatchEitherLanguage)))
+                    continue;
+                var notice = new ScreeningNotification
                 {
                     UserId = owner, FilmId = filmId, ScreeningId = time.Id, FilmTitle = screening.Film!.Title,
                     TheaterName = time.TheaterName, TheaterCity = time.TheaterCity, TicketingUrl = time.TicketingUrl,
                     StartsAt = time.StartDate.ToUniversalTime(), FoundAt = foundAt
-                });
+                };
+                notice.RecordLanguages(screening);
+                saved.Add((owner, time.Id), notice);
+                db.ScreeningNotifications.Add(notice);
             }
         }
-        await db.SaveChangesAsync(ct);
-        db.ChangeTracker.Clear();
     }
 }

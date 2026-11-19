@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 
 internal sealed class ProgrammeUpstream : HttpMessageHandler
 {
+    public const string PosterFilmId = "70122dc3-ebcc-4fb7-9337-8b2209537289";
     private const string Eye = """{"id":"eye","name":"Eye Filmmuseum","address":{"city":"Amsterdam"},"isHidden":false}""";
     private const string Kino = """{"id":"kino","name":"Kino","address":{"city":"Rotterdam"},"isHidden":false}""";
     private const string Hidden = """{"id":"hidden","name":"Closed","address":{"city":"Amsterdam"},"isHidden":true}""";
@@ -19,6 +20,7 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
     public ConcurrentQueue<(string Path, string? Body, HttpMethod Method)> Requests { get; } = new();
     public string? CursorOverride { get; set; }
     public string? FarScreeningDate { get; init; }
+    public bool IncludeNewReminderScreenings { get; set; }
     public bool IncludeEnglishScreenings { get; set; }
     public bool UseLanguageEvidence { get; init; }
 
@@ -43,6 +45,8 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
                 Page("productions", CursorOverride ?? "/productions/by-title/A?Film?page[limit]=24&page[after]=next", Film),
             "/productions/search" when body!.Contains("\"id\":{\"eq\":\"film\"}", StringComparison.Ordinal) =>
                 Page("productions", null, Film),
+            "/productions/search" when body!.Contains(PosterFilmId, StringComparison.Ordinal) =>
+                Page("productions", null, Film.Replace("\"film\"", $"\"{PosterFilmId}\"", StringComparison.Ordinal)),
             "/productions/search" when body!.Contains("\"id\":{\"eq\":", StringComparison.Ordinal) =>
                 Page("productions", null),
             "/productions/search" when body!.Contains("\"contains\"", StringComparison.Ordinal) && next =>
@@ -65,8 +69,16 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
         var early = Event("early", 18, "nl");
         var late = Event("late", 20, "en");
         if (FarScreeningDate is { } date)
-            return Page("events", null, early, late,
-                Event("later-window", 20, "en").Replace("2026-11-19", date, StringComparison.Ordinal));
+        {
+            List<string> screenings = [early, late, Event("rotterdam", 19, "en", venue: Kino),
+                Event("rotterdam-audio", 20, "nl", venue: Kino, version: "en"),
+                Event("later-window", 20, "en", date: date)];
+            if (IncludeNewReminderScreenings)
+                screenings.AddRange([Event("new-early", 18, "en", date: "2026-11-22", version: "ja"),
+                    Event("new-japanese", 20, "nl", date: "2026-11-22", version: "ja"),
+                    Event("new-late", 21, null, date: "2026-11-22", withoutSubtitles: true)]);
+            return Page("events", null, screenings.ToArray());
+        }
         if (UseLanguageEvidence)
             return Page("events", null, early, late,
                 Event("dub", 21, "en", spokenLanguage: "en", version: "nl-NL", publishedEnd: true),
@@ -81,15 +93,16 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
     }
 
     private static string Event(string id, int hour, string? subtitles, bool film = true,
-        string? spokenLanguage = null, string? version = null, bool withoutSubtitles = false, bool publishedEnd = false)
+        string? spokenLanguage = null, string? version = null, bool withoutSubtitles = false, bool publishedEnd = false,
+        string venue = Eye, string date = "2026-11-19")
     {
         var production = film ? JsonNode.Parse(Film) : null;
         if (spokenLanguage is not null)
             production!["attributes"]!["spokenLanguages"] = new JsonArray(JsonValue.Create(spokenLanguage));
         return JsonSerializer.Serialize(new
         {
-            id, title = film ? null : "Panel", startDate = $"2026-11-19T{hour}:00:00Z",
-            endDate = publishedEnd ? $"2026-11-19T{hour}:30:00Z" : null,
+            id, title = film ? null : "Panel", startDate = $"{date}T{hour}:00:00Z",
+            endDate = publishedEnd ? $"{date}T{hour}:30:00Z" : null,
             ticketingUrl = $"https://tickets.example/{id}",
             attributes = new { subtitles = subtitles is null ? [] : new[] { subtitles }, languageVersion = version,
                 tags = withoutSubtitles ? new[] { "noSubtitles" } : [] },
@@ -97,7 +110,7 @@ internal sealed class ProgrammeUpstream : HttpMessageHandler
             {
                 ["nl-NL"] = new { customTags = film ? Array.Empty<string>() : new[] { "Discussion" } }
             },
-            _embedded = new { venue = JsonNode.Parse(Eye), production }
+            _embedded = new { venue = JsonNode.Parse(venue), production }
         });
     }
 

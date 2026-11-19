@@ -4,10 +4,10 @@ using CineCompass.Api.Cineville;
 
 namespace CineCompass.Api.Notifications;
 
-internal sealed record ReminderSettings(int LookAheadDays, HashSet<string> FilmIds, HashSet<string> ListIds)
+internal sealed record ReminderSettings(ReminderFilters Global, HashSet<string> FilmIds, HashSet<string> ListIds,
+    Dictionary<string, ReminderFilters> FilmFilters, Dictionary<string, ReminderFilters> ListFilters)
 {
     public const string Key = "cinecompass_screening_reminders";
-    public const int MaximumDays = 365;
 
     public static ReminderSettings? Parse(string? json)
     {
@@ -16,11 +16,11 @@ internal sealed record ReminderSettings(int LookAheadDays, HashSet<string> FilmI
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object ||
-                !root.TryGetProperty("lookAheadDays", out var horizon) || horizon.ValueKind != JsonValueKind.Number ||
-                !horizon.TryGetInt32(out var days) || days is < 1 or > MaximumDays ||
-                !ReadIds(root, "filmIds", out var films) || !ReadIds(root, "listIds", out var lists)) return null;
-            return new(days, films, lists);
+            if (ReminderFilters.Read(root) is not { } global ||
+                !ReadIds(root, "filmIds", out var films) || !ReadIds(root, "listIds", out var lists) ||
+                !ReadOverrides(root.Field("filmFilters"), out var filmFilters) ||
+                !ReadOverrides(root.Field("listFilters"), out var listFilters)) return null;
+            return new(global, films, lists, filmFilters, listFilters);
         }
         catch (JsonException) { return null; }
     }
@@ -31,16 +31,28 @@ internal sealed record ReminderSettings(int LookAheadDays, HashSet<string> FilmI
         if (!root.TryGetProperty(name, out var list) || list.ValueKind != JsonValueKind.Array) return false;
         foreach (var item in list.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.String || item.GetString() is not { Length: > 0 and <= 128 } id ||
-                id != id.Trim() || !ids.Add(id)) return false;
+            if (item.ValueKind != JsonValueKind.String || !ReminderFilters.ValidText(item.GetString()) ||
+                !ids.Add(item.GetString()!)) return false;
         }
         return true;
     }
 
-    public HashSet<string> IncludedFilms(JsonObject settings)
+    private static bool ReadOverrides(JsonElement value, out Dictionary<string, ReminderFilters> filters)
     {
-        var result = FilmIds.Select(WatchedMovieMatcher.Id).ToHashSet(StringComparer.Ordinal);
-        if (ListIds.Count == 0) return result;
+        filters = new(StringComparer.Ordinal);
+        if (value.ValueKind == JsonValueKind.Undefined) return true;
+        if (value.ValueKind != JsonValueKind.Object) return false;
+        foreach (var item in value.EnumerateObject())
+            if (!ReminderFilters.ValidText(item.Name) || ReminderFilters.Read(item.Value) is not { } rule ||
+                !filters.TryAdd(item.Name, rule)) return false;
+        return true;
+    }
+
+    public IEnumerable<(string FilmId, ReminderFilters Filters)> FilmRules(JsonObject settings)
+    {
+        foreach (var id in FilmIds)
+            yield return (WatchedMovieMatcher.Id(id), FilmFilters.GetValueOrDefault(id, Global));
+        if (ListIds.Count == 0) yield break;
         var lists = MovieListSettings.Read(settings);
         var watched = MovieListSettings.Films(lists, MovieListSettings.WatchedId).Select(AccountMovieLists.Movie);
         var matcher = new WatchedMovieMatcher(watched);
@@ -50,8 +62,8 @@ internal sealed record ReminderSettings(int LookAheadDays, HashSet<string> FilmI
             var films = MovieListSettings.Films(lists, id).Select(AccountMovieLists.Movie).ToArray();
             if (id == MovieListSettings.WatchlistId || list["hideWatched"]?.GetValue<bool>() == true)
                 films = matcher.Visible(films);
-            result.UnionWith(films.Select(film => WatchedMovieMatcher.Id(film.Id)));
+            var filters = ListFilters.GetValueOrDefault(id, Global);
+            foreach (var film in films) yield return (WatchedMovieMatcher.Id(film.Id), filters);
         }
-        return result;
     }
 }

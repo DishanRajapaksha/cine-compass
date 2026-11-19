@@ -62,6 +62,12 @@ export const movieService = {
   getMovieShowtimes: (movieId: string, filters?: MovieFilters): Promise<Movie | null> =>
     read(`/films/${encodeURIComponent(movieId)}/showtimes`, screeningParams(filters)),
 
+  getFilmPoster: (id: string, title: string, year?: number, signal?: AbortSignal): Promise<{posterPath: string | null}> => {
+    const params = new URLSearchParams({id, title});
+    if (year) params.set('year', String(year));
+    return read('/films/poster', params, signal);
+  },
+
   searchFilms: (query: string, cursor?: string, signal?: AbortSignal): Promise<FilmSearchPage> => {
     const params = new URLSearchParams({ q: query });
     if (cursor) params.set('cursor', cursor);

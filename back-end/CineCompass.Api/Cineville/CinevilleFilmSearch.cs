@@ -11,6 +11,28 @@ internal sealed partial class CinevilleProgramme
             .FirstOrDefault(film => film.Id == id);
     }
 
+    public async Task<string?> FindFilmPoster(string? id, string? title, int? year, CancellationToken ct)
+    {
+        if (id?.Trim() is not { Length: > 0 and <= 128 } filmId)
+            throw new ProgrammeInputException("Use a film ID containing 1 to 128 characters.");
+
+        // Cineville only accepts UUIDs in its production ID filter. Older entries can use other IDs.
+        if (Guid.TryParseExact(filmId, "D", out var catalogueId) &&
+            (await FindFilmById(catalogueId.ToString("D"), ct))?.PosterUrl is { Length: > 0 } poster)
+            return poster;
+
+        var name = WatchedMovieMatcher.CatalogueTitle(title ?? "");
+        if (name.Length is < 1 or > 120 || WatchedMovieMatcher.TitleAndYear(name, year) is not { } identity)
+            return null;
+
+        // A fuzzy result is safe to reuse only when the title and release year identify the same film.
+        var page = await SearchCatalogue(name, null, ct);
+        var posters = page.Films.Where(candidate => candidate.PosterUrl.Length > 0 &&
+                WatchedMovieMatcher.TitleAndYear(candidate.Title, candidate.ReleaseYear) == identity)
+            .Select(candidate => candidate.PosterUrl).Distinct(StringComparer.Ordinal).Take(2).ToArray();
+        return posters.Length == 1 ? posters[0] : null;
+    }
+
     public async Task<FilmMatch[]> FindFilms(string? title, int? releaseYear, CancellationToken ct)
     {
         title = title?.Trim();

@@ -6,6 +6,26 @@ using Xunit;
 public sealed partial class ProgrammeTests
 {
     [Fact]
+    public async Task Poster_lookup_uses_catalogue_id_or_matching_title_and_year_without_showtimes()
+    {
+        using var upstream = new ProgrammeUpstream();
+        using var factory = Factory(upstream);
+        using var http = factory.CreateClient();
+        const string route = "/api/cineville/films/poster";
+
+        var direct = await http.GetFromJsonAsync<JsonElement>(route + "?id=" + ProgrammeUpstream.PosterFilmId);
+        Assert.Equal("https://images.example/film.jpg", direct.GetProperty("posterPath").GetString());
+        Assert.Equal("/productions/search", Assert.Single(upstream.Requests).Path);
+
+        var legacy = await http.GetFromJsonAsync<JsonElement>(route + "?id=old-id&title=A%3FFilm%20(re-release)&year=2025");
+        Assert.Equal("https://images.example/film.jpg", legacy.GetProperty("posterPath").GetString());
+        Assert.Equal(1, upstream.Requests.Count(request => request.Path == "/productions/search"));
+        var wrongYear = await http.GetFromJsonAsync<JsonElement>(route + "?id=old-id&title=A%3FFilm&year=2026");
+        Assert.Equal(JsonValueKind.Null, wrongYear.GetProperty("posterPath").ValueKind);
+        Assert.DoesNotContain(upstream.Requests, request => request.Path.StartsWith("/events", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Catalogue_search_pages_through_fuzzy_matches_without_requesting_screenings()
     {
         using var upstream = new ProgrammeUpstream();

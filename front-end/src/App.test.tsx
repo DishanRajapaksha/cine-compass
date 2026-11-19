@@ -766,6 +766,27 @@ test('manages independent custom list membership for watched catalogue films', a
   expect(screen.getAllByRole('button',{name:'Watchlist 1'})).toHaveLength(2);
 });
 
+test('recovers missing and broken Watched posters while retaining the original entries', async () => {
+  const films = Array.from({length:5}, (_, index) => ({
+    id:`old-${index}`,title:`A Watched Film ${index}`,year:2022,
+    posterPath:index === 0 ? 'https://example.com/obsolete.jpg' : '',
+  }));
+  localStorage.setItem('cinecompass_watched_movies', JSON.stringify(films));
+  service.getFilmPoster.mockImplementation(async id => ({posterPath:`https://example.com/${id}.jpg`}));
+  render(<App/>);
+  await screen.findByRole('button',{name:'Perfect Days'});
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Main navigation'})).getByRole('button',{name:'Lists'}));
+  expect(service.getFilmPoster).not.toHaveBeenCalled();
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Movie lists'})).getByRole('button',{name:'Watched 5'}));
+
+  const watched = screen.getByRole('region',{name:'Watched'});
+  fireEvent.error(watched.querySelector('img[src="https://example.com/obsolete.jpg"]')!);
+  await waitFor(() => expect(watched.querySelectorAll('img[src^="https://example.com/old-"]')).toHaveLength(5));
+  expect(storedFilms(watchedListId)).toEqual(films.map(film => ({...film,posterPath:`https://example.com/${film.id}.jpg`})));
+  expect(service.getFilmPoster).toHaveBeenCalledWith('old-4','A Watched Film 4',2022,expect.any(AbortSignal));
+  expect(within(watched).getByRole('button',{name:'Restore A Watched Film 0'})).toBeInTheDocument();
+});
+
 test('hides watched films per list without removing membership and remembers the filter', async () => {
   const watchedFilm = {id:'older-catalogue-id',title:'Perfect Days',year:2023,posterPath:''};
   const film = {...watchedFilm,id:'current-catalogue-id'};

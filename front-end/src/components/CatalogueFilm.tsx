@@ -20,7 +20,7 @@ export default function CatalogueFilm({movie,label,releaseLabel,...props}:Catalo
     <div className="cc-upcoming-actions">
       <button className="cc-watchlist-showtimes" aria-expanded={showtimesOpen} aria-controls={showtimesId} onClick={() => setShowtimesOpen(value => !value)}>{showtimesOpen ? 'Hide showtimes' : 'Find showtimes'} <ChevronDown size={14}/></button>
       <MovieListAction film={savedFilm(movie)}/>
-      <ScreeningReminder id={movie.id} title={movie.title}/>
+      <ScreeningReminder id={movie.id} title={movie.title} spokenLanguages={movie.spokenLanguages} subtitleLanguages={movie.availableSubtitles}/>
     </div>
     <div className="cc-catalogue-showtimes" id={showtimesId} hidden={!showtimesOpen}>{showtimesOpen && <FilmShowtimes movieId={movie.id} movieTitle={movie.title} cities={props.cities} initialCity={props.city} saved={props.saved} onSave={props.onSave} onPlan={props.onPlan} onMarkWatched={watched ? undefined : props.onMarkWatched}/>}</div>
   </article>;

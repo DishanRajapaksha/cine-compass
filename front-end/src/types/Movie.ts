@@ -96,13 +96,16 @@ export interface City {
   theaters: Theater[];
 }
 
-export interface MovieFilters {
-  watchlistOnly?: boolean;
+export interface LanguageFilterValues {
   languageMatchMode?: 'any' | 'all';
-  selectedCity: string | null;
-  selectedTheaters: string[];
   selectedSubtitleLanguages: string[];
   selectedSpokenLanguages: string[];
+}
+
+export interface MovieFilters extends LanguageFilterValues {
+  watchlistOnly?: boolean;
+  selectedCity: string | null;
+  selectedTheaters: string[];
   selectedSpecials: string[];
   startTime: string | null; // Format: "HH:MM"
   endTime: string | null;   // Format: "HH:MM"

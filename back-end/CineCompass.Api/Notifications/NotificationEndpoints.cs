@@ -15,19 +15,25 @@ internal static class NotificationEndpoints
             if (before is <= 0) return Results.BadRequest(new { error = "Invalid notification cursor." });
             var owner = users.GetUserId(context.User);
             var rows = db.ScreeningNotifications.AsNoTracking().Where(row => row.UserId == owner);
-            var unread = await rows.CountAsync(row => !row.IsRead, ct);
-            if (before is { } cursor) rows = rows.Where(row => row.Id < cursor);
-            var page = await rows.OrderByDescending(row => row.Id).Take(PageSize + 1).Select(row => new
+            var unread = await CountUnreadAlerts(rows, ct);
+            var alerts = rows.GroupBy(row => row.FoundAt)
+                .Select(group => new { FoundAt = group.Key, LastId = group.Max(row => row.Id) });
+            if (before is { } cursor) alerts = alerts.Where(alert => alert.LastId < cursor);
+            var page = await alerts.OrderByDescending(alert => alert.LastId).Take(PageSize + 1).ToArrayAsync(ct);
+            // Keep a check's showtimes together even when it found more than one page of screenings.
+            var foundTimes = page.Take(PageSize).Select(alert => alert.FoundAt).ToArray();
+            var items = await rows.Where(row => foundTimes.Contains(row.FoundAt)).OrderByDescending(row => row.Id).Select(row => new
             {
                 row.Id, row.ScreeningId, row.FilmId, row.FilmTitle, row.TheaterName, row.TheaterCity,
-                row.TicketingUrl, row.StartsAt, row.FoundAt, row.IsRead
+                row.TicketingUrl, row.StartsAt, row.FoundAt, row.IsRead, row.AudioLanguages, row.AudioSource,
+                row.LanguageVersion, row.SubtitleLanguages, row.SubtitleStatus
             }).ToArrayAsync(ct);
-            return Results.Ok(new { items = page.Take(PageSize), unread, nextBefore = page.Length > PageSize ? page[PageSize - 1].Id : (long?)null });
+            return Results.Ok(new { items, unread, nextBefore = page.Length > PageSize ? page[PageSize - 1].LastId : (long?)null });
         });
         inbox.MapGet("/unread", async (HttpContext context, UserManager<AppUser> users, AppDbContext db, CancellationToken ct) =>
         {
             var owner = users.GetUserId(context.User);
-            var unread = await db.ScreeningNotifications.CountAsync(row => row.UserId == owner && !row.IsRead, ct);
+            var unread = await CountUnreadAlerts(db.ScreeningNotifications.Where(row => row.UserId == owner), ct);
             return Results.Ok(new { unread });
         });
         inbox.MapPost("/read", async (MarkNotificationsRead request, HttpContext context, UserManager<AppUser> users, AppDbContext db, CancellationToken ct) =>
@@ -39,6 +45,9 @@ internal static class NotificationEndpoints
             return Results.NoContent();
         });
     }
+
+    private static Task<int> CountUnreadAlerts(IQueryable<ScreeningNotification> rows, CancellationToken ct) =>
+        rows.Where(row => !row.IsRead).Select(row => row.FoundAt).Distinct().CountAsync(ct);
 
     internal sealed record MarkNotificationsRead(long Through);
 }

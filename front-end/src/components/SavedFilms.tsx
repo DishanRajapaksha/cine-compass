@@ -26,7 +26,7 @@ function FilmCard({film,entries,inWatchlist,...props}: Omit<Props,'films'|'onBro
       <div className="cc-watchlist-film-actions">
         <ImdbLink title={film.title} year={film.year}/>
         <MovieListAction film={film}/>
-      <ScreeningReminder id={film.id} title={film.title}/>
+      <ScreeningReminder id={film.id} title={film.title} spokenLanguages={film.spokenLanguages} subtitleLanguages={film.availableSubtitles}/>
         {inWatchlist && <button className="cc-watchlist-icon" aria-label={`Remove film ${film.title} from watchlist`} title="Remove film from watchlist" aria-pressed="true" onClick={() => props.onRemoveFilm(film.id)}><Bookmark size={17} fill="currentColor"/></button>}
         <button className="cc-watchlist-icon" aria-label={`Watched: ${film.title}`} title="Watched" onClick={() => props.onMarkWatched(film)}><EyeClosed size={17}/></button>
       </div>

@@ -1,6 +1,10 @@
 import { setPreference } from './accountStorage';
-import { Movie, MovieFilters, MovieShowtime } from '../types/Movie';
+import { LanguageFilterValues, Movie, MovieFilters, MovieShowtime } from '../types/Movie';
 import { normalizeLanguageCode, hasEnglishSubtitles } from './utils';
+
+export const defaultLanguageFilters: Required<LanguageFilterValues> = {
+  selectedSubtitleLanguages: ['en'], selectedSpokenLanguages: ['en'], languageMatchMode: 'any',
+};
 
 export const amsterdamDate = (value: string) => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit'

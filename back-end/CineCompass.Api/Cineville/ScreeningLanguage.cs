@@ -33,6 +33,15 @@ internal static class ScreeningLanguage
         requested.Any(value => !string.IsNullOrWhiteSpace(value) &&
             available.Any(x => Normalize(value) == Normalize(x)));
 
+    public static bool Matches(Screening screening, string[]? audio, string[]? subtitles, bool matchEither)
+    {
+        var audioMatches = Matches(audio, screening.AudioLanguages);
+        var subtitlesMatch = Matches(subtitles, screening.SubtitleLanguages);
+        return matchEither && audio is { Length: > 0 } && subtitles is { Length: > 0 }
+            ? audioMatches || subtitlesMatch
+            : audioMatches && subtitlesMatch;
+    }
+
     public static string Normalize(string value) => value.Trim().Split('-', '_')[0].ToLowerInvariant() switch
     {
         "english" or "engels" or "eng" => "en",

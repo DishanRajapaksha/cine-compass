@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setPreference } from './accountStorage';
 import { readStorage } from './schedule';
-import { defaultScreeningReminders, ScreeningReminders, screeningRemindersKey, validScreeningReminders } from './screeningReminders';
+import { defaultScreeningReminders, OverrideKey, ReminderFilters, ScreeningReminders, screeningRemindersKey, validScreeningReminders } from './screeningReminders';
 
 const load = () => readStorage(screeningRemindersKey, defaultScreeningReminders, validScreeningReminders);
 
@@ -39,6 +39,12 @@ export default function useScreeningReminders(enabled: boolean) {
     enabled, settings, error,
     toggleFilm: (id: string) => toggle('filmIds', id),
     toggleList: (id: string) => toggle('listIds', id),
-    setLookAhead: (lookAheadDays: number) => update(current => ({...current, lookAheadDays})),
+    setGlobalFilters: (filters: ReminderFilters) => update(current => ({...current, ...filters})),
+    setOverride: (key: OverrideKey, id: string, filters: ReminderFilters | null) => update(current => {
+      const entries = {...current[key]};
+      if (filters) return {...current, [key]: {...entries, [id]: filters}};
+      delete entries[id];
+      return {...current, [key]: entries};
+    }),
   };
 }

@@ -4,8 +4,16 @@ import { WatchedMovie } from '../types/Movie';
 import ImdbSettings from './ImdbSettings';
 import AccountSettings from './AccountSettings';
 import CalendarSubscription from './CalendarSubscription';
+import NotificationLookAhead, { LookAheadProps } from './NotificationLookAhead';
 
-export default function SettingsModal({watched,onRestore,onClose}: {watched:WatchedMovie[];onRestore:(id:string) => void;onClose:() => void}) {
+type Props = {
+  watched: WatchedMovie[];
+  screeningReminders: LookAheadProps;
+  onRestore: (id: string) => void;
+  onClose: () => void;
+};
+
+export default function SettingsModal({watched,screeningReminders,onRestore,onClose}: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {const el=dialog.current;el?.showModal();return () => el?.close();},[]);
   return <dialog ref={dialog} className="cc-dialog cc-settings-dialog" aria-labelledby="cc-settings-title" onCancel={onClose} onClick={e => {if(e.target===e.currentTarget) onClose();}}>
@@ -15,6 +23,7 @@ export default function SettingsModal({watched,onRestore,onClose}: {watched:Watc
     </header>
     <div className="cc-settings-body">
     <AccountSettings/>
+    {screeningReminders.reminders.enabled && <NotificationLookAhead {...screeningReminders}/>}
     <CalendarSubscription/>
     <section aria-labelledby="cc-imdb-title"><h3 id="cc-imdb-title">IMDb</h3><ImdbSettings/></section>
     <section aria-labelledby="cc-watched-title"><h3 id="cc-watched-title">Watched films <span>({watched.length})</span></h3>

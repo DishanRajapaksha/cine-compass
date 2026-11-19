@@ -56,13 +56,19 @@ Save an upcoming film to the existing Movies watchlist before any screenings are
 
 Open **Lists → New list** to create a collection. Use **Add to list** on a search result, in film details, or on a saved film to select its lists. You can rename or delete custom lists, and a film can belong to several lists. Each entry keeps the Cineville ID, title, poster and any film metadata available when you add it.
 
-Watchlist and Watched use permanent list IDs. Marking a film watched still hides it from the programme and Watchlist views. Each custom list has its own **Hide watched** option. Restore a watched film from Lists or Settings. Earlier account and browser lists are carried forward automatically.
+Watchlist and Watched use permanent list IDs. Marking a film watched still hides it from the programme and Watchlist views. Each custom list has its own **Hide watched** option. Restore a watched film from Lists or Settings. Earlier account and browser lists are carried forward automatically. Opening **Lists → Watched** recovers missing poster artwork from the Cineville catalogue when the film can be identified.
 
 ## Screening notifications
 
 Sign in and choose **Notify me** on a film or **Notify for this list** in Lists. A list reminder includes films added later and follows that list’s watched visibility. Individual reminders follow the selected film independently.
 
-Open **More pages → Notifications** to set your look-ahead window from 1 to 365 days. The backend checks published Cineville screenings across all cities daily at 08:00 Amsterdam time, or after startup if that day’s check is due. Each screening appears once per account, even if multiple reminders match it. The page keeps the history of past screenings and their read status.
+Open **More pages → Settings → Screening notifications** to set the global look-ahead window from 1 to 365 days, city, spoken language and subtitles. The default matches English audio or English subtitles. Use **Any (OR)** for either selected language filter or **All (AND)** to require both. If you select only one language filter, that filter must match. Set both to **Any** to include all languages.
+
+On a followed film or list, open **Reminder filters** to save a custom set of filters. **Use global filters** clears that override. If you follow a film directly and through a list, any matching reminder can trigger a notification for that screening.
+
+CineCompass checks published Cineville screenings daily at 08:00 Amsterdam time, or after startup if that day’s check is due. A check with new showtimes adds one unread alert per account. Each screening appears once, even if several reminders match it.
+
+Open **More pages → Notifications** to see the inbox. It groups showtimes by film and displays upcoming screenings earliest first, with the cinema, city, audio and subtitles. Language details can be unlisted, especially for historical notices. The page keeps past screenings and their read status.
 
 ## Sync behavior
 

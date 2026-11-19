@@ -8,8 +8,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronDown, SlidersHorizontal, Sparkle, X } from 'lucide-react';
 import { City, Movie, MovieFilters, SavedFilm, SavedShowtime } from '../types/Movie';
 import { movieService } from '../services/movieService';
-import { getCurrentDateInAmsterdam, getCurrentTimeInAmsterdam, normalizeLanguageCode } from '../lib/utils';
-import { amsterdamDate, dateLabel, filterScreenings, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
+import { getCurrentDateInAmsterdam, getCurrentTimeInAmsterdam, normalizeLanguageCode, normalizeLanguageCodes } from '../lib/utils';
+import { amsterdamDate, dateLabel, defaultLanguageFilters, filterScreenings, readStorage, screeningTime, Screening, writeStorage } from '../lib/schedule';
 import ScheduleFilters from './ScheduleFilters';
 import SavedFilms from './SavedFilms';
 import { savedFilm, watchedListId, watchlistId } from '../lib/movieLists';
@@ -30,7 +30,7 @@ import SettingsModal from './SettingsModal';
 
 type View = 'posters' | 'compact';
 type Grouping = 'time' | 'movie';
-const defaults = (): MovieFilters => ({ selectedCity:'Amsterdam', selectedTheaters:[], selectedSubtitleLanguages:['en'], selectedSpokenLanguages:['en'], languageMatchMode:'any', selectedSpecials:[], startDate:getCurrentDateInAmsterdam(), endDate:getCurrentDateInAmsterdam(), startTime:getCurrentTimeInAmsterdam(), endTime:'23:59' });
+const defaults = (): MovieFilters => ({ selectedCity:'Amsterdam', selectedTheaters:[], ...defaultLanguageFilters, selectedSpecials:[], startDate:getCurrentDateInAmsterdam(), endDate:getCurrentDateInAmsterdam(), startTime:getCurrentTimeInAmsterdam(), endTime:'23:59' });
 const validFilters = (value: unknown): value is MovieFilters => {
   if (!value || typeof value !== 'object') return false;
   const f = value as MovieFilters;
@@ -46,7 +46,7 @@ const refreshTimeWindow = (f: MovieFilters): MovieFilters => {
 };
 const loadFilters = () => {
   const f = readStorage('cinecompass_schedule_filters', defaults(), validFilters);
-  return refreshTimeWindow({...f, ...(f.languageMatchMode ? {} : {selectedSubtitleLanguages:['en'],selectedSpokenLanguages:['en'],languageMatchMode:'any' as const})});
+  return refreshTimeWindow({...f, ...(f.languageMatchMode ? {} : defaultLanguageFilters)});
 };
 const validSaved = (value: unknown): value is SavedShowtime[] => Array.isArray(value) && value.every(s => s && typeof s.showtimeId === 'string' && typeof s.movieId === 'string' && typeof s.startDate === 'string' && typeof s.endDate === 'string' && typeof s.movieTitle === 'string');
 const shiftDate = (date: string, amount: number) => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate()+amount); return d.toISOString().slice(0,10); };
@@ -137,6 +137,7 @@ export default function CinemaSchedule() {
   useEffect(() => writeStorage('cinecompass_schedule_grouping',grouping), [grouping]);
   useEffect(() => writeStorage('cineville_saved_showtimes',saved), [saved]);
   const languages = useMemo(() => Array.from(new Set([...movies.flatMap(m => m.spokenLanguages.map(normalizeLanguageCode)),...filters.selectedSpokenLanguages])).sort(), [movies,filters.selectedSpokenLanguages]);
+  const subtitleLanguages = useMemo(() => normalizeLanguageCodes(movies.flatMap(movie => movie.availableSubtitles)), [movies]);
   const specials = useMemo(() => Array.from(new Set([...movies.flatMap(m => m.showtimes.flatMap(s => s.specials ? s.specials.split(',').map(v => v.trim()).filter(Boolean) : [])),...filters.selectedSpecials])).sort(), [movies,filters.selectedSpecials]);
   const screenings = useMemo(() => invalidRange ? [] : filterScreenings(movies,filters,query), [movies,filters,query,invalidRange]);
   const anchor = selected && Date.parse(selected.showtime.endDate) + buffer*60000;
@@ -167,12 +168,13 @@ export default function CinemaSchedule() {
   const catalogueProps = {films:visibleFilms,isWatched:isWatchedMovie,cities,city:filters.selectedCity,saved:visibleSaved,
     onToggleFilm:toggleFilm,onMarkWatched:(movie:Movie) => markWatched(savedFilm(movie)),
     onSave:toggleSave,onPlan:planScreening};
-  return <ScreeningRemindersContext.Provider value={reminders}><MovieListsContext.Provider value={movieLists}><div className="cc-app">
+  const reminderOptions = {reminders, cities, languages, subtitleLanguages, cityError, retryCities: () => setRetry(value => value + 1)};
+  return <ScreeningRemindersContext.Provider value={reminderOptions}><MovieListsContext.Provider value={movieLists}><div className="cc-app">
     <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><HeaderNavigation page={page} count={visibleFilms.length} unreadNotifications={notifications.unread} onPage={setPage} onSettings={() => setSettingsOpen(true)}/></header>
     <main className="cc-main">
     {reminders.error && <p className="cc-error" role="alert">{reminders.error}</p>}
     {movieLists.error && <p className="cc-error" role="alert">{movieLists.error}</p>}
-    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => removeFilm(watchlistId, id)} saved={visibleSaved} onMarkWatched={markWatched} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : page === 'notifications' ? <NotificationsPage reminders={reminders} unread={notifications.unread} refreshCount={notifications.refresh}/> : page === 'lists' ? <MovieLists store={movieLists} visibleWatchlist={visibleFilms} isWatched={isWatchedMovie} selectedId={selectedListId} onSelect={setSelectedListId} onBrowse={() => setPage('search')} onWatchlist={() => setPage('watchlist')}/> : page === 'search' ? <FilmSearch {...catalogueProps}/> : page === 'now-showing' ? <NowShowing {...catalogueProps}/> : page === 'upcoming' ? <ComingSoon {...catalogueProps}/> : <>
+    {page === 'watchlist' ? <SavedFilms films={visibleFilms} onRemoveFilm={id => removeFilm(watchlistId, id)} saved={visibleSaved} onMarkWatched={markWatched} cities={cities} city={filters.selectedCity} onRemove={id => setSaved(prev => prev.filter(s => s.showtimeId!==id))} onSave={toggleSave} onPlan={planScreening} onBrowse={() => setPage('schedule')}/> : page === 'notifications' ? <NotificationsPage enabled={reminders.enabled} unread={notifications.unread} refreshCount={notifications.refresh}/> : page === 'lists' ? <MovieLists store={movieLists} visibleWatchlist={visibleFilms} isWatched={isWatchedMovie} selectedId={selectedListId} onSelect={setSelectedListId} onBrowse={() => setPage('search')} onWatchlist={() => setPage('watchlist')}/> : page === 'search' ? <FilmSearch {...catalogueProps}/> : page === 'now-showing' ? <NowShowing {...catalogueProps}/> : page === 'upcoming' ? <ComingSoon {...catalogueProps}/> : <>
       <button className="cc-mobile-filters" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(v => !v)}><SlidersHorizontal size={17}/> {filtersOpen ? 'Hide filters' : 'Filters & search'}</button>
       <div className="cc-layout"><div className={filtersOpen ? 'cc-filter-rail is-open' : 'cc-filter-rail'}><ScheduleFilters showCinemaLists showWatchlistFilter filters={filters} cities={cities} query={query} languages={languages} specials={specials} loading={citiesLoading} onQuery={setQuery} onChange={setFilters} onReset={reset}/>{cityError && <p className="cc-error">{cityError} <button onClick={() => setRetry(v => v+1)}>Retry</button></p>}</div>
       <section className="cc-programme" aria-label="Programme">
@@ -187,7 +189,10 @@ export default function CinemaSchedule() {
         {invalidRange ? <div className="cc-empty"><h3>Check your time window.</h3><p>The end date and time should come after the start.</p></div> : error ? <div className="cc-empty" role="alert"><h3>A brief intermission.</h3><p>{error}</p><button className="cc-primary" onClick={() => setRetry(v => v+1)}>Try again</button></div> : loading ? <div className="cc-loading" role="status"><div/><p>Gathering the programme…</p></div> : !visible.length ? <div className="cc-empty"><h3>{filters.watchlistOnly ? watchlistMovieIds.size ? 'No watchlist films in this window.' : 'Your watchlist is empty.' : 'No screenings in this window.'}</h3><p>{filters.watchlistOnly ? watchlistMovieIds.size ? 'Try a different date, cinema, or language.' : 'Save a film from the programme to add it to your watchlist.' : 'Try a different date, cinema, or language.'}</p><button className="cc-primary" onClick={filters.watchlistOnly ? () => setFilters(f => ({...f,watchlistOnly:false})) : reset}>{filters.watchlistOnly ? 'Show all films' : 'Reset filters'}</button></div> : Array.from(groups).map(([date,items]) => <section key={date} className={`cc-day cc-${view}${grouping === 'movie' ? ' cc-movie-group' : ''}`} aria-label={grouping === 'movie' ? items[0].movie.title : dateLabel(date)}>{grouping === 'movie' ? <MovieGroupSummary movie={items[0].movie} count={items.length} compact={view === 'compact'} saved={watchlistMovieIds.has(items[0].movie.id)} onDetails={() => setDetails(items[0])} onToggleFilm={() => toggleFilm(items[0].movie)} onMarkWatched={() => markWatched(savedFilm(items[0].movie))}/> : <>{groups.size > 1 && <h3 className="cc-day-label">{dateLabel(date)}</h3>}{view === 'compact' && <div className="cc-table-head" aria-hidden="true"><span>Film / duration</span><span>Cinema</span><span>Start / end</span></div>}</>}{items.map(s => <ScreeningRow key={s.showtime.id} screening={s} showCity={false} grouped={grouping === 'movie'} filmSaved={watchlistMovieIds.has(s.movie.id)} onToggleFilm={() => toggleFilm(s.movie)} compact={view !== 'posters' || grouping === 'movie'} inlineCompactActions={view === 'compact'} saved={saved.some(item => item.showtimeId===s.showtime.id)} selected={selected?.showtime.id===s.showtime.id} unavailable={blocked(s)} available={Boolean(selected && s.showtime.id!==selected.showtime.id && !blocked(s) && !hideUnavailable)} onSave={() => toggleSave(s)} onSelect={() => selected?.showtime.id===s.showtime.id ? setSelected(null) : startPlanning(s)} onDetails={() => setDetails(s)} onPlan={() => startPlanning(s)} onMarkWatched={() => markWatched(savedFilm(s.movie))}/>)}</section>)}
         </div>
       </section></div></>}
-    </main>{settingsOpen && <SettingsModal watched={watched} onRestore={id => removeFilm(watchedListId, id)} onClose={() => setSettingsOpen(false)}/>}
+    </main>
+    {settingsOpen && <SettingsModal watched={watched} onRestore={id => removeFilm(watchedListId, id)}
+      onClose={() => setSettingsOpen(false)}
+      screeningReminders={reminderOptions}/>}
     {details && <FilmDetails movie={details.movie} filmSaved={watchlistMovieIds.has(details.movie.id)} onToggleFilm={() => toggleFilm(details.movie)} screening={details} cities={cities} city={filters.selectedCity} saved={saved} onSave={toggleSave} onPlan={planScreening} onClose={() => setDetails(null)} onMarkWatched={() => markWatched(savedFilm(details.movie))}/>}
   </div></MovieListsContext.Provider></ScreeningRemindersContext.Provider>;
 }

@@ -1,28 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
-import { screeningTime } from '../lib/schedule';
 import { api } from '../services/accountService';
+import NotificationScreenings, { Notice } from './NotificationScreenings';
 
-type Notice = {
-  id: number;
-  filmTitle: string;
-  theaterName: string;
-  theaterCity: string;
-  ticketingUrl: string | null;
-  startsAt: string;
-  isRead: boolean;
-};
 type Page = {items: Notice[]; unread: number; nextBefore: number | null};
-
-const screeningDate = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/Amsterdam', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
-});
-
-function ticketLink(url: string | null) {
-  if (!url) return undefined;
-  try { return ['https:', 'http:'].includes(new URL(url).protocol) ? url : undefined; }
-  catch { return undefined; }
-}
 
 export default function NotificationHistory({unread, refreshCount}: {unread: number; refreshCount: () => void}) {
   const [page, setPage] = useState<Page | null>(null);
@@ -71,19 +52,8 @@ export default function NotificationHistory({unread, refreshCount}: {unread: num
     </header>
     {error && <p className="cc-error" role="alert">{error}</p>}
     {!page && busy && <p role="status">Loading notifications…</p>}
-    {page && (page.items.length ? <ul className="cc-notification-history">
-      {page.items.map(notice => {
-        const tickets = ticketLink(notice.ticketingUrl);
-        return <li key={notice.id}>
-          <div>
-            <h4>{notice.filmTitle} {!notice.isRead && <span className="cc-notification-new">New</span>}</h4>
-            <p><time dateTime={notice.startsAt}>{screeningDate.format(new Date(notice.startsAt))} · {screeningTime(notice.startsAt)}</time></p>
-            <p>{notice.theaterName}{notice.theaterCity && `, ${notice.theaterCity}`}</p>
-          </div>
-          {tickets && Date.parse(notice.startsAt) > Date.now() && <a className="cc-text-button" href={tickets} target="_blank" rel="noopener noreferrer" aria-label={`Tickets for ${notice.filmTitle}`}>Tickets ↗</a>}
-        </li>;
-      })}
-    </ul> : <div className="cc-empty"><Bell size={28} aria-hidden="true"/><h4>No screening notifications yet</h4><p>Follow a film or a list to get started.</p></div>)}
+    {page && (page.items.length ? <NotificationScreenings items={page.items}/> :
+      <div className="cc-empty"><Bell size={28} aria-hidden="true"/><h4>No screening notifications yet</h4><p>Follow a film or a list to get started.</p></div>)}
     {page?.nextBefore && <button className="cc-text-button" disabled={busy} onClick={() => void load(page.nextBefore!)}>Load older notifications</button>}
   </section>;
 }
