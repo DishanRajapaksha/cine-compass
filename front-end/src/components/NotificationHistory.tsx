@@ -42,18 +42,15 @@ export default function NotificationHistory({unread, refreshCount}: {unread: num
     finally { setBusy(false); }
   };
 
-  return <section aria-labelledby="cc-notification-history">
-    <header className="cc-notification-history-heading">
-      <h3 id="cc-notification-history">Screening history</h3>
-      <div>
-        <button className="cc-text-button" disabled={busy} onClick={() => void load()}>Refresh</button>
-        <button className="cc-text-button" disabled={busy || !page?.items.length || !(page.unread || unread)} onClick={markRead}>Mark all read</button>
-      </div>
-    </header>
+  return <section aria-label="Screening history">
+    <div className="cc-notification-actions">
+      <button className="cc-text-button" disabled={busy} onClick={() => void load()}>Refresh</button>
+      <button className="cc-text-button" disabled={busy || !page?.items.length || !(page.unread || unread)} onClick={markRead}>Mark all read</button>
+    </div>
     {error && <p className="cc-error" role="alert">{error}</p>}
     {!page && busy && <p role="status">Loading notifications…</p>}
     {page && (page.items.length ? <NotificationScreenings items={page.items}/> :
-      <div className="cc-empty"><Bell size={28} aria-hidden="true"/><h4>No screening notifications yet</h4><p>Follow a film or a list to get started.</p></div>)}
+      <div className="cc-empty"><Bell size={28} aria-hidden="true"/><h3>No screening notifications yet</h3><p>Follow a film or a list to get started.</p></div>)}
     {page?.nextBefore && <button className="cc-text-button" disabled={busy} onClick={() => void load(page.nextBefore!)}>Load older notifications</button>}
   </section>;
 }

@@ -5,6 +5,7 @@ import {api,ApiError} from '../services/accountService';
 import {cinemaListsKey,setPreference,snapshot} from '../lib/accountStorage';
 import { movieListsKey } from '../lib/movieLists';
 import CinemaLists from './CinemaLists';
+import ImdbSettings from './ImdbSettings';
 jest.mock('../services/accountService',()=>({api:jest.fn(),resetCsrf:jest.fn(),ApiError:jest.requireActual('../services/accountService').ApiError}));
 const request=api as jest.Mock;
 function Controls(){const a=useAccount()!;return <><span>{a.user?.name || 'Guest'}</span><span>{a.status}</span><span>{a.error}</span><button onClick={()=>setPreference('cinecompass_schedule_view','"posters"')}>Change view</button><button onClick={a.logout}>Sign out</button></>;}
@@ -56,6 +57,24 @@ test('snapshots exclude credentials and temporary dates and times',()=>{
   localStorage.setItem('cinecompass_omdb_key','private-key');localStorage.setItem('cinecompass_imdb_cache','cache');
   localStorage.setItem('cinecompass_schedule_filters',JSON.stringify({selectedCity:'Amsterdam',startDate:'2026-10-02',endDate:'2026-10-02',startTime:'12:00',endTime:'23:59'}));
   const values=snapshot();expect(Object.keys(values)).toEqual(['cinecompass_schedule_filters']);expect(JSON.parse(values.cinecompass_schedule_filters)).toEqual({selectedCity:'Amsterdam',startDate:null,endDate:null,startTime:null,endTime:null});
+});
+
+test('copies a device key to the account and removes the account key separately', async () => {
+  localStorage.setItem('cinecompass_omdb_key','device-key');
+  request.mockImplementation(async path => {
+    if (path === '/auth/me') return {user:{id:'alice',name:'Alice'}};
+    if (path === '/settings') return {userId:'alice',revision:2,values:{},omdbConfigured:false};
+  });
+  render(<AccountProvider><ImdbSettings/></AccountProvider>);
+  const copy = await screen.findByRole('button',{name:'Save device key to account'});
+  expect(screen.getByLabelText('OMDb API key')).toHaveValue('');
+  fireEvent.click(copy);
+  expect(request).toHaveBeenCalledWith('/imdb/key','PUT',{userId:'alice',key:'device-key'});
+  fireEvent.click(await screen.findByRole('button',{name:'Remove key'}));
+  expect(request).toHaveBeenLastCalledWith('/imdb/key','PUT',{userId:'alice',key:null});
+  expect(await screen.findByText('OMDb key removed.')).toBeInTheDocument();
+  expect(localStorage.getItem('cinecompass_omdb_key')).toBe('device-key');
+  expect(snapshot()).toEqual({});
 });
 
 test('film watchlists sync to their owner and guest films return on sign-out',async()=>{

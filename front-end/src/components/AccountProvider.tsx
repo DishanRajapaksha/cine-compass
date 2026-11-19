@@ -4,7 +4,8 @@ import { movieListsKey, normalizeMovieListSettings, readMovieLists } from '../li
 import OpeningScreen from './OpeningScreen';
 import { applySettings, settingsEvent, snapshot } from '../lib/accountStorage';
 
-type AccountState = {user:Account|null;status:string;error:string;busy:boolean;login:()=>Promise<void>;logout:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>};
+type AccountState = {user:Account|null;status:string;error:string;busy:boolean;login:()=>Promise<void>;logout:()=>Promise<void>;reload:()=>Promise<void>;importGuest:()=>Promise<void>;
+  omdb:{enabled:boolean; revision:number}; setOmdbEnabled:(userId:string, enabled:boolean)=>void};
 const AccountContext = createContext<AccountState | null>(null);
 export const useAccount = () => useContext(AccountContext);
 const guestKey='cinecompass_guest_settings';
@@ -13,13 +14,15 @@ const stable = (values:Record<string,string>) => JSON.stringify(Object.entries(v
 export default function AccountProvider({children}:{children:React.ReactNode}) {
   const [user,setUser]=useState<Account|null>(null), [ready,setReady]=useState(false), [workspace,setWorkspace]=useState(0);
   const [status,setStatus]=useState(''), [error,setError]=useState(''), [busy,setBusy]=useState(false);
+  const [omdb,setOmdb]=useState({enabled:false,revision:0});
   const current=useRef<Account|null>(null), revision=useRef(0), baseline=useRef(''), blocked=useRef(false), writing=useRef(false);
   const guest=useRef<Record<string,string>>({});
-  const restoreGuest=useCallback(() => {applySettings(guest.current);localStorage.removeItem(activeKey);current.current=null;setUser(null);setWorkspace(n=>n+1);},[]);
+  const restoreGuest=useCallback(() => {applySettings(guest.current);localStorage.removeItem(activeKey);current.current=null;setUser(null);setOmdb({enabled:false,revision:0});setWorkspace(n=>n+1);},[]);
   const load=useCallback(async (account:Account) => {
     const settings=await api<Settings>('/settings');
     if(settings.userId!==account.id) throw new Error('The account changed in another tab. Reload this page.');
     applySettings(settings.values);revision.current=settings.revision;baseline.current=stable(snapshot());blocked.current=false;
+    setOmdb(previous => ({enabled:settings.omdbConfigured === true,revision:previous.revision+1}));
     localStorage.setItem(activeKey,account.id);current.current=account;setUser(account);setWorkspace(n=>n+1);setStatus('Saved');setError('');
   },[]);
   useEffect(() => {
@@ -74,7 +77,8 @@ export default function AccountProvider({children}:{children:React.ReactNode}) {
     return () => {clearTimeout(timer);window.removeEventListener('storage',accountChanged);window.removeEventListener(settingsEvent,changed);window.removeEventListener('online',online);};
   },[restoreGuest]);
   const run=async (action:()=>Promise<void>)=>{setBusy(true);setError('');try {await action();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
-  const state:AccountState={user,status,error,busy,
+  const state:AccountState={user,status,error,busy,omdb,
+    setOmdbEnabled:(userId,enabled)=>{if(current.current?.id===userId) setOmdb(previous => ({enabled,revision:previous.revision+1}));},
     login:()=>run(async()=>{
       guest.current=snapshot();localStorage.setItem(guestKey,JSON.stringify(guest.current));
       window.location.assign('/api/auth/login');

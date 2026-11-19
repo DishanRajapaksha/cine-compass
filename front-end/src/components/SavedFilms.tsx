@@ -64,7 +64,7 @@ export default function SavedFilms(props: Props) {
     document.getElementById(`${tabsId}-${next}-tab`)?.focus();
   }
   return <section className="cc-subpage cc-watchlist" aria-labelledby={`${tabsId}-heading`}>
-    <header className="cc-page-header"><div className="cc-page-title"><h2 id={`${tabsId}-heading`}>Watchlist</h2><span>{props.films.length} film{props.films.length===1 ? '' : 's'} · {props.saved.length} saved screening{props.saved.length===1 ? '' : 's'}</span></div></header>
+    <header className="cc-page-header"><h2 id={`${tabsId}-heading`}>Watchlist</h2></header>
     <div className="cc-watchlist-tabs" role="tablist" aria-label="Watchlist lists">
       {(['movies','showtimes'] as const).map(value => <button key={value} id={`${tabsId}-${value}-tab`} role="tab" aria-selected={tab === value} aria-controls={`${tabsId}-${value}-panel`} tabIndex={tab === value ? 0 : -1} onClick={() => setTab(value)} onKeyDown={onTabKeyDown}>{value === 'movies' ? 'Movies' : 'Saved showtimes'} <span className="cc-count">{value === 'movies' ? props.films.length : props.saved.length}</span></button>)}
     </div>

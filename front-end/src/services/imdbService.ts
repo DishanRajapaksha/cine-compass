@@ -21,11 +21,12 @@ async function limited<T>(work: () => Promise<T>): Promise<T> {
   finally { const next = queue.shift(); if (next) next(); else active--; }
 }
 type OmdbFilm = { Response?: string; Error?: string; imdbID?: string; imdbRating?: string; Year?: string };
-export async function resolveImdb(title: string, year: number | undefined, key: string): Promise<ImdbMatch | null> {
-  if (!key) return null;
+type LookupCredential = string | {userId: string; revision: number};
+export async function resolveImdb(title: string, year: number | undefined, credential: LookupCredential): Promise<ImdbMatch | null> {
+  if (!credential) return null;
   const cleanTitle = title.replace(/(?:\s*\([^)]*\))+\s*$/, '').trim();
   const identity = JSON.stringify([cleanTitle, year || null]);
-  const requestId = JSON.stringify([key, identity]);
+  const requestId = JSON.stringify([credential, identity]);
   if (pending.has(requestId)) return pending.get(requestId)!;
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE) || '{}')[identity];
@@ -33,12 +34,16 @@ export async function resolveImdb(title: string, year: number | undefined, key: 
   } catch { /* Cache is optional. */ }
   const request = limited(async () => {
     const fetchFilm = async (exactYear?: number): Promise<OmdbFilm | null> => {
-      const params = new URLSearchParams({apikey:key,type:'movie',t:cleanTitle});
-      if (exactYear) params.set('y',String(exactYear));
+      const account = typeof credential !== 'string';
+      const params = new URLSearchParams(account
+        ? {userId:credential.userId,title:cleanTitle}
+        : {apikey:credential,type:'movie',t:cleanTitle});
+      if (exactYear) params.set(account ? 'year' : 'y',String(exactYear));
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(),10000);
       let response: Response;
-      try {response = await fetch(`https://www.omdbapi.com/?${params}`, {credentials:'omit', signal:controller.signal});}
+      try {response = await fetch(account ? `/api/imdb/film?${params}` : `https://www.omdbapi.com/?${params}`,
+        {credentials:account ? 'same-origin' : 'omit', signal:controller.signal});}
       finally {clearTimeout(timeout);}
       if (!response.ok) throw new Error('IMDb lookup unavailable');
       const film: OmdbFilm = await response.json();

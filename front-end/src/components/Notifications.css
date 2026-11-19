@@ -11,17 +11,15 @@
 .cc-reminder-filter-actions{align-items:center}
 .cc-app .cc-reminder-filter-actions .cc-primary{min-height:36px;margin:0;padding:0 18px}
 .cc-app .cc-reminder-filter-actions .cc-primary:disabled{background:#e5dbcc;color:var(--muted);cursor:default}
-.cc-notification-history-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin:22px 0 8px}
-.cc-notification-history-heading h3{margin:0;font-size:23px}
-.cc-notification-history-heading>div{display:flex;gap:16px}
+.cc-notification-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px 16px;margin:12px 0 8px}
 .cc-notification-history,.cc-notification-film>ul{margin:0;padding:0;list-style:none}
 .cc-notification-film{border-bottom:1px solid var(--rule)}
-.cc-notification-film h4{margin:0;font-size:20px}
-.cc-notification-film h4 button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;padding:14px 0;background:none;color:inherit;font:inherit;text-align:left;overflow-wrap:anywhere;cursor:pointer}
-.cc-notification-film h4 button:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
-.cc-notification-film h4 button:hover{color:var(--wine)}
-.cc-notification-film h4 svg{flex-shrink:0}
-.cc-notification-film h4 button[aria-expanded=false] svg{transform:rotate(-90deg)}
+.cc-notification-film h3{margin:0;font-size:20px}
+.cc-notification-film h3 button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;padding:14px 0;background:none;color:inherit;font:inherit;text-align:left;overflow-wrap:anywhere;cursor:pointer}
+.cc-notification-film h3 button:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
+.cc-notification-film h3 button:hover{color:var(--wine)}
+.cc-notification-film h3 svg{flex-shrink:0}
+.cc-notification-film h3 button[aria-expanded=false] svg{transform:rotate(-90deg)}
 .cc-notification-film>ul{padding-bottom:7px}
 .cc-notification-screening{display:flex;justify-content:space-between;align-items:start;gap:6px 16px;flex-wrap:wrap;padding:8px 0}
 .cc-notification-screening>div{min-width:0;overflow-wrap:anywhere}

@@ -17,7 +17,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261119093242_ScreeningNotificationLanguages";
+    public override string LastMigrationId => "20261119102623_OmdbCredentials";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -209,6 +209,21 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("Id");
 
                 b.ToTable("ScreeningNotificationScans");
+            });
+
+        modelBuilder.Entity("CineCompass.Api.OmdbCredential", b =>
+            {
+                b.Property<string>("UserId")
+                    .HasColumnType("text");
+
+                b.Property<string>("ProtectedKey")
+                    .IsConcurrencyToken()
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.HasKey("UserId");
+
+                b.ToTable("OmdbCredentials");
             });
 
         modelBuilder.Entity("CineCompass.Api.UserSettings", b =>
@@ -430,6 +445,15 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.HasOne("CineCompass.Api.AppUser", null)
                     .WithMany()
                     .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+            });
+
+        modelBuilder.Entity("CineCompass.Api.OmdbCredential", b =>
+            {
+                b.HasOne("CineCompass.Api.AppUser", null)
+                    .WithOne()
+                    .HasForeignKey("CineCompass.Api.OmdbCredential", "UserId")
                     .OnDelete(DeleteBehavior.Cascade)
                     .IsRequired();
             });

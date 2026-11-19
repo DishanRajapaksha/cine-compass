@@ -1,0 +1,132 @@
+.cc-dialog.cc-preferences-dialog {
+  max-width: 760px;
+  border: 1px solid var(--rule);
+  box-shadow: 0 24px 64px #2015103d;
+}
+
+.cc-preferences-dialog .cc-settings-header {
+  padding-block: 20px;
+}
+
+.cc-preferences-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cc-preferences-title svg {
+  color: var(--wine);
+  flex-shrink: 0;
+}
+
+.cc-preferences-body {
+  padding-block: 22px 26px;
+}
+
+.cc-preferences-body > section,
+.cc-preferences-integrations > section {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+.cc-preferences-body > section + section,
+.cc-preferences-integrations {
+  margin-top: 14px;
+}
+
+.cc-preferences-body section > h3,
+.cc-preferences-body .cc-account-heading h3 {
+  margin: 0 0 8px;
+  font-size: 21px;
+}
+
+.cc-preferences-body .cc-account-heading h3 {
+  margin: 0;
+}
+
+.cc-account-heading,
+.cc-account-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.cc-account-heading > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.cc-account-session + details {
+  border-top: 1px solid var(--rule);
+  padding-top: 8px;
+}
+
+.cc-preferences-body section p {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.cc-preferences-body section p.cc-error {
+  color: var(--wine);
+}
+
+.cc-preferences-body details summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.cc-preferences-integrations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cc-preferences-body .cc-imdb-settings form {
+  margin-top: 12px;
+}
+
+.cc-preferences-body .cc-imdb-settings .cc-field {
+  gap: 5px;
+  margin-bottom: 6px;
+  font-weight: normal;
+}
+
+.cc-imdb-key-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.cc-app .cc-imdb-key-actions .cc-primary {
+  min-height: 36px;
+  margin: 0;
+}
+
+.cc-app .cc-imdb-key-actions .cc-primary:disabled {
+  background: #e5dbcc;
+  color: var(--muted);
+  cursor: default;
+}
+
+@media (min-width: 721px) {
+  .cc-preferences-body .cc-reminder-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+  .cc-preferences-body .cc-reminder-filter-row { align-self: start; }
+  .cc-preferences-body .cc-reminder-filters > :is(p, .cc-reminder-filter-actions) { grid-column: 1 / -1; }
+}
+
+@media (max-width: 620px) {
+  .cc-preferences-integrations { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .cc-preferences-dialog .cc-settings-header { padding: 14px 16px; }
+  .cc-preferences-body { padding: 14px 14px 18px; }
+  .cc-preferences-body > section, .cc-preferences-integrations > section { padding: 14px; }
+}

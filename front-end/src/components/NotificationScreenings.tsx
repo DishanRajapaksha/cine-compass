@@ -58,12 +58,12 @@ function NotificationFilm({group, now}: {group: DatedNotice[]; now: number}) {
   const [expanded, setExpanded] = useState(true);
   const showtimesId = useId();
   return <li className="cc-notification-film">
-    <h4>
+    <h3>
       <button type="button" aria-expanded={expanded} aria-controls={showtimesId} onClick={() => setExpanded(value => !value)}>
         {group[0].notice.filmTitle}
         <ChevronDown size={17} aria-hidden="true"/>
       </button>
-    </h4>
+    </h3>
     <ul id={showtimesId} hidden={!expanded}>
       {group.map(({notice, start}) => <ScreeningNotice key={notice.id} notice={notice} upcoming={start > now}/>)}
     </ul>

@@ -20,7 +20,7 @@ function Inbox({refreshCount}: {refreshCount: () => void}) {
     <ScreeningReminder id="club" title="Film club" list/>
     <NotificationsPage enabled={reminders.enabled} unread={1} refreshCount={refreshCount}/>
     <button onClick={() => setSettingsOpen(true)}>Open settings</button>
-    {settingsOpen && <SettingsModal watched={[]} onRestore={jest.fn()} onClose={() => setSettingsOpen(false)}
+    {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)}
       screeningReminders={options}/>}
   </ScreeningRemindersContext.Provider>;
 }
@@ -44,6 +44,7 @@ test('saves look-ahead preferences in Settings and keeps screening history in No
     ],unread:1,nextBefore:null};
   });
   render(<Inbox refreshCount={jest.fn()}/>);
+  expect(screen.queryByRole('heading',{name:'Screening history'})).not.toBeInTheDocument();
   const film = (await screen.findByRole('heading',{name:'A Film'})).closest('li')!;
   expect(within(film).getAllByRole('listitem').map(item => item.querySelector('time')?.dateTime))
     .toEqual([earlier.startsAt, notice.startsAt]);
@@ -105,7 +106,7 @@ test('saves look-ahead preferences in Settings and keeps screening history in No
 
   fireEvent.click(screen.getByRole('button',{name:'Load older notifications'}));
   await screen.findByRole('heading',{name:'Older Film'});
-  expect(screen.getAllByRole('heading',{level:4}).map(heading => heading.textContent)).toEqual(['Older Film','A Film']);
+  expect(screen.getAllByRole('heading',{level:3}).map(heading => heading.textContent)).toEqual(['Older Film','A Film']);
   expect(screen.getByRole('button',{name:'Older Film'})).toHaveAttribute('aria-expanded','true');
   expect(within(film).queryByRole('list')).not.toBeInTheDocument();
   fireEvent.click(toggleFilm);

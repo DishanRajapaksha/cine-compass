@@ -94,7 +94,7 @@ test('watchlist filter keeps films when the last saved screening is removed',asy
   expect(screen.getByText('Your watchlist is empty.')).toBeInTheDocument();
 });
 
-test('marks a film watched across views and reloads, then restores from Settings',async () => {
+test('marks a film watched across views and reloads, then restores it from Lists',async () => {
   Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function() {this.setAttribute('open','');}});
   Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function() {this.removeAttribute('open');}});
   const response=await service.getPopularMovies();
@@ -117,9 +117,13 @@ test('marks a film watched across views and reloads, then restores from Settings
   fireEvent.click(screen.getByRole('menuitem',{name:'Settings'}));
   const dialog=screen.getByRole('dialog',{name:'Settings'});
   expect(within(dialog).getByLabelText('OMDb API key')).toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button',{name:'Restore Perfect Days'}));
-  expect(within(dialog).getByText('No watched films.')).toBeInTheDocument();
+  expect(within(dialog).queryByRole('heading',{name:/Watched films/})).not.toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole('button',{name:'Close settings'}));
+  fireEvent.click(screen.getByRole('button',{name:'Lists'}));
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Movie lists'})).getByRole('button',{name:'Watched 1'}));
+  fireEvent.click(screen.getByRole('button',{name:'Restore Perfect Days'}));
+  expect(screen.getByText('No watched films yet')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Schedule'}));
   expect(screen.getAllByRole('button',{name:'Perfect Days'})).toHaveLength(2);
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
 });
@@ -141,7 +145,8 @@ test('switches to one compact layout with no posters and preserves saved screeni
   fireEvent.click(screen.getByRole('tab',{name:'Saved showtimes 1'}));
   fireEvent.click(screen.getByRole('button',{name:/^Remove Perfect Days at/}));
   expect(screen.getByRole('button',{name:'Watchlist 1'})).toBeInTheDocument();
-  expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
+  expect(screen.queryByText('1 film · 0 saved screenings')).not.toBeInTheDocument();
+  expect(screen.getByRole('tab',{name:'Movies 1'})).toBeInTheDocument();
 });
 
 test('film details shows artwork, readable language, screening actions, and a missing-poster fallback',async () => {
@@ -422,7 +427,7 @@ test('saves a film without a screening, persists across reload, and finds upcomi
   expect(screen.getByText('No saved showtimes yet.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('tab',{name:'Movies 1'}));
   expect(screen.getByRole('heading',{name:'Perfect Days 2023'})).toBeInTheDocument();
-  expect(screen.getByText('1 film · 0 saved screenings')).toBeInTheDocument();
+  expect(screen.getByRole('tab',{name:'Movies 1'})).toBeInTheDocument();
 });
 
 test('removing a film retains screening access and does not resurrect it on reload',async () => {
@@ -690,11 +695,12 @@ test.each([
   expect(screen.queryByRole('article',{name:`${page === 'Coming soon' ? 'Upcoming' : 'Now showing'} ${title}`})).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Poster grid'}));
   expect(screen.queryByRole('button',{name:`Details for ${title}`})).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
-  fireEvent.click(screen.getByRole('menuitem',{name:'Settings'}));
+  fireEvent.click(screen.getByRole('button',{name:'Lists'}));
+  fireEvent.click(within(screen.getByRole('navigation',{name:'Movie lists'})).getByRole('button',{name:'Watched 1'}));
   fireEvent.click(screen.getByRole('button',{name:`Restore ${oldTitle}`}));
-  fireEvent.click(screen.getByRole('button',{name:'Close settings'}));
-  expect(screen.getByRole('button',{name:`Details for ${title}`})).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'More pages'}));
+  fireEvent.click(screen.getByRole('menuitem',{name:page}));
+  expect(await screen.findByRole('button',{name:`Details for ${title}`})).toBeInTheDocument();
 });
 
 test('manages independent custom list membership for watched catalogue films', async () => {

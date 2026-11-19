@@ -57,9 +57,9 @@ public sealed class TestAuth(IOptionsMonitor<AuthenticationSchemeOptions> o, ILo
         return Task.FromResult(user is null ? AuthenticateResult.NoResult() : AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,user)], "Test")), "Test")));
     }
 }
-public sealed class AccountTests
+public sealed partial class AccountTests
 {
-    private static async Task<HttpClient> Client(ApiFactory factory, string? user = null)
+    private static async Task<HttpClient> Client(WebApplicationFactory<Program> factory, string? user = null)
     {
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         if(user is not null) client.DefaultRequestHeaders.Add("Test-User",user);

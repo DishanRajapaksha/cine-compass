@@ -35,7 +35,7 @@ npm start
 
 Open **http://localhost:3000**. React proxies `/api` to port 5080. Open Settings and select **Sign in with Heimdall**. The first sign-in creates a CineCompass profile for that Keycloak identity unless the identity is already linked to a local account. Set `App__Origin` and register its exact callback URI if you serve the frontend on another origin.
 
-Watched films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring a film in Settings puts its matching catalogue listings back. The account database migration renames the old hidden-movie setting to watched movies. The web app moves existing browser and guest settings when it loads.
+Watched films are matched by their Cineville ID, with a normalized title and original release-year fallback for older catalogue IDs and re-releases. A different-year remake remains separate. Restoring a film from **Lists → Watched** puts its matching catalogue listings back. The account database migration renames the old hidden-movie setting to watched movies. The web app moves existing browser and guest settings when it loads.
 
 ## Now showing
 
@@ -56,7 +56,7 @@ Save an upcoming film to the existing Movies watchlist before any screenings are
 
 Open **Lists → New list** to create a collection. Use **Add to list** on a search result, in film details, or on a saved film to select its lists. You can rename or delete custom lists, and a film can belong to several lists. Each entry keeps the Cineville ID, title, poster and any film metadata available when you add it.
 
-Watchlist and Watched use permanent list IDs. Marking a film watched still hides it from the programme and Watchlist views. Each custom list has its own **Hide watched** option. Restore a watched film from Lists or Settings. Earlier account and browser lists are carried forward automatically. Opening **Lists → Watched** recovers missing poster artwork from the Cineville catalogue when the film can be identified.
+Watchlist and Watched use permanent list IDs. Marking a film watched still hides it from the programme and Watchlist views. Each custom list has its own **Hide watched** option. Restore a film from **Lists → Watched**. Earlier account and browser lists are carried forward automatically. Opening **Lists → Watched** recovers missing poster artwork from the Cineville catalogue when the film can be identified.
 
 ## Screening notifications
 
@@ -74,7 +74,7 @@ Open **More pages → Notifications** to see the inbox. It groups showtimes by f
 
 Guest settings remain separately saved on this device and are restored on sign-out. Signing in loads account settings. Settings → Settings on this device → Import guest settings replaces account settings with that guest snapshot. Changes save after a short delay.
 
-Filters, display mode, cinema order, planner preferences, movie lists, screening reminders, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. OMDb credentials stay browser-local. The active account cache is cleared if its session cannot be restored; account data remains on the server.
+Filters, display mode, cinema order, planner preferences, movie lists, screening reminders, and saved screenings sync. Dates, time windows, search text, API caches, and the OMDb key do not. Signed-in users can store an OMDb key encrypted in the database under **Settings → IMDb**. CineCompass uses that key for server-side lookups and only reports whether it is configured. Keys saved as a guest stay in the browser and can be copied to the account from Settings. The active account cache is cleared if its session cannot be restored; account data remains on the server.
 
 Saves include the expected account ID and revision. Conflicting edits are rejected rather than silently overwritten. Reload account settings discards unsynced changes and loads the server version. Concurrent list edits are not merged in this initial implementation. Offline changes retry while the page stays open and when connectivity returns; there is no persistent offline upload queue. A session switch in another tab reloads this tab to prevent mixing accounts.
 

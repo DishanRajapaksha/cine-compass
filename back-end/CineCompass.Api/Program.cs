@@ -26,6 +26,7 @@ builder.Services.AddRateLimiter(o => {
 });
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 262144);
 builder.AddCineville();
+builder.AddOmdb();
 builder.Services.AddScoped<ScreeningNotificationScanner>();
 builder.Services.AddHostedService<ScreeningNotificationWorker>();
 var app = builder.Build();
@@ -58,8 +59,10 @@ app.Use(async (context, next) => {
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAccountAuthentication();
 app.MapGet("/api/settings", async (HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
-    var row = await db.Settings.FindAsync(users.GetUserId(c.User));
-    return Results.Ok(new { userId = users.GetUserId(c.User), revision = row?.Revision ?? 0, values = MovieListSettings.Parse(row?.Json) });
+    var userId = users.GetUserId(c.User);
+    var row = await db.Settings.FindAsync(userId);
+    var omdbConfigured = await db.OmdbCredentials.AnyAsync(key => key.UserId == userId, c.RequestAborted);
+    return Results.Ok(new { userId, revision = row?.Revision ?? 0, values = MovieListSettings.Parse(row?.Json), omdbConfigured });
 }).RequireAuthorization();
 app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserManager<AppUser> users, AppDbContext db) => {
     var allowed = new HashSet<string> { "cinecompass_schedule_filters", "cinecompass_schedule_view", "cinecompass_schedule_grouping", "cinecompass_catalogue_view", "cinecompass_now_showing_sort", "cinecompass_upcoming_sort", "cineville_saved_showtimes", MovieListSettings.Key, ReminderSettings.Key, MovieListSettings.LegacyWatchlist, MovieListSettings.LegacyWatched, MovieListSettings.LegacyHidden, "cinecompass_cinema_lists", "cinecompass_planner_prefs", "cineville_filters", "cineville_filters_open", "cineville_timeline_prefs", "cineville_timeline_theater_order" };
@@ -80,6 +83,7 @@ app.MapPut("/api/settings", async (SettingsRequest request, HttpContext c, UserM
     return Results.Ok(new { revision = row.Revision });
 }).RequireAuthorization();
 app.MapCalendarFeed(origin);
+app.MapOmdb();
 app.MapScreeningNotifications();
 app.MapCineville();
 app.MapCinevilleMcp(origin);

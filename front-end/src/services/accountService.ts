@@ -1,5 +1,5 @@
 export type Account = { id: string; name: string };
-export type Settings = { userId: string; revision: number; values: Record<string, string> };
+export type Settings = { userId: string; revision: number; values: Record<string, string>; omdbConfigured?: boolean };
 let csrf: string | undefined;
 export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {

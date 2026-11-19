@@ -190,8 +190,7 @@ export default function CinemaSchedule() {
         </div>
       </section></div></>}
     </main>
-    {settingsOpen && <SettingsModal watched={watched} onRestore={id => removeFilm(watchedListId, id)}
-      onClose={() => setSettingsOpen(false)}
+    {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)}
       screeningReminders={reminderOptions}/>}
     {details && <FilmDetails movie={details.movie} filmSaved={watchlistMovieIds.has(details.movie.id)} onToggleFilm={() => toggleFilm(details.movie)} screening={details} cities={cities} city={filters.selectedCity} saved={saved} onSave={toggleSave} onPlan={planScreening} onClose={() => setDetails(null)} onMarkWatched={() => markWatched(savedFilm(details.movie))}/>}
   </div></MovieListsContext.Provider></ScreeningRemindersContext.Provider>;

@@ -25,6 +25,7 @@ public sealed class CalendarSubscription
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser>(options)
 {
     public DbSet<CalendarSubscription> CalendarSubscriptions => Set<CalendarSubscription>();
+    public DbSet<OmdbCredential> OmdbCredentials => Set<OmdbCredential>();
     public DbSet<ScreeningNotification> ScreeningNotifications => Set<ScreeningNotification>();
     public DbSet<ScreeningNotificationScan> ScreeningNotificationScans => Set<ScreeningNotificationScan>();
     public DbSet<UserSettings> Settings => Set<UserSettings>();
@@ -32,6 +33,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
     {
         base.OnModelCreating(builder);
         NotificationData.Configure(builder);
+        builder.Entity<OmdbCredential>().HasKey(x => x.UserId);
+        builder.Entity<OmdbCredential>().Property(x => x.ProtectedKey).IsConcurrencyToken();
+        builder.Entity<OmdbCredential>().HasOne<AppUser>().WithOne().HasForeignKey<OmdbCredential>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<CalendarSubscription>().HasKey(x => x.UserId);
         builder.Entity<CalendarSubscription>().HasIndex(x => x.TokenHash).IsUnique();
         builder.Entity<CalendarSubscription>().Property(x => x.Revision).IsConcurrencyToken();

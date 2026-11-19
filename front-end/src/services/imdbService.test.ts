@@ -37,3 +37,11 @@ test('no key or network failure leaves the search fallback available',async () =
   expect(fetchMock).not.toHaveBeenCalled();
   expect(await resolveImdb('Film',2026,'test-key')).toBeNull();
 });
+
+test('account lookups send only the film and account identifiers to CineCompass', async () => {
+  const fetchMock = jest.fn().mockResolvedValue(response({Response:'True',Year:'1988',imdbID:'tt0094625',imdbRating:'8.0'}));
+  global.fetch = fetchMock;
+  expect(await resolveImdb('Akira',1988,{userId:'alice',revision:1})).toEqual({id:'tt0094625',rating:'8.0'});
+  expect(fetchMock).toHaveBeenCalledWith('/api/imdb/film?userId=alice&title=Akira',
+    expect.objectContaining({credentials:'same-origin'}));
+});
