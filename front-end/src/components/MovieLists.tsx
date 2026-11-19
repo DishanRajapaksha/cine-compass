@@ -57,6 +57,11 @@ export default function MovieLists({store, visibleWatchlist, isWatched, selected
   const selected = lists.find(list => list.id === selectedId) ?? lists[0];
   const films = selected.visibleFilms;
   const allWatched = selected.hideWatched && selected.films.length > 0 && films.length === 0;
+  const chooseList = (id: string) => {
+    onSelect(id);
+    setEditing(null);
+    setConfirmDelete(false);
+  };
 
   return <section className="cc-subpage cc-movie-lists" aria-labelledby="cc-lists-heading">
     <header className="cc-page-header">
@@ -66,10 +71,14 @@ export default function MovieLists({store, visibleWatchlist, isWatched, selected
     <div className="cc-lists-layout">
       <nav className="cc-list-index" aria-label="Movie lists">
         {lists.map(list => <button key={list.id} aria-current={selected.id === list.id ? 'true' : undefined}
-          onClick={() => {onSelect(list.id); setEditing(null); setConfirmDelete(false);}}>
+          onClick={() => chooseList(list.id)}>
           <span>{list.name}</span><span className="cc-count">{list.visibleFilms.length}</span>
         </button>)}
       </nav>
+      <select className="cc-list-select" aria-label="Movie list" value={selected.id}
+        onChange={event => chooseList(event.target.value)}>
+        {lists.map(list => <option key={list.id} value={list.id}>{list.name} ({list.visibleFilms.length})</option>)}
+      </select>
       <section className="cc-list-content" aria-labelledby="cc-list-title">
         {editing && <form className="cc-list-editor" aria-label={editing === 'create' ? 'New movie list' : 'Rename movie list'} onSubmit={event => {
           event.preventDefault();
@@ -84,19 +93,19 @@ export default function MovieLists({store, visibleWatchlist, isWatched, selected
         </form>}
         <header className="cc-list-content-heading">
           <h3 id="cc-list-title">{selected.name}</h3>
-          <div>
+          <div className="cc-list-preferences">
             <ScreeningReminder id={selected.id} title={selected.name} list/>
             {selected.id === watchlistId && <button className="cc-text-button" onClick={onWatchlist}>Open Watchlist</button>}
-            {!isBuiltInList(selected.id) && <>
-              <label className="cc-list-filter">
-                <input type="checkbox" checked={selected.hideWatched ?? false}
-                  onChange={event => store.setHideWatched(selected.id, event.target.checked)}/>
-                Hide watched
-              </label>
-              <button className="cc-text-button" onClick={() => {setEditing('rename'); setName(selected.name); setConfirmDelete(false);}}>Rename list</button>
-              <button className="cc-text-button" onClick={() => {setConfirmDelete(true); setEditing(null);}}>Delete list</button>
-            </>}
+            {!isBuiltInList(selected.id) && <label className="cc-list-filter">
+              <input type="checkbox" checked={selected.hideWatched ?? false}
+                onChange={event => store.setHideWatched(selected.id, event.target.checked)}/>
+              Hide watched
+            </label>}
           </div>
+          {!isBuiltInList(selected.id) && <div className="cc-list-management">
+            <button className="cc-text-button" onClick={() => {setEditing('rename'); setName(selected.name); setConfirmDelete(false);}}>Rename list</button>
+            <button className="cc-text-button" onClick={() => {setConfirmDelete(true); setEditing(null);}}>Delete list</button>
+          </div>}
         </header>
         {confirmDelete && <div className="cc-list-editor" role="group" aria-label="Confirm list deletion">
           <p>Delete “{selected.name}”?</p>

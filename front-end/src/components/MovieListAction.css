@@ -1,0 +1,60 @@
+.cc-app .cc-movie-list-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--wine);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cc-app .cc-movie-list-trigger:hover,
+.cc-app .cc-movie-list-trigger[aria-expanded="true"],
+.cc-app .cc-movie-list-trigger[data-selected="true"] {
+  background: #ece4d8;
+  border-color: #ac9581;
+}
+
+.cc-movie-list-trigger[aria-expanded="true"] .cc-list-picker-arrow { transform: rotate(180deg); }
+
+.cc-list-picker {
+  position: fixed;
+  z-index: 40;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  border: 1px solid #ac9581;
+  border-radius: 5px;
+  background: var(--paper);
+  box-shadow: 0 7px 22px #29231f26;
+  color: var(--ink);
+}
+
+.cc-list-picker label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 7px 9px;
+  border-radius: 3px;
+  font-size: 14px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.cc-list-picker label:hover,
+.cc-list-picker label:focus-within { background: #ece4d8; }
+
+.cc-list-picker input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--wine);
+}
