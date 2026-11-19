@@ -2,8 +2,8 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { Menu } from 'lucide-react';
 
 export type Page = 'schedule'|'search'|'watchlist'|'lists'|'notifications'|'upcoming'|'now-showing';
-type Props = {page:Page;count:number;unreadNotifications?:number;onPage:(page:Page)=>void;onSettings:()=>void};
-export default function HeaderNavigation({page,count,unreadNotifications=0,onPage,onSettings}:Props) {
+type Props = {page:Page;unreadNotifications?:number;onPage:(page:Page)=>void;onSettings:()=>void};
+export default function HeaderNavigation({page,unreadNotifications=0,onPage,onSettings}:Props) {
   const [open,setOpen] = useState(false);
   const menuId = useId();
   const unreadId = useId();
@@ -31,7 +31,7 @@ export default function HeaderNavigation({page,count,unreadNotifications=0,onPag
   return <nav aria-label="Main navigation">
     <button className={page === 'schedule' ? 'active' : ''} onClick={() => {setOpen(false);onPage('schedule');}}>Schedule</button>
     <button className={page === 'search' ? 'active' : ''} aria-current={page === 'search' ? 'page' : undefined} onClick={() => {setOpen(false);onPage('search');}}>Search</button>
-    <button className={page === 'watchlist' ? 'active' : ''} onClick={() => {setOpen(false);onPage('watchlist');}}>Watchlist <span className="cc-count">{count}</span></button>
+    <button className={page === 'watchlist' ? 'active' : ''} onClick={() => {setOpen(false);onPage('watchlist');}}>Watchlist</button>
     <button className={page === 'lists' ? 'active' : ''} aria-current={page === 'lists' ? 'page' : undefined} onClick={() => {setOpen(false);onPage('lists');}}>Lists</button>
     <div className="cc-header-menu" ref={container} onBlur={event => {
       // A touch tap may blur without a new focus target before its click arrives.

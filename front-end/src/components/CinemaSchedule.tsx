@@ -170,7 +170,7 @@ export default function CinemaSchedule() {
     onSave:toggleSave,onPlan:planScreening};
   const reminderOptions = {reminders, cities, languages, subtitleLanguages, cityError, retryCities: () => setRetry(value => value + 1)};
   return <ScreeningRemindersContext.Provider value={reminderOptions}><MovieListsContext.Provider value={movieLists}><div className="cc-app">
-    <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><HeaderNavigation page={page} count={visibleFilms.length} unreadNotifications={notifications.unread} onPage={setPage} onSettings={() => setSettingsOpen(true)}/></header>
+    <header className="cc-header"><a className="cc-brand" href="#schedule" onClick={() => setPage('schedule')}><Sparkle size={27} fill="currentColor" strokeWidth={1}/><span>Cine Compass<span className="cc-brand-dot">.</span></span></a><CinemaAnimation/><HeaderNavigation page={page} unreadNotifications={notifications.unread} onPage={setPage} onSettings={() => setSettingsOpen(true)}/></header>
     <main className="cc-main">
     {reminders.error && <p className="cc-error" role="alert">{reminders.error}</p>}
     {movieLists.error && <p className="cc-error" role="alert">{movieLists.error}</p>}
